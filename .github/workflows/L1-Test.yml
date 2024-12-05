@@ -1,0 +1,27 @@
+name: L1 Unit Tests Remote Debugger
+
+on:
+  pull_request:
+    branches: [ develop, main, feature/RDK-49894 ]
+
+env:
+  AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME }}
+  AUTOMATICS_PASSCODE: ${{ secrets.AUTOMATICS_PASSCODE }}
+
+jobs:
+  execute-unit-tests-on-pr:
+    name: Execute unit tests in gtest test suite
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rdkcentral/docker-rdk-ci:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run unit tests
+        run: sh run_ut.sh
+
+      - name: Upload test results to automatic test result management system
+        run: >
+          gtest-json-result-push.py /tmp/Gtest_Report https://rdkeorchestrationservice.apps.cloud.comcast.net/rdke_orchestration_api/push_unit_test_results `pwd`

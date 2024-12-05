@@ -1,0 +1,23 @@
+{
+    "DebugCategory": {
+        "DebugIssueType": {
+            "DebugCommands": "command1;command2;commmand3",
+            "DebugTimeout" : 10
+        }
+    },
+    "Sanity": {
+        "Check" : {
+            "Commands" : [ "rm -rf ", "kill ", "pkill ", "iptables ", "ip6tables " ]
+        }
+    },
+   "Process" : {
+       "ProcessStatus" : {
+            "Commands": "cat /opt/logs/top_log.txt*",
+            "Timeout" : 10
+       },
+       "ServiceStatus" : {
+            "Commands": "systemctl list-units --type=service --all",
+            "Timeout" : 10
+       }
+    }
+}
