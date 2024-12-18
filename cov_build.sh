@@ -72,8 +72,10 @@ cd iarmbus
 git checkout iarmbus_52984
 make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/dbus-1.0/ -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
 make install
+cd $ROOT
+git clone https://github.com/rdkcentral/iarmmgrs.git
 cd $WORKDIR
 autoreconf -i
 autoupdate
 ./configure --prefix=${INSTALL_DIR}
-sudo make remotedebugger_CFLAGS="-I/usr/iarmbus/core/include -I/usr/iarmbus/core  -I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/WebconfigFramework/include -I/usr/iarmmgrs/rdmmgr/include -I/usr/iarmmgrs/hal/include -I/usr/local/include/trower-base64" remotedebugger_LDFLAGS="-L/usr/local/lib -lsafec -lrdkloggers -lcjson -lIARMBus -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lsafec -lwebconfig_framework -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
+make remotedebugger_CFLAGS="-I/usr/iarmbus/core/include -I/usr/iarmbus/core  -I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/WebconfigFramework/include -I/usr/iarmmgrs/rdmmgr/include -I/usr/iarmmgrs/hal/include -I/usr/local/include/trower-base64" remotedebugger_LDFLAGS="-L/usr/local/lib -lsafec -lrdkloggers -lcjson -lIARMBus -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lsafec -lwebconfig_framework -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
