@@ -18,7 +18,7 @@
 */
 
 #include "rrdCommandSanity.h"
-
+int *ptr = NULL;
 /*
  * @function updateBackgroundCmd
  * @brief Modifies the given command string by replacing instances of "&;" with "& "
