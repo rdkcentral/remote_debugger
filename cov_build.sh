@@ -1,5 +1,4 @@
 WORKDIR=`pwd`
-apt-get install -y libdbus-1-dev
 # Build and install critical dependency
 export ROOT=/usr
 export INSTALL_DIR=${ROOT}/local
@@ -10,6 +9,12 @@ cd $ROOT
 git clone https://github.com/rdkcentral/rbus
 cmake -Hrbus -Bbuild/rbus -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
 make -C build/rbus && make -C build/rbus install
+
+#Build dbus
+git clone -b master https://github.com/d-bus/dbus.git
+cmake -Hdbus -Bbuild/dbus -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
+make -C build/dbus && make -C build/dbus install
+
 #Build wdmp-c
 git clone https://github.com/xmidt-org/wdmp-c.git
 sed -i '/WDMP_ERR_SESSION_IN_PROGRESS/a\    WDMP_ERR_INTERNAL_ERROR,\n    WDMP_ERR_DEFAULT_VALUE,' /usr/wdmp-c/src/wdmp-c.h
@@ -73,7 +78,7 @@ cd iarmbus
 git checkout iarmbus_52984
 autoreconf -i
 ./configure
-make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include -I/usr/include/directfb -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/dbus-1.0/ -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
+make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include -I/usr/local/lib/dbus-1.0/include -I/usr/include/local/dbus-1.0 -I/usr/include/directfb -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/dbus-1.0/ -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
 make install
 cd $ROOT
 git clone https://github.com/rdkcentral/iarmmgrs.git
