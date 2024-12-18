@@ -1,4 +1,5 @@
 WORKDIR=`pwd`
+apt-get install -y libdbus-1-dev
 # Build and install critical dependency
 export ROOT=/usr
 export INSTALL_DIR=${ROOT}/local
@@ -70,7 +71,9 @@ cd $ROOT
 git clone https://github.com/rdkcentral/iarmbus.git
 cd iarmbus
 git checkout iarmbus_52984
-make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/dbus-1.0/ -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
+autoreconf -i
+./configure
+make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include -I/usr/include/directfb -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/dbus-1.0/ -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
 make install
 cd $ROOT
 git clone https://github.com/rdkcentral/iarmmgrs.git
