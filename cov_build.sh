@@ -78,7 +78,7 @@ cd iarmbus
 git checkout iarmbus_52984
 autoreconf -i
 ./configure
-make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include -I/usr/directfb-core-DirectFB/lib -I/usr/local/lib/dbus-1.0/include -I/usr/include/local/dbus-1.0 -I/usr/include/directfb -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/include/dbus-1.0/ -I/usr/lib/x86_64-linux-gnu/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
+make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include  -I/usr/directfb-core-DirectFB/lib -I/usr/local/lib/dbus-1.0/include  -I/usr/include/directfb -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/local/include/dbus-1.0 -I/usr/local/lib/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
 make install
 cd $ROOT
 git clone https://github.com/rdkcentral/iarmmgrs.git
