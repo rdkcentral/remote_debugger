@@ -18,7 +18,6 @@
 */
 
 #include "rrdCommandSanity.h"
-int *ptr = NULL:
 
 /*
  * @function updateBackgroundCmd
