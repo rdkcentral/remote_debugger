@@ -45,7 +45,7 @@ autoreconf -i
 make && make install
 #Build rfc
 cd ${ROOT}
-git clone git@github.com:rdkcentral/rfc.git
+git clone https://github.com/rdkcentral/iarmmgrs.git
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
