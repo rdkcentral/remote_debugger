@@ -17,7 +17,7 @@ make -C build/dbus && make -C build/dbus install
 
 #Build wdmp-c
 git clone https://github.com/xmidt-org/wdmp-c.git
-sed -i '/WDMP_ERR_SESSION_IN_PROGRESS/a\    WDMP_ERR_INTERNAL_ERROR,\n    WDMP_ERR_DEFAULT_VALUE,' /usr/wdmp-c/src/wdmp-c.h
+sed -i '/WDMP_ERR_SESSION_IN_PROGRESS/a\    WDMP_ERR_INTERNAL_ERROR,\n    WDMP_ERR_DEFAULT_VALUE,' /usr/local/include/wdmp-c/wdmp-c.h
 cd $ROOT
 #Build rdk-logger
 git clone https://github.com/rdkcentral/rdk_logger.git
