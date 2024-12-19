@@ -39,6 +39,18 @@ AC_ARG_ENABLE([gtestapp],
              [echo "Gtestapp is disabled"])
 AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
 
+AC_ARG_ENABLE([iarmbus],
+	      AS_HELP_STRING([--enable-iarmbus], [enable IARMBus support (default is no)]),
+	      [
+                case "${enableval}" in
+                  yes) USE_IARMBUS=true;;
+                  no) AC_MSG_ERROR([IARMBus support is disabled]);;
+                  *) AC_MSG_ERROR([bad value ${enableval} for --enable-iarmbus]);;
+                esac
+              ],
+	      [echo "IARMBus support is disabled"])
+AM_CONDITIONAL([USE_IARMBUS], [test x$USE_IARMBUS = xtrue])
+
 # Config Source files.
 AC_CONFIG_SRCDIR([src/rrdMain.c])
 AC_CONFIG_HEADERS([config.h])
