@@ -45,7 +45,7 @@ IARM_Result_t RRD_subscribe()
     int ret = 0;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-
+#if defined(USE_IARMBUS)
     ret = IARM_Bus_Init(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME);
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -56,8 +56,9 @@ IARM_Result_t RRD_subscribe()
         return ret;
 #endif
     }
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_Init done! \n", __FUNCTION__, __LINE__);
-
+#if defined(USE_IARMBUS)
     ret = IARM_Bus_Connect();
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -68,9 +69,10 @@ IARM_Result_t RRD_subscribe()
         return ret;
 #endif
     }
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_Connect done! \n", __FUNCTION__, __LINE__);
 
-
+#if defined(USE_IARMBUS)
     ret = IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, _remoteDebuggerEventHandler);
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -91,6 +93,7 @@ IARM_Result_t RRD_subscribe()
         return ret;
 #endif
     }
+
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_RegisterEventHandler for RRD done! \n", __FUNCTION__, __LINE__);
 
     // IARM Reg for RDM Event Handler
@@ -116,7 +119,7 @@ IARM_Result_t RRD_subscribe()
         return ret;
 #endif
     }
-
+#endif
     webconfigFrameworkInit();
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_RegisterEventHandler for RDMMGR done! \n", __FUNCTION__, __LINE__);
@@ -546,7 +549,7 @@ IARM_Result_t RRD_unsubscribe()
     rbusError_t rc = RBUS_ERROR_BUS_ERROR;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-
+#if defined(USE_IARMBUS)
     ret = IARM_Bus_Disconnect();
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -557,8 +560,9 @@ IARM_Result_t RRD_unsubscribe()
         return ret;
 #endif
     }
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_Disconnect done!\n", __FUNCTION__, __LINE__);
-
+#if defined(USE_IARMBUS)
     ret = IARM_Bus_Term();
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -569,8 +573,9 @@ IARM_Result_t RRD_unsubscribe()
         return ret;
 #endif
     }
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_Term done!\n", __FUNCTION__, __LINE__);
-
+#if defined(USE_IARMBUS)
     ret = IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE);
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -607,6 +612,7 @@ IARM_Result_t RRD_unsubscribe()
         return ret;
 #endif
     }
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for RDMMGR done! \n", __FUNCTION__, __LINE__);
 
 
