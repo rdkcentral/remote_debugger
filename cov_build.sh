@@ -29,7 +29,7 @@ make && make install
 cd $ROOT/rdk_logger
 autoreconf -i
 ./configure
-make sudo make LOG4C_LIBS="-L/usr/lib/x86_64-linux-gnu"
+make LOG4C_LIBS="-L/usr/lib/x86_64-linux-gnu"
 make install
 #Build Webconfig framework
 cd ${ROOT}
@@ -46,7 +46,7 @@ cd ${ROOT}/libSyscallWrapper
 autoupdate
 autoreconf -i
 ./configure --prefix=${INSTALL_DIR}
-make && sudo make install
+make && make install
 #Build rfc
 cd ${ROOT}
 git clone git@github.com:rdkcentral/rfc.git
