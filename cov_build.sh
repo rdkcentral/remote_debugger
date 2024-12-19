@@ -17,6 +17,12 @@ make -C build/dbus && make -C build/dbus install
 
 #Build wdmp-c
 git clone https://github.com/xmidt-org/wdmp-c.git
+cd wdmp-c
+mkdir build
+cd build
+cmake ..
+make
+make install
 sed -i '/WDMP_ERR_SESSION_IN_PROGRESS/a\    WDMP_ERR_INTERNAL_ERROR,\n    WDMP_ERR_DEFAULT_VALUE,' /usr/local/include/wdmp-c/wdmp-c.h
 cd $ROOT
 #Build rdk-logger
@@ -63,19 +69,6 @@ cd ${ROOT}/trower-base64
 meson setup build
 ninja -C build
 ninja -C build install
-cd $ROOT
-git clone https://github.com/rurban/safeclib
-cd $ROOT/safeclib
-autoreconf --install
-./configure --prefix=${INSTALL_DIR} && make && make install
-cd $ROOT
-git clone https://github.com/rdkcentral/iarmbus.git
-cd iarmbus
-git checkout iarmbus_52984
-autoreconf -i
-./configure
-make INCLUDE_FILES="-I/usr/include/glib-2.0 -I/usr/iarmbus/core/include  -I/usr/directfb-core-DirectFB/lib -I/usr/local/lib/dbus-1.0/include  -I/usr/include/directfb -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/local/include/dbus-1.0 -I/usr/local/lib/dbus-1.0/include -I/usr/safeclib/src/str -I/usr/local/include/safeclib" IARMDaemonMain_LDADD="-L/usr/local/lib -lsafec"
-make install
 cd $ROOT
 git clone https://github.com/rdkcentral/iarmmgrs.git
 cd $WORKDIR
