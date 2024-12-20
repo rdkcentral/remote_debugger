@@ -9,12 +9,6 @@ cd $ROOT
 git clone https://github.com/rdkcentral/rbus
 cmake -Hrbus -Bbuild/rbus -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
 make -C build/rbus && make -C build/rbus install
-git clone https://github.com/djbclark/directfb-core-DirectFB.git
-#Build dbus
-git clone -b master https://github.com/d-bus/dbus.git
-cmake -Hdbus -Bbuild/dbus -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
-make -C build/dbus && make -C build/dbus install
-
 #Build wdmp-c
 git clone https://github.com/xmidt-org/wdmp-c.git
 cd wdmp-c
