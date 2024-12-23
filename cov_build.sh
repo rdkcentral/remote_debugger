@@ -50,6 +50,7 @@ cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
 cd rfcapi
+cp /usr/local/lib/pkgconfig/libcjson.pc /usr/local/lib/pkgconfig/cjson.pc
 make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks"
 make install
 cd /usr/rfc/tr181api
