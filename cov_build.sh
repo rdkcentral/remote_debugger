@@ -3,14 +3,6 @@ WORKDIR=`pwd`
 export ROOT=/usr
 export INSTALL_DIR=${ROOT}/local
 mkdir -p $INSTALL_DIR
-#Build Webconfig framework
-cd ${ROOT}
-git  clone https://github.com/rdkcentral/WebconfigFramework.git
-cd WebconfigFramework
-autoreconf -i
-export CFLAGS="-I/usr/local/include/rbus -I/usr/local/include/rtmessage"
-./configure --prefix=/usr/local
-make && make install
 #Build rfc
 cd ${ROOT}
 git clone https://github.com/rdkcentral/rfc.git
