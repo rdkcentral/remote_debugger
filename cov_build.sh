@@ -30,4 +30,4 @@ cd $WORKDIR
 autoreconf -i
 autoupdate
 ./configure --prefix=${INSTALL_DIR}
-make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include  -I/usr/WebconfigFramework/include -I/usr/local/include/trower-base64" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
+make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I/usr/local/include/trower-base64" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
