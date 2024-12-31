@@ -36,7 +36,7 @@ devicePropertiesData devPropData;
  */
 void *RRDEventThreadFunc(void *arg)
 {
-    data_buf *rbuf;
+    data_buf *rbuf = NULL;
     msgRRDHdr msgHdr;
 
     while (1)
@@ -67,7 +67,11 @@ void *RRDEventThreadFunc(void *arg)
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
             break;
         }
-        free(rbuf);
+        if(rbuf)
+	{
+            free(rbuf);
+	    rbuf = NULL;
+	}
 #if GTEST_ENABLE
         break;
 #endif
