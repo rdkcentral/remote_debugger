@@ -21,7 +21,7 @@
 #include <cstdarg>
 
 /* -------- IARM ---------------- */
-
+#ifdef IARMBUS_SUPPORT
 ClientIARMMock *g_mock = nullptr;
 
 void setMock(ClientIARMMock *mock)
@@ -81,6 +81,7 @@ extern "C"
         return IARM_RESULT_SUCCESS;
     }
 }
+#endif
 
 /* ---------- RBUS --------------*/
 RBusApiInterface *RBusApiWrapper::impl = nullptr;

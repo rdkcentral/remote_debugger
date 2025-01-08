@@ -53,15 +53,17 @@ void *RRDEventThreadFunc(void *arg)
 
         switch (rbuf->mtype)
         {
-        case IARM_EVENT_MSG:
+        case EVENT_MSG:
             processIssueTypeEvent(rbuf);
             break;
-        case IARM_EVENT_WEBCFG_MSG:
+        case EVENT_WEBCFG_MSG:
             processWebCfgTypeEvent(rbuf);
             break;
-        case IARM_DEEPSLEEP_EVENT_MSG:
+        case DEEPSLEEP_EVENT_MSG:
+#ifdef IARMBUS_SUPPORT
             /*Process Deep Sleep Events*/
             RRDProcessDeepSleepAwakeEvents(rbuf);
+#endif
             break;
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
@@ -118,9 +120,10 @@ int main(int argc, char *argv[])
     pthread_t RRDTR69ThreadID;
 
     rdk_logger_init(DEBUG_INI_FILE);
-
+#if !defined(GTEST_ENABLE)
     /* Store Device Info.*/
     RRDStoreDeviceInfo(&devPropData);
+#endif
     /* Initialize Cache */
     initCache();
 
