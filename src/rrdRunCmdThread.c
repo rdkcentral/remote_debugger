@@ -17,10 +17,12 @@
  * limitations under the License.
 */
 
+#include <stdio.h>
 #include <time.h>
 #include <sys/stat.h>
 #include "rrdRunCmdThread.h"
 #include "rrdCommandSanity.h"
+#include "secure_wrapper.h"
 
 pthread_mutex_t rrdCacheMut;
 static cacheData *cacheDataNode = NULL;
@@ -242,7 +244,6 @@ void freecacheDataCacheNode(cacheData **node)
  */
 void removeQuotes(char* str)
 {
-    int len = 0;
     if(str)
     {
         int len = strlen(str);
@@ -282,8 +283,6 @@ bool executeCommands(issueData *cmdinfo)
     char finalOutFile[BUF_LEN_256] =  {'\0'};
     char remoteDebuggerServiceStr[BUF_LEN_256] =  {'\0'};
     char *printbuffer = NULL;
-    char *execbuffer = NULL;
-    char *journbuffer = NULL;
     FILE *filePointer;
     const char *remoteDebuggerPrefix = "remote_debugger_";
 
@@ -314,12 +313,14 @@ bool executeCommands(issueData *cmdinfo)
             if(result != NULL)
             {
                 getcwd(pathname, BUF_LEN_256);
-                snprintf(outdirpath,BUF_LEN_256,"%s/%s",pathname,dirname);
+		/* RDK-55159: Wformat-truncation : asprintf allocate a string large enough to hold the output including the terminating null byte */
+		asprintf(outdirpath, "%s/%s",pathname,dirname);
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Replacing default location %s with Event Specific Output Directory:%s \n",__FUNCTION__,__LINE__,result,outdirpath);
                 cmdData->command = replaceRRDLocation(cmdData->command,outdirpath);
                 if(cmdData->command == NULL)
                 {
-                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Invalid Location found for command:%s\n",__FUNCTION__,__LINE__,cmdData->command);
+		    /* RDk-55159: Fix for warning Wformat-overflow : directive argument is null*/
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Invalid Location found for command \n",__FUNCTION__,__LINE__);
                     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
                     free(cmdData); // free structure with command and time information
                     return false;
