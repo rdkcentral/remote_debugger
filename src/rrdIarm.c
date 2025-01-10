@@ -192,7 +192,7 @@ void RRDMsgDeliver(int msgqid, data_buf *sbuf)
 
     if (msgsnd(msgqid, (void *)&msgHdr, msgLen, 0) < 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%ld MbufSize=%d Error: %s !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen, strerror(errno));
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%u MbufSize=%d Error: %s !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen, strerror(errno));
         exit(1);
     }
 }
@@ -250,13 +250,15 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
-    data_buf *sbuf = NULL;
-    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
     if (strcmp(owner, IARM_BUS_PWRMGR_NAME) == 0)
     {
+	 /* RDK-55159: Fix for Warning Unused Variable */
+        data_buf *sbuf = NULL;
+	int msgLen = strlen(DEEP_SLEEP_STR) + 1;
+
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for IARM_BUS_PWRMGR_NAME %s \n", __FUNCTION__, __LINE__, owner);
         eventData = (IARM_Bus_PWRMgr_EventData_t *)data;
 
@@ -273,7 +275,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             {
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed!!! \n ", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
-                return rc;
+		RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed with Error %d !!! \n ", __FUNCTION__, __LINE__, rc);
 #else
                 return;
 #endif
@@ -342,9 +344,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 {
     data_buf *sendbuf;
     IARM_Bus_RDMMgr_EventData_t *eventData;
-    int msgCacheIndex = -1;
     int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
-    int msgLen = 0;
     cacheData *cache = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
@@ -410,7 +410,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
                     RRDMsgDeliver(msqid, sendbuf);
-                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype);
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype);
                 }
                 else
                 {
@@ -530,7 +530,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         RRD_data_buff_init(sbuf, sndtype, RRD_DEEPSLEEP_INVALID_DEFAULT);
         sbuf->mdata = issueTypeList;
         RRDMsgDeliver(msqid, sbuf);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype);
     }
 }
 
@@ -543,7 +543,6 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
 IARM_Result_t RRD_unsubscribe()
 {
     int ret = 0;
-    rbusError_t rc = RBUS_ERROR_BUS_ERROR;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 

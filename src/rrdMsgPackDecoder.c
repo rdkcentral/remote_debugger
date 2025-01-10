@@ -462,7 +462,6 @@ void FreeResources_RemoteDebugger(void *arg)
 pErr Process_RemoteDebugger_WebConfigRequest(void *Data)
 {
     pErr retStatus = NULL;
-    int ret = 0;
     remotedebuggerdoc_t *premotedebuggerInfo = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);

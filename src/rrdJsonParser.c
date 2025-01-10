@@ -110,7 +110,6 @@ char * readJsonFile(char *jsonfile)
 cJSON *readAndParseJSON(char *jsonFile)
 {
     char *file_content = NULL;
-    char *jsonstring = NULL;
     cJSON *jsoncfg = NULL;
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Start Reading JSON File... %s\n",__FUNCTION__,__LINE__, jsonFile);
     file_content = readJsonFile(jsonFile);
@@ -203,7 +202,6 @@ bool findIssueInParsedJSON(issueNodeData *issuestructNode, cJSON *jsoncfg)
     cJSON *type = NULL;
     char *issuetype = NULL;
     char *categoryname = NULL;
-    cJSON *elem = NULL;
     bool result = false;
 
     if (!issuestructNode->Node)
@@ -385,10 +383,8 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     char *rfcbuf = NULL;
     bool execstatus;
     char outdir[BUF_LEN_256] =  {'\0'};
-    char *changedir = NULL;
     time_t ctime;
     struct tm *ltime;
-    pthread_t RRDCmdThreadID;
     rfcbuf = strdup(buff->mdata);
 
     // Creating Directory for MainNode under /tmp/rrd Folder
@@ -505,7 +501,9 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
 	         if(issuetypearray[i])
 	         {
                      strncpy(issuetypearray[i], rfcbuf, strlen(rfcbuf));
-                     strncat(issuetypearray[i], RFC_DELIM, rfcDelimLen);
+		     /* RDK-55159: Wstringop-overflow : strncat is to provide the length of the source argument rather than the remaining space in the destination.
+		      * Fix is to call the functions with the remaining space in the destination, with room for the terminating null byte */
+		     strncat(issuetypearray[i], RFC_DELIM, sizeof(issuetypearray[i]) - strlen(issuetypearray[i]) - 1);
                      strncat(issuetypearray[i], issuearray[i]->string, strlen(issuearray[i]->string));
                      if (i != 0)
                      {
@@ -542,9 +540,7 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
 bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issuestructNode, char *rfcbuf)
 {
     cJSON *rootNode = NULL;
-    cJSON *mainnode = NULL;
     char *rootNodeName = NULL;
-    char *mainnodename = NULL;
     int issueTypeCount = 0, _sindex = 0;
     int issueCategoryCount = 0, _mindex = 0;
     bool execstatus = false;
@@ -556,6 +552,7 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
     rootNodeName = cJSON_Print(rootNode);
     issueCategoryCount = cJSON_GetArraySize(rootNode);
 
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Printing RootNode name %s \n", __FUNCTION__, __LINE__, rootNodeName);
     free(issuestructNode->Node); // Deep Sleep String not required.
 
     if (issueCategoryCount)
@@ -584,7 +581,9 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
                     }
                     memset(issuedCommand[_sindex], '\0', (issueTypeLen + issueCategoryLen + rfcDelimLen + 1));
                     strncpy(issuedCommand[_sindex], issueCategoryNode[_mindex]->string, issueCategoryLen);
-                    strncat(issuedCommand[_sindex], RFC_DELIM, rfcDelimLen);
+		    /* RDK-55159: Wstringop-overflow: strncat is to provide the length of the source argument rather than the remaining space in the destination.
+		     * Fix is to call the functions with the remaining space in the destination, with room for the terminating null byte */
+		    strncat(issuedCommand[_sindex], RFC_DELIM, sizeof(issuedCommand[_sindex]) - strlen(issuedCommand[_sindex]) - 1);
                     strncat(issuedCommand[_sindex], issueTypeNode[_sindex]->string, issueTypeLen);
 
                     issuestructNode->Node = strdup(issueCategoryNode[_mindex]->string);
