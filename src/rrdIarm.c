@@ -144,10 +144,6 @@ void webconfigFrameworkInit()
     memset(blobData, 0, sizeof(blobRegInfo));
     strncpy( blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
 
-    getVersion versionGet = getBlobVersion;
-
-    setVersion versionSet = setBlobVersion;
-
     register_sub_docs(blobData, 1 /*SubDoc Count*/, NULL, NULL);
 }
 
@@ -255,10 +251,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 
     if (strcmp(owner, IARM_BUS_PWRMGR_NAME) == 0)
     {
-	 /* RDK-55159: Fix for Warning Unused Variable */
-        data_buf *sbuf = NULL;
-	int msgLen = strlen(DEEP_SLEEP_STR) + 1;
-
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for IARM_BUS_PWRMGR_NAME %s \n", __FUNCTION__, __LINE__, owner);
         eventData = (IARM_Bus_PWRMgr_EventData_t *)data;
 
@@ -269,6 +261,12 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
+#if !defined(ENABLE_WEBCFG_FEATURE)
+	    /* RDK-55159: Fix for Warning Unused Variable */
+            data_buf *sbuf = NULL;
+	    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
+#endif
+
 #ifdef ENABLE_WEBCFG_FEATURE
             rc = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
             if (rc != RBUS_ERROR_SUCCESS)
