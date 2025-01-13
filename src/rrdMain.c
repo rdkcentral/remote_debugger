@@ -41,7 +41,7 @@ void *RRDEventThreadFunc(void *arg)
 
     while (1)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69 Events... \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69/RBUS Events... \n", __FUNCTION__, __LINE__);
 
         if (msgrcv(msqid, (void *)&msgHdr, sizeof(void *), 0, 0) < 0)
         {
