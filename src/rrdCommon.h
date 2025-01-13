@@ -35,8 +35,8 @@ extern "C"
 #ifdef IARMBUS_SUPPORT
 #include "rdmMgr.h"
 #include "pwrMgr.h"
-#endif
 #include "tr181api.h"
+#endif
 #endif
 
 #ifndef ENABLE_WEBCFG_FEATURE
