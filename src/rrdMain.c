@@ -88,6 +88,7 @@ bool isRRDEnabled(void)
 {
     bool ret = true;
 #if !defined(GTEST_ENABLE)
+#ifdef IARMBUS_SUPPORT
     RFC_ParamData_t param;
     WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
     if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
@@ -99,6 +100,23 @@ bool isRRDEnabled(void)
     else {
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
     }
+#else
+    char RRDValue[64]={'\0'};
+    if(0 == syscfg_init())
+    {
+        if( 0 == syscfg_get( NULL, "RemoteDebuggerEnabled", RRDValue, sizeof(RRDValue)))
+            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
+           if ((RRDValue[0] != '\0' && strncmp(RRDValue, "true", strlen("true")) == 0))
+            {
+               RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is enabled, starting remote-debugger\n", __FUNCTION__, __LINE__);
+                ret = true;
+            }
+           else
+            {
+                ret = false;
+            }
+    }
+#endif
 #endif
     return ret;
 }
