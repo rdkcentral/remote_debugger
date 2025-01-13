@@ -32,8 +32,10 @@ extern "C"
 
 #if !defined(GTEST_ENABLE)
 #include "rdk_debug.h"
+#ifdef IARMBUS_SUPPORT
 #include "rdmMgr.h"
 #include "pwrMgr.h"
+#endif
 #include "tr181api.h"
 #endif
 
@@ -70,9 +72,9 @@ typedef enum {
 /* Enum for Events*/
 typedef enum {
      DEFAULT = 0,
-     IARM_EVENT_MSG,
-     IARM_EVENT_WEBCFG_MSG,
-     IARM_DEEPSLEEP_EVENT_MSG,
+     EVENT_MSG,
+     EVENT_WEBCFG_MSG,
+     DEEPSLEEP_EVENT_MSG,
 } message_type_et;
 
 /* Enum for Messages Queue*/

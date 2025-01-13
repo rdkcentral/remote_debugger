@@ -17,13 +17,17 @@
 # limitations under the License.
 ##########################################################################
 
-AM_LDFLAGS="-lIARMBus -lpthread -lrdkloggers -ltr181api -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper"
-
 bin_PROGRAMS = remotedebugger
 
 remotedebuggerincludedir = $(includedir)/rrd
-remotedebuggerinclude_HEADERS = rrdCommon.h rrdIarm.h
+remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h
 
-remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdIarm.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdExecuteScript.c rrdDeepSleep.c rrdMsgPackDecoder.c
-remotedebugger_CFLAGS = -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs/rdmmgr -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/ $(CJSON_CFLAGS)
+remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdExecuteScript.c rrdDeepSleep.c rrdMsgPackDecoder.c rrdInterface.c
+remotedebugger_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/ $(CJSON_CFLAGS)
+AM_LDFLAGS="-lpthread -lrdkloggers -ltr181api -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper"
+if IARMBUS_ENABLE
+remotedebugger_SOURCES += rrdIarmEvents.c
+remotedebugger_CFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs/rdmmgr -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal -DIARMBUS_SUPPORT
+AM_LDFLAGS += "-lIARMBus"
+endif
 remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -fno-common -lrfcapi

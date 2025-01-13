@@ -33,9 +33,11 @@
 #include "rrdCommandSanity.h"
 #include "rrdCommandSanity.c"
 
+#ifdef IARMBUS_SUPPORT
 // rrdDeepSleep
 #include "rrdDeepSleep.h"
 #include "rrdDeepSleep.c"
+#endif
 
 // rrdExecuteScript
 #include "rrdExecuteScript.h"
@@ -49,9 +51,13 @@
 #include "rrdEventProcess.h"
 #include "rrdEventProcess.c"
 
-// rrdIarm
-#include "rrdIarm.h"
-#include "rrdIarm.c"
+#include "rrdInterface.h"
+#include "rrdInterface.c"
+
+//rrdIarm
+#ifdef IARMBUS_SUPPORT
+#include "rrdIarmEvents.c"
+#endif
 
 // rrdMsgPackDecoder
 #include "rrdMsgPackDecoder.h"
@@ -693,6 +699,7 @@ TEST_F(SetParamByRFC, TestSetParam)
     EXPECT_EQ(result, tr181Failure);
 }
 
+#ifdef IARMBUS_SUPPORT
 /* ----------------IARM --------------- */
 class IARMBusTest : public ::testing::Test
 {
@@ -736,6 +743,7 @@ TEST_F(IARMBusTest, TestIARM_Bus_UnRegisterEventHandler)
     IARM_Result_t result = IARM_Bus_UnRegisterEventHandler("owner", IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS);
     EXPECT_EQ(result, IARM_RESULT_SUCCESS);
 }
+#endif
 
 /* ------------- RBUS ------------- */
 class RBusApiTest : public ::testing::Test
@@ -832,6 +840,7 @@ TEST_F(WebConfigTest, TestRegisterSubDocMock)
     ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(&mock_webconfig));
 }
 
+#ifdef IARMBUS_SUPPORT
 /* ====================== rrdDeepSleep ===================*/
 /* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
 devicePropertiesData devPropData;
@@ -1287,6 +1296,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInD
 
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
+#endif
 
 /* ========================== rrdExecuteScript ======================= */
 /* --------------- Test normalizeIssueName() from rrdExecuteScript --------------- */
@@ -2081,6 +2091,7 @@ TEST(ProcessIssueTypeInInstalledPackageTest, WhenReadAndParseJSONReturnsNull)
     free(rbuf.jsonPath);
 }
 
+#ifdef IARMBUS_SUPPORT
 TEST(ProcessIssueTypeInInstalledPackageTest, WhenReadAndParseJSONReturnsNonNull)
 {
     data_buf rbuf;
@@ -2097,6 +2108,7 @@ TEST(ProcessIssueTypeInInstalledPackageTest, WhenReadAndParseJSONReturnsNonNull)
 
     free(rbuf.jsonPath);
 }
+
 /* --------------- Test processIssueTypeInStaticProfile() from rrdExecuteScript --------------- */
 class ProcessIssueTypeInStaticProfileTest : public ::testing::Test
 {
@@ -2129,6 +2141,7 @@ TEST_F(ProcessIssueTypeInStaticProfileTest, StatusProcessWhenReadAndParseJSONRet
 
     free(rbuf.jsonPath);
 }
+#endif
 
 /* --------------- Test processIssueType() from rrdExecuteScript --------------- */
 TEST(processIssueTypeTest, mdataIsNull)
@@ -2148,6 +2161,7 @@ TEST(processIssueTypeTest, dynamicPath)
     processIssueType(&rbuf);
 }
 
+#ifdef IARMBUS_SUPPORT
 /* ====================== rrdIarm ================*/
 /* --------------- Test getBlobVersion() from rrdIarm --------------- */
 extern uint32_t gWebCfgBloBVersion;
@@ -2825,6 +2839,7 @@ TEST_F(RRDSubscribeTest, TestRRD_Subscribe_PwrMgrHandlerFail)
 
     EXPECT_NE(result, IARM_RESULT_SUCCESS);
 }
+#endif
 
 /* ====================== rrdMsgPackDecoder ================*/
 /* --------------- Test rollback_Debugger() from rrdMsgPackDecoder --------------- */
@@ -3082,7 +3097,7 @@ TEST_F(PrepareDataToPushTest, SuccessfulExecution)
     param.commandList = (char *)"12345";
     PrepareDataToPush(&param);
     data_buf receivedBuf;
-    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
@@ -3761,7 +3776,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDefaultType) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
     data_buf rbuf;
-    rbuf.mtype = IARM_EVENT_MSG;
+    rbuf.mtype = EVENT_MSG;
     rbuf.mdata = strdup("Test");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
@@ -3777,7 +3792,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessWebCfgMsgType) {
     data_buf rbuf;
-    rbuf.mtype = IARM_EVENT_WEBCFG_MSG;
+    rbuf.mtype = EVENT_WEBCFG_MSG;
     rbuf.mdata = nullptr;
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
@@ -3791,7 +3806,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessWebCfgMsgType) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDeepSleepEventType) {
     data_buf rbuf;
-    rbuf.mtype = IARM_DEEPSLEEP_EVENT_MSG;
+    rbuf.mtype = DEEPSLEEP_EVENT_MSG;
     rbuf.mdata = nullptr;
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
@@ -3803,6 +3818,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDeepSleepEventType) {
     EXPECT_EQ(RRDEventThreadFunc(arg), arg);
 }
 
+#ifdef IARMBUS_SUPPORT
 /* --------------- Test shadowMain() aka main() from rrdMain --------------- */
 TEST(shadowMainTest, MaintTest) {
     int msqid_cpy;
@@ -3828,6 +3844,7 @@ TEST(shadowMainTest, MaintTest) {
     msqid = msqid_cpy;
     key = key_cpy;
 }
+#endif
 
 /* ================== Gtest Main ======================== */
 GTEST_API_ main(int argc, char *argv[])

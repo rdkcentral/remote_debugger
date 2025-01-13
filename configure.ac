@@ -62,5 +62,15 @@ AC_TYPE_SIZE_T
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
 
+# IARMBus Support
+AC_ARG_ENABLE([iarmbusSupport],
+[  --enable-iarmbusSupport    Turn on iarmbus support],
+[case "${enableval}" in
+  yes) iarmbusSupport=true ;;
+  no)  iarmbusSupport=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-iarmbusSupport]) ;;
+esac],[iarmbusSupport=false])
+AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
+
 AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT
