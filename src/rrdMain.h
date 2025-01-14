@@ -29,7 +29,11 @@ extern "C"
 #include <pthread.h>
 #include "rrdCommon.h"
 #if !defined(GTEST_ENABLE)
+#ifdef IARMBUS_SUPPORT
 #include "rfcapi.h"
+#else
+#include "syscfg/syscfg.h"
+#endif
 #endif
 
 #define DEBUG_INI_FILE "/etc/debug.ini"
