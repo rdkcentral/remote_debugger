@@ -73,7 +73,7 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
-    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 0);
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
 #endif
     if(ret != 0)
     {
