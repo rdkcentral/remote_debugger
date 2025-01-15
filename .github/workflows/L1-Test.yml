@@ -1,7 +1,7 @@
 name: L1 Unit Tests Remote Debugger
 
 on:
-  push:
+  pull_request:
     branches: [ develop, main, feature/RDK-49894 feature/RDKE-610 ]
 
 env:
