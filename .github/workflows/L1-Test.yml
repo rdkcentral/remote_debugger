@@ -1,8 +1,8 @@
 name: L1 Unit Tests Remote Debugger
 
 on:
-  pull_request:
-    branches: [ develop, main, feature/RDK-49894 ]
+  push:
+    branches: [ develop, main, feature/RDK-49894 feature/RDKE-610 ]
 
 env:
   AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME }}
