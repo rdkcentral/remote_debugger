@@ -21,6 +21,7 @@
 #include "rrdInterface.h"
 #include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
+#include "rbus.h"
 #if !defined(GTEST_ENABLE)
 #include "webconfig_framework.h"
 
