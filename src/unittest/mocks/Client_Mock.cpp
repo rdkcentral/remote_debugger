@@ -128,7 +128,40 @@ rbusError_t RBusApiWrapper::rbus_set(rbusHandle_t handle, char const *objectName
     EXPECT_NE(impl, nullptr);
     return impl->rbus_set(handle, objectName, value, respHandler);
 }
+const char* rbusError_ToString(rbusError_t e)
+{
+    #define rbusError_String(E, S) case E: s = S; break;
 
+  char const * s = NULL;
+  switch (e)
+  {
+    rbusError_String(RBUS_ERROR_SUCCESS, "ok");
+    rbusError_String(RBUS_ERROR_BUS_ERROR, "generic error");
+    rbusError_String(RBUS_ERROR_INVALID_INPUT, "invalid input");
+    rbusError_String(RBUS_ERROR_NOT_INITIALIZED, "not initialized");
+    rbusError_String(RBUS_ERROR_OUT_OF_RESOURCES, "out of resources");
+    rbusError_String(RBUS_ERROR_DESTINATION_NOT_FOUND, "destination not found");
+    rbusError_String(RBUS_ERROR_DESTINATION_NOT_REACHABLE, "destination not reachable");
+    rbusError_String(RBUS_ERROR_DESTINATION_RESPONSE_FAILURE, "destination response failure");
+    rbusError_String(RBUS_ERROR_INVALID_RESPONSE_FROM_DESTINATION, "invalid response from destination");
+    rbusError_String(RBUS_ERROR_INVALID_OPERATION, "invalid operation");
+    rbusError_String(RBUS_ERROR_INVALID_EVENT, "invalid event");
+    rbusError_String(RBUS_ERROR_INVALID_HANDLE, "invalid handle");
+    rbusError_String(RBUS_ERROR_SESSION_ALREADY_EXIST, "session already exists");
+    rbusError_String(RBUS_ERROR_COMPONENT_NAME_DUPLICATE, "duplicate component name");
+    rbusError_String(RBUS_ERROR_ELEMENT_NAME_DUPLICATE, "duplicate element name");
+    rbusError_String(RBUS_ERROR_ELEMENT_NAME_MISSING, "name missing");
+    rbusError_String(RBUS_ERROR_COMPONENT_DOES_NOT_EXIST, "component does not exist");
+    rbusError_String(RBUS_ERROR_ELEMENT_DOES_NOT_EXIST, "element name does not exist");
+    rbusError_String(RBUS_ERROR_ACCESS_NOT_ALLOWED, "access denied");
+    rbusError_String(RBUS_ERROR_INVALID_CONTEXT, "invalid context");
+    rbusError_String(RBUS_ERROR_TIMEOUT, "timeout");
+    rbusError_String(RBUS_ERROR_ASYNC_RESPONSE, "async operation in progress");
+    default:
+      s = "unknown error";
+  }
+  return s;
+}
 rbusError_t (*rbus_open)(rbusHandle_t *, char const *) = &RBusApiWrapper::rbus_open;
 rbusError_t (*rbus_close)(rbusHandle_t) = &RBusApiWrapper::rbus_close;
 rbusError_t (*rbusValue_Init)(rbusValue_t *) = &RBusApiWrapper::rbusValue_Init;
