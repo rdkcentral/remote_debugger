@@ -1,0 +1,556 @@
+{
+    "DebugCategory": {
+        "DebugIssueType": {
+            "DebugCommands": "command1;command2;commmand3",
+            "DebugTimeout" : 10
+        }
+    },
+    "Sanity": {
+        "Check" : {
+            "Commands" : [ "rm -rf ", "kill ", "pkill ", "iptables ", "ip6tables " ]
+        }
+    },
+    "Audio" : {
+        "AudioStatus" : {
+            "Commands": "cat /sys/class/avsync_session0/session_stat;cat /sys/class/vdec/vdec_status;hal_dump",
+            "Timeout" : 10
+        }
+    },
+    "Video" : {
+        "VideoStatus" : {
+            "Commands": "cat /sys/class/avsync_session0/session_stat;cat /sys/class/vdec/vdec_status;hal_dump",
+            "Timeout" : 10
+        }
+    },
+    "Process" : {
+        "ProcessStatus" : {
+            "Commands": "cat /opt/logs/top_log.txt*",
+            "Timeout" : 10
+        },
+        "ServiceStatus" : {
+            "Commands": "systemctl list-units --type=service --all",
+            "Timeout" : 10
+        },
+        "CrashesInfo" : {
+            "Commands": "grep -i \"process.*crashed\" /opt/logs/core_log.txt",
+            "Timeout" : 5
+        }       
+    },
+    "Upgrade": {
+        "UpgradeStatus": {
+            "Commands": "ifconfig;curl ifconfig.io;tcpdump -w RRD_LOCATION/tcp_output1.pcap &;/lib/rdk/deviceInitiatedFWDnld.sh  0 2;grep \"deviceInitiatedFWDnld.sh\" /opt/logs/swupdate.log",
+            "Timeout" : 60
+        },
+        "SWUpgradeStatus": {
+            "Commands": "ifconfig;curl ifconfig.io;tcpdump -w RRD_LOCATION/tcp_output1.pcap &;/lib/rdk/swupdate_utility.sh 0 2;grep -E \"deviceInitiatedFWDnld.sh|mod=FWUPG\" /opt/logs/swupdate.log",
+            "Timeout" : 60
+        }
+    },
+    "Device": {
+        "DeviceDetails": {
+            "Commands": "cat /tmp/.deviceDetails.cache",
+            "Timeout" : 10
+        },
+        "DebugLogs": {
+            "Commands": "curl -H \"Content-Type: application/json\"  -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -X POST -d '{\"jsonrpc\":\"2.0\",\"id\":\"3\",\"method\":\"org.rdk.RDKShell.1.setLogLevel\",\"params\":{\"logLevel\":\"debug\"}}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 10
+        },
+        "DeviceTime": {
+            "Commands": "uptime",
+            "Timeout" : 10
+        },
+        "DeviceTop": {
+            "Commands": "cat /opt/logs/top_log.txt*",
+            "Timeout" : 10
+        },
+        "DeviceIP": {
+            "Commands": "curl ifconfig.io",
+            "Timeout" : 10
+        },
+         "RebootInfo": {
+            "Commands": "cat /opt/secure/reboot/previousreboot.info",
+            "Timeout" : 5
+        },
+         "HardpowerInfo": {
+            "Commands": "cat /opt/secure/reboot/hardpower.info",
+            "Timeout" : 5
+        }
+    },
+    "Activation": {
+        "ActivationStatus": {
+            "Commands": "ifconfig;tr181 Device.DeviceInfo.SerialNumber;cat /opt/logs/socprov.log;nslookup fkpsbroker-stage.ccp.xcal.tv;curl -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" '{\"jsonrpc\":\"2.0\",\"id\":\"3\",\"method\":\"org.rdk.AuthService.1.getAuthToken\"}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 10
+        }
+    },
+    "Telemetry": {
+        "UploadStatus": {
+            "Commands": "cat /opt/logs/dcmscript.log | grep -i telemetry;curl -vvv https://stbrtl-oi.stb.r53.xcal.tv/secure",
+            "Timeout" : 10
+        }
+    },
+    "LogUpload": {
+        "Status": {
+            "Commands": "cat /opt/logs/dcmscript.log | grep -i upload;curl -vvv https://ssr.ccp.xcal.tv",
+            "Timeout" : 10
+        },
+         "Enable": {
+            "Commands": "tar -cvzf /tmp/rrd/RRD_LIVE_LOGS.tar.gz /opt/logs/*.*",
+            "Timeout" : 10
+        }
+    },
+    "OTA": {
+        "SetFRMMode": {
+            "Commands": "westeros-gl-console set auto-frm-mode 0",
+            "Timeout" : 10
+        },
+        "EnableUVM": {
+            "Commands": "echo 0x607 > /sys/module/amvdec_ports/parameters/debug_mode;echo 1 > /sys/module/meson_uvm_core/parameters/uvm_debug_level",
+            "Timeout" : 5
+        },
+        "DisableUVM": {
+            "Commands": "echo 0 > /sys/module/amvdec_ports/parameters/debug_mode;echo 0 > /sys/module/meson_uvm_core/parameters/uvm_debug_level",
+            "Timeout" : 5
+        },
+        "MediaServices": {
+            "Commands": "/usr/share/mediarite/thunder.sh org.rdk.MediaServices getServices '{\"callsign\":\"org.rdk.MediaServices\"}'",
+            "Timeout" : 10
+        },
+        "getZOrder": {
+            "Commands": "curl -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d '{\"jsonrpc\":\"2.0\",\"id\":\"3\", \"method\":\"org.rdk.RDKShell.1.getZOrder\", \"params\":{ }}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 10
+        }
+    },
+    "HDMI": {
+        "Loglevel": {
+            "Commands": "echo log_level 0x2b > /sys/class/hdmirx/hdmirx0/param",
+            "Timeout" : 5
+        },
+        "HDCPState": {
+            "Commands": "echo state3 > /sys/class/hdmirx/hdmirx0/debug;echo state > /sys/class/hdmirx/hdmirx0/debug",
+            "Timeout" : 5
+        },
+        "HexDump": {
+            "Commands": "hexdump -C /vendor/etc/tvconfig/hdmi/port1_20_dv.bin",
+            "Timeout" : 5
+        },
+        "HDMIInfo": {
+            "Commands": "cat /sys/class/hdmirx/hdmirx0/info",
+            "Timeout" : 5
+        },
+        "HDMIFormat": {
+            "Commands": "hal_param get hdmi_format",
+            "Timeout" : 5
+        }
+    },
+    "WebPACDL": {
+        "Status": {
+            "Commands": "tr181 Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.NonPersistent.WebPACDL.Enable",
+            "Timeout" : 5
+        },
+        "Enable": {
+            "Commands": "eval tr181 -s -t s -n rfc -v true Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.NonPersistent.WebPACDL.Enable",
+            "Timeout" : 5
+        },
+        "Disable": {
+            "Commands": "eval tr181 -s -t s -n rfc -v false Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.NonPersistent.WebPACDL.Enable",
+            "Timeout" : 5
+        }
+    },
+    "Firmware": {
+        "DownloadStatus": {
+            "Commands": "cat /opt/fwdnldstatus.txt",
+            "Timeout" : 5
+        }
+    },
+    "RDKShell":{
+        "getClients": {
+            "Commands": "curl -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d '{\"jsonrpc\":\"2.0\",\"id\":\"3\", \"method\":\"org.rdk.RDKShell.1.getClients\", \"params\":{ }}' http://localhost:9998/jsonrpc",
+            "Timeout" : 10
+        },
+        "setTopmost": {
+            "Commands": "curl -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d '{\"jsonrpc\":\"2.0\",\"id\":\"3\",\"method\": \"org.rdk.RDKShell.1.setTopmost\", \"params\": {\"client\":\"netflix-0\", \"topmost\":\"true\"}}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 10
+        },
+        "LaunchApp": {
+            "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d '{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"org.rdk.RDKShell.1.launch\", \"params\": {\"callsign\": \"factoryapp\", \"type\": \"ResidentApp\", \"uri\":\"http://10.0.0.5/index.html?cfg=Hisense\"}}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 10
+        }
+    },
+    "ControlMgr": {
+        "getHCIData": {
+            "Commands": "hciconfig -a;hcitool dev;hcitool con",
+            "Timeout" : 5
+        },
+        "getPairedRemote": {
+            "Commands": "grep -rn -e req_process_network_status -e print_status -e ctrlm_hal_ble_ParseVariantToRcuProperty /opt/logs/ctrlm_log.txt",
+            "Timeout" : 10
+        },
+        "enableDriverDebug": {
+            "Commands": "echo 1 > /sys/class/remote/amremote/debug_enable;dmesg -w &",
+            "Timeout" : 20
+        },
+        "disableDriverDebug": {
+            "Commands": "echo 0 > /sys/class/remote/amremote/debug_enable",
+            "Timeout" : 5
+        },
+        "upgradeStatus": {
+            "Commands": "grep -rn -e ctrlm_hal_ble_FwUpgrade_ResultCB -e ctrlm_hal_ble_DBusOnSignalReceivedCB /opt/logs/ctrlm_log.txt",
+            "Timeout" : 10
+        },
+        "VoiceStatus": {
+            "Commands": "grep -rn -e shortUtterance -e \"ERROR : req_process_voice_session_begin\" -e TIMEOUT_INTERPACKET -e TIMEOUT_FIRST_PACKET -e \"ERROR : ctrlm_hal_ble_dbusSendMethodCall\" -e \"ERROR : ctrlm_hal_ble_req_StartAudioStream\" /opt/logs/ctrlm_log.txt",
+            "Timeout" : 30
+        },
+        "AVRStatus": {
+            "Commands": "grep -rn -e \"printStatus: IR status\" /opt/logs/ctrlm_log.txt",
+            "Timeout" : 10
+        },
+        "BatteryStatus": {
+            "Commands": "grep -rn -e \"Your remote batteries are low\" /opt/logs/ctrlm_log.txt",
+            "Timeout" : 10
+        },
+        "remoteVersion": {
+            "Commands": "grep -rn -e \"SoftwareRevision\" /opt/logs/ctrlm_log.txt",
+            "Timeout" : 10
+        }
+    },
+    "OTTAppStatus": {
+        "Youtube": {
+            "Commands": "curl -vvv https://www.youtube.com/tv",
+            "Timeout" : 10
+        },
+        "Netflix": {
+            "Commands": "curl -vvv https://secure.netflix.com",
+            "Timeout" : 10
+        },
+        "Bamgrid": {
+            "Commands": "curl -vvv https://cd-dmgz.bamgrid.com",
+            "Timeout" : 10
+        },
+        "Peacock": {
+            "Commands": "curl -vvv  https://tv.clients.peacocktv.com",
+            "Timeout" : 10
+        },
+        "Hulu": {
+            "Commands": "curl -vvv https://comcast.app.hulu.com",
+            "Timeout" : 10
+        },
+        "AmazonPrime": {
+            "Commands": "curl -vvv https://avpk-a12ttfat8x8j46-0.api.amazonvideo.com",
+            "Timeout" : 10
+        },
+        "HBOMax": {
+            "Commands": "curl -vvv https://xtv.play.hbomax.com",
+            "Timeout" : 10
+        },
+        "Pluto": {
+            "Commands": "curl -vvv https://xfinity.pluto.tv",
+            "Timeout" : 10
+        },
+        "Tubi": {
+            "Commands": "curl -vvv https://ott-comcast.tubitv.com",
+            "Timeout" : 10
+        },
+        "ParamountPlus": {
+            "Commands": "curl -vvv https://www.paramountplus.com",
+            "Timeout" : 10
+        },
+        "Xumo": {
+            "Commands": "curl -vvv https://x1box-app.xumo.com",
+            "Timeout" : 10
+        },
+        "Sling": {
+            "Commands": "curl -vvv https://webapp.movetv.com",
+            "Timeout" : 10
+        },
+        "Vudu": {
+            "Commands": "curl -vvv https://www-v6.vudu.com",
+            "Timeout" : 10
+        },
+        "Spotify": {
+            "Commands": "curl -vvv https://tv.scdn.co/comcast/v2/8de5b30/index.html",
+            "Timeout" : 10
+        },
+        "DiscoveryPlus": {
+            "Commands": "curl -vvv https://c1-xclass.dplusstb.prod.cd-tv.mercury.dnitv.com",
+            "Timeout" : 10
+        },
+        "ESPNPlus": {
+            "Commands": "curl -vvv  https://a.espncdn.com",
+            "Timeout" : 10
+        }
+    },
+    "NetflixFeature": {
+        "Status": {
+            "Commands": "tr181 Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Dobby.Netflix.Enable",
+            "Timeout" : 5
+        },
+        "Enable": {
+            "Commands": "eval tr181 -s -v true Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Dobby.Netflix.Enable",
+            "Timeout" : 5
+        },
+        "Disable": {
+            "Commands": "eval tr181 -s -v false Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Dobby.Netflix.Enable",
+            "Timeout" : 5
+        }
+    },
+    "OpenGL": {
+        "OpenGLStatus": {
+            "Commands": "strings /usr/lib/libMali.so strings /usr/lib/libMali.so | grep OpenGL",
+            "Timeout" : 5
+        }
+    },
+    "Display": {
+        "DimBrightness": {
+            "Commands": "echo 255 > /sys/class/backlight/aml-bl/brightness;echo 0 > /sys/class/aml_ldim/remap;echo 0 > /sys/class/aml_ldim/func_en;echo lc disable > /sys/class/amvecm/lc;echo dnlp disable > /sys/class/amvecm/debug",
+            "Timeout" : 5
+        },
+        "ReadEDID": {
+            "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\": \"2.0\",\"id\": \"1234567890\",\"method\": \"org.rdk.DisplaySettings.1.readEDID\"}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 5
+        },
+        "getDisplayHeight": {
+            "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\": \"2.0\",\"id\": \"1234567890\",\"method\": \"DisplayInfo.1.heightincentimeters\"}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 5
+        },
+        "getDisplayWidth": {
+            "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\": \"2.0\",\"id\": \"1234567890\",\"method\": \"DisplayInfo.1.widthincentimeters\"}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 5
+        },
+        "getEDIDVersion": {
+            "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\":\"2.0\", \"id\":\"3\", \"method\":\"org.rdk.HdmiInput.2.getEdidVersion\", \"params\":{\"portId\":\"0\"}}' http://127.0.0.1:9998/jsonrpc",
+            "Timeout" : 5
+        }
+    },
+    "Network": {
+        "InterfaceStatus": {
+            "Commands": "wpa_cli status",
+            "Timeout" : 5
+        },
+        "InterfaceSignal": {
+            "Commands": "wpa_cli signal_poll",
+            "Timeout" : 5
+        },
+        "InterfaceConfig": {
+            "Commands": "ifconfig",
+            "Timeout" : 5
+        },
+        "ConnectionStatus": {
+            "Commands": "netstat",
+            "Timeout" : 5
+        },
+        "SendICMPRequest": {
+            "Commands": "ping -c20 10.0.0.1 >> RRD_LOCATION/ping_10001 &;ping google.com >> RRD_LOCATION/ping_google_v4 &;ping -6 google.com >> RRD_LOCATION/ping_google_v6 &",
+            "Timeout" : 30
+        },
+        "AnalyzeTraffic": {
+            "Commands": "tcpdump -i wlan0 -w RRD_LOCATION/packetcapture.pcap &",
+            "Timeout" : 30
+        },
+        "AnalyzeAllTraffic": {
+            "Commands": "tcpdump -w RRD_LOCATION/capture.pcap &"
+        },
+        "DNSResolve": {
+            "Commands": "cat /etc/resolv.conf;cat /etc/resolv.dnsmasq",
+            "Timeout" : 5
+        },
+        "IPRoute": {
+            "Commands": "ip -6 r;ip neigh show",
+            "Timeout" : 5
+        }
+    },
+    "Power": {
+        "PowerState": {
+            "Commands": "/QueryPowerState",
+            "Timeout" : 5
+        },
+        "RingBuffer": {
+            "Commands": "dmesg -n8",
+            "Timeout" : 10
+        }
+    },
+    "DeepSleep": {
+        "Audio" : {
+            "AudioStatus" : {
+                "Commands": "cat /sys/class/avsync_session0/session_stat;cat /sys/class/vdec/vdec_status;hal_dump",
+                "Timeout" : 10
+            }
+        },
+        "Video" : {
+            "VideoStatus" : {
+                "Commands": "cat /sys/class/avsync_session0/session_stat;cat /sys/class/vdec/vdec_status;hal_dump",
+                "Timeout" : 10
+            }
+        },
+        "Process" : {
+            "ProcessStatus" : {
+                "Commands": "cat /opt/logs/top_log.txt*",
+                "Timeout" : 10
+            },
+            "ServiceStatus" : {
+                "Commands": "systemctl list-units --type=service --all",
+                "Timeout" : 10
+            },
+            "CrashesInfo" : {
+                "Commands": "grep -i \"process.*crashed\" /opt/logs/core_log.txt",
+                "Timeout" : 5
+            }
+        },
+        "Device": {
+            "DeviceDetails": {
+                "Commands": "cat /tmp/.deviceDetails.cache",
+                "Timeout" : 10
+            },
+            "DebugLogs": {
+                "Commands": "curl -H \"Content-Type: application/json\"  -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -X POST -d '{\"jsonrpc\":\"2.0\",\"id\":\"3\",\"method\":\"org.rdk.RDKShell.1.setLogLevel\",\"params\":{\"logLevel\":\"debug\"}}' http://127.0.0.1:9998/jsonrpc",
+                "Timeout" : 10
+            },
+            "DeviceTime": {
+                "Commands": "uptime",
+                "Timeout" : 10
+            },
+            "DeviceTop": {
+                "Commands": "cat /opt/logs/top_log.txt*",
+                "Timeout" : 10
+            },
+            "DeviceIP": {
+                "Commands": "curl ifconfig.io",
+                "Timeout" : 10
+            },
+            "RebootInfo": {
+                "Commands": "cat /opt/secure/reboot/previousreboot.info",
+                "Timeout" : 5
+            },
+            "HardpowerInfo": {
+                "Commands": "cat /opt/secure/reboot/hardpower.info",
+                "Timeout" : 5
+            }
+        },
+        "ControlMgr": {
+            "getHCIData": {
+                "Commands": "hciconfig -a;hcitool dev;hcitool con",
+                "Timeout" : 5
+            },
+            "getPairedRemote": {
+                "Commands": "grep -rn -e req_process_network_status -e print_status -e ctrlm_hal_ble_ParseVariantToRcuProperty /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            },
+            "enableDriverDebug": {
+                "Commands": "echo 1 > /sys/class/remote/amremote/debug_enable;dmesg -w &",
+                "Timeout" : 20
+            },
+            "disableDriverDebug": {
+                "Commands": "echo 0 > /sys/class/remote/amremote/debug_enable",
+                "Timeout" : 5
+            },
+            "upgradeStatus": {
+                "Commands": "grep -rn -e ctrlm_hal_ble_FwUpgrade_ResultCB -e ctrlm_hal_ble_DBusOnSignalReceivedCB /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            },
+            "VoiceStatus": {
+                "Commands": "grep -rn -e shortUtterance -e \"ERROR : req_process_voice_session_begin\" -e TIMEOUT_INTERPACKET -e TIMEOUT_FIRST_PACKET -e \"ERROR : ctrlm_hal_ble_dbusSendMethodCall\" -e \"ERROR : ctrlm_hal_ble_req_StartAudioStream\" /opt/logs/ctrlm_log.txt",
+                "Timeout" : 30
+            },
+            "AVRStatus": {
+                "Commands": "grep -rn -e \"printStatus: IR status\" /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            },
+            "BatteryStatus": {
+                "Commands": "grep -rn -e \"Your remote batteries are low\" /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            },
+            "remoteVersion": {
+                "Commands": "grep -rn -e \"SoftwareRevision\" /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            }
+        },
+        "Display": {
+            "DimBrightness": {
+                "Commands": "echo 255 > /sys/class/backlight/aml-bl/brightness;echo 0 > /sys/class/aml_ldim/remap;echo 0 > /sys/class/aml_ldim/func_en;echo lc disable > /sys/class/amvecm/lc;echo dnlp disable > /sys/class/amvecm/debug",
+                "Timeout" : 5
+            },
+            "ReadEDID": {
+                "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\": \"2.0\",\"id\": \"1234567890\",\"method\": \"org.rdk.DisplaySettings.1.readEDID\"}' http://127.0.0.1:9998/jsonrpc",
+                "Timeout" : 5
+            },
+            "getDisplayHeight": {
+                "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\": \"2.0\",\"id\": \"1234567890\",\"method\": \"DisplayInfo.1.heightincentimeters\"}' http://127.0.0.1:9998/jsonrpc",
+                "Timeout" : 5
+            },
+            "getDisplayWidth": {
+                "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\": \"2.0\",\"id\": \"1234567890\",\"method\": \"DisplayInfo.1.widthincentimeters\"}' http://127.0.0.1:9998/jsonrpc",
+                "Timeout" : 5
+            },
+            "getEDIDVersion": {
+                "Commands": "curl -H \"Content-Type: application/json\" -H \"Authorization: Bearer `WPEFrameworkSecurityUtility 2>/dev/null | awk -F '\"' '{print $4}'`\" -d ' {\"jsonrpc\":\"2.0\", \"id\":\"3\", \"method\":\"org.rdk.HdmiInput.2.getEdidVersion\", \"params\":{\"portId\":\"0\"}}' http://127.0.0.1:9998/jsonrpc",
+                "Timeout" : 5
+            }
+        },
+        "Network": {
+            "InterfaceStatus": {
+                "Commands": "wpa_cli status",
+                "Timeout" : 5
+            },
+            "InterfaceSignal": {
+                "Commands": "wpa_cli signal_poll",
+                "Timeout" : 5
+            },
+            "InterfaceConfig": {
+                "Commands": "ifconfig",
+                "Timeout" : 5
+            },
+            "ConnectionStatus": {
+                "Commands": "netstat",
+                "Timeout" : 5
+            },
+            "SendICMPRequest": {
+                "Commands": "ping -c20 10.0.0.1 >> RRD_LOCATION/ping_10001 &;ping google.com >> RRD_LOCATION/ping_google_v4 &;ping -6 google.com >> RRD_LOCATION/ping_google_v6 &",
+                "Timeout" : 30
+            },
+            "AnalyzeTraffic": {
+                "Commands": "tcpdump -i wlan0 -w RRD_LOCATION/packetcapture.pcap &",
+                "Timeout" : 30
+            },
+            "DNSResolve": {
+                "Commands": "cat /etc/resolv.conf;cat /etc/resolv.dnsmasq",
+                "Timeout" : 5
+            },
+            "IPRoute": {
+                "Commands": "ip -6 r;ip neigh show",
+                "Timeout" : 5
+            }
+        },
+        "Power": {
+            "PowerState": {
+                "Commands": "/QueryPowerState",
+                "Timeout" : 5
+            },
+            "RingBuffer": {
+                "Commands": "dmesg -n8",
+                "Timeout" : 10
+            }
+        },
+        "KeyEvents": {
+            "DriverKeyEvents": {
+                "Commands": "grep -rn -e \"evbug\" /opt/logs/messages.txt",
+                "Timeout" : 10
+            },
+            "BleKeyEvents": {
+                "Commands": "grep -rn -e \"ind_process_keypress: BLE_CONTROLLER\" /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            },
+            "IRKeyEvents": {
+                "Commands": "grep -rn -e \"ind_process_keypress: INFRARED_CONTROLLER\" /opt/logs/ctrlm_log.txt",
+                "Timeout" : 10
+            },
+            "WPEFrameworkKeyEvents": {
+                "Commands": "grep -rn -e \"rdkshell_focus key intercepted:\" /opt/logs/wpeframework.log",
+                "Timeout" : 10
+            },
+            "PLUIKeyEvents": {
+                "Commands": "grep -rn -e \"captureKey:\" /opt/logs/wpeframework.log*",
+                "Timeout" : 10
+            }
+        }
+    }
+}
