@@ -217,7 +217,7 @@ typedef enum _rbusError
     RBUS_ERROR_NOT_INITIALIZED,
     RBUS_ERROR_BUS_ERROR,
 } rbusError_t;
-
+char const * rbusError_ToString(rbusError_t e);
 struct _rbusHandle
 {
 };
