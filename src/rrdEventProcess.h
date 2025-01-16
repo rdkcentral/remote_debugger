@@ -30,7 +30,8 @@ extern "C"
 
 void processIssueTypeEvent(data_buf *rbuf);
 void processWebCfgTypeEvent(data_buf *rbuf);
-
+issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *pIssueNode);
+issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode);
 #ifdef __cplusplus
 }
 #endif
