@@ -35,7 +35,6 @@ extern "C"
 #include "libIARMCore.h"
 #endif
 #endif
-#include "rbus.h"
 #define RDK_REMOTE_DEBUGGER_NAME "REMOTE_DEBUGGER"
 #define REMOTE_DEBUGGER_RBUS_HANDLE_NAME "rdkRrdRbus"
 #define RRD_WEBCFG_FORCE_SYNC "Device.X_RDK_WebConfig.ForceSync"
