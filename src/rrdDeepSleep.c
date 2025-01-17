@@ -32,7 +32,6 @@ extern devicePropertiesData devPropData;
 int RRDGetDeepSleepdynJSONPathLen()
 {
     int length = 0;
-    ind width = 0;
     length += strlen(RRD_MEDIA_APPS);
     length += strlen(RDM_PKG_PREFIX);
     length += strlen(DEEP_SLEEP_STR);
