@@ -27,12 +27,9 @@ extern "C"
 
 #if !defined(GTEST_ENABLE)
 #include <rbus.h>
+
+rbusEventSubscription_t subscriptions[2];
 #endif
-
-#define REMOTE_DEBUGGER_RBUS_HANDLE_NAME "rdkRrdRbus"
-#define RRD_WEBCFG_FORCE_SYNC "Device.X_RDK_WebConfig.ForceSync"
-
-rbusHandle_t rrdRbusHandle;
 
 void webconfigFrameworkInit();
 uint32_t getBlobVersion(char* subdoc);

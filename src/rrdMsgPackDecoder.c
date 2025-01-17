@@ -540,7 +540,7 @@ void PrepareDataToPush(remotedebuggerparam_t *param)
     }
     strncpy(issueTypeList, commandList, issueTypeListLen);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data Prepared for Message Queue\n", __FUNCTION__, __LINE__);
-    pushIssueTypesToMsgQueue(issueTypeList, IARM_EVENT_MSG);
+    pushIssueTypesToMsgQueue(issueTypeList, EVENT_MSG);
     return;
 }
 

@@ -32,9 +32,11 @@ extern "C"
 
 #if !defined(GTEST_ENABLE)
 #include "rdk_debug.h"
+#ifdef IARMBUS_SUPPORT
 #include "rdmMgr.h"
 #include "pwrMgr.h"
 #include "tr181api.h"
+#endif
 #endif
 
 #ifndef ENABLE_WEBCFG_FEATURE
@@ -60,6 +62,7 @@ extern "C"
 #endif
 
 #define BUF_LEN_128  128
+#define APPEND_SUFFIX "_apnd"
 
 /* Enum for Messages Queue*/
 typedef enum {
@@ -70,9 +73,9 @@ typedef enum {
 /* Enum for Events*/
 typedef enum {
      DEFAULT = 0,
-     IARM_EVENT_MSG,
-     IARM_EVENT_WEBCFG_MSG,
-     IARM_DEEPSLEEP_EVENT_MSG,
+     EVENT_MSG,
+     EVENT_WEBCFG_MSG,
+     DEEPSLEEP_EVENT_MSG,
 } message_type_et;
 
 /* Enum for Messages Queue*/
@@ -88,6 +91,7 @@ typedef struct mbuffer {
      char                *mdata;
      char                *jsonPath;
      bool                inDynamic;
+     bool                appendMode;
      deepsleep_event_et  dsEvent;
 } data_buf;
 
@@ -129,6 +133,7 @@ void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent);
 bool lookupRrdProfileList(const char *profile);
 const char* getRrdProfileName(devicePropertiesData *devPropData);
+bool checkAppendRequest(char *issuerequest);
 
 #ifdef __cplusplus
 }

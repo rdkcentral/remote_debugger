@@ -99,8 +99,11 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
                 jsonParsed = RRDCheckIssueInDynamicProfile(rbuf, &issueStructNode);
                 if (jsonParsed)
                 {
-		    /* RDK-55159: Fix for Wincompatible-pointer-types Warning */
-                    checkIssueNodeInfo(&issueStructNode, cJSON_Parse(jsonParsed), rbuf, true);
+#if !defined(GTEST_ENABLE)
+                    checkIssueNodeInfo(&issueStructNode, jsonParsed, rbuf, true, NULL);
+#else
+                    checkIssueNodeInfo(&issueStructNode, cJSON_Parse(jsonParsed), rbuf, true, NULL);
+#endif
                 }
             }
             break;
@@ -163,6 +166,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
     tr181ErrorCode_t tr181status = tr181Failure;
     char *paramString = NULL;
     char *msgDataString = NULL;
+    char *appendData = NULL;
     unsigned char objSize = sizeof(unsigned char);
     int mSGLength = -1;
     int msgDataStringSize = -1;
@@ -219,14 +223,27 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                     if (tr181status == tr181Success)
                     {
                         /* Append Package string in Cache */
-                        append_item(strdup(msgDataString), strdup((char *)rbuf->mdata));
-                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, (char *)rbuf->mdata, strlen((char *)rbuf->mdata));
+                        if (rbuf->appendMode)
+                        {
+                            appendData = (char *)malloc(strlen(APPEND_SUFFIX) + strlen(rbuf->mdata) + 1);
+                            strcpy(appendData,rbuf->mdata);
+                            strcat(appendData,APPEND_SUFFIX);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated in appendmode IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, appendData, strlen(appendData));
+                            append_item(strdup(msgDataString), strdup(appendData));
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, appendData, strlen(appendData));
+                        }
+                        else
+                        {
+                            append_item(strdup(msgDataString), strdup((char *)rbuf->mdata));
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, (char *)rbuf->mdata, strlen((char *)rbuf->mdata));
+                        }			    
                     }
                     else
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters failed...\n", __FUNCTION__, __LINE__);
                     }
                     free(msgDataString);
+		    free(appendData);
                 }
                 else
                 {
