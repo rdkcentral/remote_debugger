@@ -28,28 +28,45 @@ extern "C"
 #include <sys/msg.h>
 #include "rrdCommon.h"
 #if !defined(GTEST_ENABLE)
+#include "rbus.h"
+#ifdef IARMBUS_SUPPORT
 #include "libIARM.h"
 #include "libIBus.h"
 #include "libIARMCore.h"
 #endif
+#endif
 
-#define IARM_BUS_RDK_REMOTE_DEBUGGER_NAME "REMOTE_DEBUGGER"
+#define RDK_REMOTE_DEBUGGER_NAME "REMOTE_DEBUGGER"
+#define REMOTE_DEBUGGER_RBUS_HANDLE_NAME "rdkRrdRbus"
+#define RRD_WEBCFG_FORCE_SYNC "Device.X_RDK_WebConfig.ForceSync"
+#define RRD_SET_ISSUE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType"
+#define RRD_WEBCFG_ISSUE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.WebCfgData"
+#define RRD_PROCESS_NAME "remotedebugger"
+#define RRD_RBUS_TIMEOUT 60
 
+#ifdef IARMBUS_SUPPORT
 /*Enum for IARM Events*/
 typedef enum _RemoteDebugger_EventId_t {
         IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
         IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
         IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT
 } IARM_Bus_RemoteDebugger_EventId_t;
+#endif
 
-/*IARM Event Handler Function*/
-void _remoteDebuggerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+/*Event Handler Function*/
+#if !defined(GTEST_ENABLE)
+void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
+void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
+#endif
+#ifdef IARMBUS_SUPPORT
+int RRD_IARM_subscribe(void);
+int RRD_IARM_unsubscribe(void);
 void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
-void _remoteDebuggerWebCfgDataEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+#endif
 void RRD_data_buff_deAlloc(data_buf *sbuf);
-IARM_Result_t RRD_subscribe(void);
-IARM_Result_t RRD_unsubscribe(void);
+int RRD_subscribe(void);
+int RRD_unsubscribe(void);
 
 #ifdef __cplusplus
 }

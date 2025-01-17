@@ -22,7 +22,6 @@
 #include "rrdJsonParser.h"
 #include "rrdDeepSleep.h"
 #include "rrdEventProcess.h"
-#include "rrdIarm.h"
 
 #if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;
@@ -42,7 +41,7 @@ void *RRDEventThreadFunc(void *arg)
 
     while (1)
     {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69 Events... \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69/RBUS Events... \n", __FUNCTION__, __LINE__);
 
         if (msgrcv(msqid, (void *)&msgHdr, sizeof(void *), 0, 0) < 0)
         {
@@ -54,15 +53,17 @@ void *RRDEventThreadFunc(void *arg)
 
         switch (rbuf->mtype)
         {
-        case IARM_EVENT_MSG:
+        case EVENT_MSG:
             processIssueTypeEvent(rbuf);
             break;
-        case IARM_EVENT_WEBCFG_MSG:
+        case EVENT_WEBCFG_MSG:
             processWebCfgTypeEvent(rbuf);
             break;
-        case IARM_DEEPSLEEP_EVENT_MSG:
+        case DEEPSLEEP_EVENT_MSG:
+#ifdef IARMBUS_SUPPORT
             /*Process Deep Sleep Events*/
             RRDProcessDeepSleepAwakeEvents(rbuf);
+#endif
             break;
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
@@ -87,6 +88,7 @@ bool isRRDEnabled(void)
 {
     bool ret = true;
 #if !defined(GTEST_ENABLE)
+#ifdef IARMBUS_SUPPORT
     RFC_ParamData_t param;
     WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
     if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
@@ -98,6 +100,23 @@ bool isRRDEnabled(void)
     else {
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
     }
+#else
+    char RRDValue[64]={'\0'};
+    if(0 == syscfg_init())
+    {
+        if( 0 == syscfg_get( NULL, "RemoteDebuggerEnabled", RRDValue, sizeof(RRDValue)))
+            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
+           if ((RRDValue[0] != '\0' && strncmp(RRDValue, "true", strlen("true")) == 0))
+            {
+               RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is enabled, starting remote-debugger\n", __FUNCTION__, __LINE__);
+                ret = true;
+            }
+           else
+            {
+                ret = false;
+            }
+    }
+#endif
 #endif
     return ret;
 }
@@ -119,9 +138,10 @@ int main(int argc, char *argv[])
     pthread_t RRDTR69ThreadID;
 
     rdk_logger_init(DEBUG_INI_FILE);
-
+#if !defined(GTEST_ENABLE)
     /* Store Device Info.*/
     RRDStoreDeviceInfo(&devPropData);
+#endif
     /* Initialize Cache */
     initCache();
 

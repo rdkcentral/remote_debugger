@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#ifdef IARMBUS_SUPPORT
 /* ----------------- RDMMgr ---------- */
 #define IARM_BUS_RDMMGR_NAME "RDMMgr"
 #define RDM_PKG_NAME_MAX_SIZE 128
@@ -118,6 +119,7 @@ typedef struct _PWRMgr_EventData_t
         int32_t reset_sequence_progress;
     } data;
 } IARM_Bus_PWRMgr_EventData_t;
+#endif
 
 /* ---------------- WebConf ------------*/
 #define SUBDOC_NAME_SZ 64
@@ -236,7 +238,7 @@ typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *me
 
 /* =============== Implementations ============== */
 /* ---------- IARM Impl -----------*/
-
+#ifdef IARMBUS_SUPPORT
 class ClientIARMMock
 {
 public:
@@ -249,7 +251,7 @@ public:
 };
 
 void setMock(ClientIARMMock *mock);
-
+#endif
 /* ------------------- RBUS Impl--------------- */
 class RBusApiInterface
 {
