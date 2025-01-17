@@ -97,7 +97,7 @@ char * readJsonFile(char *jsonfile)
     fread(jsonfile_content, 1, ch_count,fp);
     jsonfile_content[ch_count] ='\0';
     fclose(fp);
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: File content %s \n",__FUNCTION__,__LINE__,jsonfile_content);
+
     return jsonfile_content;
 }
 
@@ -265,6 +265,96 @@ bool findIssueInParsedJSON(issueNodeData *issuestructNode, cJSON *jsoncfg)
     return result;
 }
 
+/* Function: getIssueCommandInfo
+ * Details: checks the sanity and chekc commands in the Profile JSON and gets the commands for the issues and proceeds for execution
+ * Inputs: issuestructNode structure with Issue Category and Issye Type, jsoncontent for JSON Parsing, issueData issue and the received issue string
+ * Returns: NULL or Structure with command information
+*/
+
+issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, char *buf)
+{
+    int nitems = 0, j = 0, ret = 0;
+    issueData *issuestdata = NULL;
+    cJSON *sanity = NULL;
+    cJSON *check = NULL;
+    cJSON *cmdlist = NULL;
+    cJSON *root = NULL;
+    cJSON *category = NULL;
+    cJSON *type = NULL;
+    char *checkval = NULL;
+    cJSON *elem = NULL;
+    bool exresult = false;
+    char *tmpCommand = NULL;
+
+    category = cJSON_GetObjectItem(jsoncfg, issuestructNode->Node);
+    type = cJSON_GetObjectItem(category, issuestructNode->subNode);
+
+    issuestdata = (issueData *) malloc(sizeof(issueData));
+    if(issuestdata == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failure \n",__FUNCTION__,__LINE__);
+	return false;
+    }
+    issuestdata->rfcvalue = NULL;
+    issuestdata->command = NULL;
+    issuestdata->timeout = 0;
+
+    /* Read Command and Timeout information for Issuetype */
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Command and Timeout information for Debug Issue\n",__FUNCTION__,__LINE__);
+    nitems = cJSON_GetArraySize(type);
+    for(j = 0; j < nitems; j++)
+    {
+        elem = cJSON_GetArrayItem(type, j);
+        if(elem && elem->type == cJSON_Number)
+        {
+            issuestdata->timeout = elem->valueint;  // copy timeout info from json file
+        }
+        else if(elem && elem->type == cJSON_String)
+        {
+            tmpCommand = cJSON_Print(elem);
+            if(tmpCommand)
+            {
+                issuestdata->command = strdup(tmpCommand);   // print command info from json file
+                cJSON_free(tmpCommand);
+            }
+        }
+    }
+
+    if(issuestdata->command == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Commands found, exiting.. \n",__FUNCTION__,__LINE__);
+        free(issuestdata);
+    }
+    else
+    {
+        sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
+        check = cJSON_GetObjectItem(sanity, "Check");
+        checkval = cJSON_Print(check);  // Print list of sanity commands received
+        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
+        cmdlist = cJSON_GetObjectItem(check, "Commands");
+        cJSON_free(checkval); // free sanity command list
+        ret = isCommandsValid(issuestdata->command, cmdlist);
+        if(ret != 0)
+        {
+            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
+            free(issuestdata->command);
+            free(issuestdata);
+        }
+        else
+        {
+            issuestdata->rfcvalue = strdup(buf);
+            if(issuestdata->timeout == 0)
+            {
+                issuestdata->timeout = DEFAULT_TIMEOUT; // Use Default Systemd service timeout of 90 seconds
+                RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Using default timeout of %d seconds\n",__FUNCTION__,__LINE__,issuestdata->timeout);
+            }
+            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Value of rfcvalue: %s command: %s time: %d\n",__FUNCTION__,__LINE__, issuestdata->rfcvalue,issuestdata->command,issuestdata->timeout);
+        }
+    }
+
+    return issuestdata;
+}
+
 /*
  * @function invokeSanityandCommandExec
  * @brief Checks the sanity and commands in the profile JSON and gets the commands for the issues, then proceeds for execution.
@@ -379,7 +469,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
  * @param bool isDeepSleepAwakeEventValid - Flag indicating if it is a deep sleep wake event.
  * @return void
  */
-void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf *buff, bool isDeepSleepAwakeEventValid)
+void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf *buff, bool isDeepSleepAwakeEventValid, issueData *appendprofiledata)
 {
     int status = 0,dlen = 0;
     char *rfcbuf = NULL;
@@ -413,7 +503,17 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             {
                 // Execute the command for received Issue Type of the Issue Category
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d] Run Debug Commands for %s:%s \n",__FUNCTION__,__LINE__,issuestructNode->Node,issuestructNode->subNode);
-                execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, rfcbuf, false);
+                // Execute the command for received Issue Type of the Issue Category
+                if (buff->appendMode)
+                {
+                    execstatus = executeCommands(appendprofiledata);
+                    free(issuestructNode->Node); // free main node
+                    free(issuestructNode->subNode); // free sub node
+                }
+                else
+                {
+                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, rfcbuf, false);
+                }		
             }
             else if(isDeepSleepAwakeEventValid)
             {

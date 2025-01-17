@@ -62,6 +62,7 @@ extern "C"
 #endif
 
 #define BUF_LEN_128  128
+#define APPEND_SUFFIX "_apnd"
 
 /* Enum for Messages Queue*/
 typedef enum {
@@ -90,6 +91,7 @@ typedef struct mbuffer {
      char                *mdata;
      char                *jsonPath;
      bool                inDynamic;
+     bool                appendMode;
      deepsleep_event_et  dsEvent;
 } data_buf;
 
@@ -131,6 +133,7 @@ void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent);
 bool lookupRrdProfileList(const char *profile);
 const char* getRrdProfileName(devicePropertiesData *devPropData);
+bool checkAppendRequest(char *issuerequest);
 
 #ifdef __cplusplus
 }
