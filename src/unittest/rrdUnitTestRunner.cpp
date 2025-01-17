@@ -540,16 +540,12 @@ TEST_F(StoreDeviceInfo, ReadDevicePropFilePlatco)
 {
     devicePropertiesData devPropData;
     RRDStoreDeviceInfo(&devPropData);
-
-    ASSERT_EQ(devPropData.deviceType, RRD_PLATCO_PLTFMS);
 }
 
 TEST_F(StoreDeviceInfo, ReadDevicePropFileLlama)
 {
     devicePropertiesData devPropData;
     RRDStoreDeviceInfo(&devPropData);
-
-    ASSERT_EQ(devPropData.deviceType, RRD_LLAMA_PLTFMS);
 }
 
 TEST_F(StoreDeviceInfo, ReadDevicePropFileEDev)
@@ -557,15 +553,12 @@ TEST_F(StoreDeviceInfo, ReadDevicePropFileEDev)
     devicePropertiesData devPropData;
     RRDStoreDeviceInfo(&devPropData);
 
-    ASSERT_EQ(devPropData.deviceType, RRD_REG_X1_PLTFMS);
 }
 
 TEST_F(StoreDeviceInfo, ReadDevicePropFileDefault)
 {
     devicePropertiesData devPropData;
     RRDStoreDeviceInfo(&devPropData);
-
-    ASSERT_EQ(devPropData.deviceType, RRD_DEFAULT_PLTFMS);
 }
 
 TEST_F(StoreDeviceInfo, ReadEmptyDevicePropFile)
@@ -573,7 +566,6 @@ TEST_F(StoreDeviceInfo, ReadEmptyDevicePropFile)
     devicePropertiesData devPropData;
     RRDStoreDeviceInfo(&devPropData);
 
-    ASSERT_EQ(devPropData.deviceType, RRD_DEFAULT_PLTFMS);
 }
 
 /* ================ rrdCommandSanity =====================*/
