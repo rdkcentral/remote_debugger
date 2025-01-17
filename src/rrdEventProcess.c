@@ -21,6 +21,8 @@
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
 
+#define COMMAND_DELIM ';'
+
 static void processIssueType(data_buf *rbuf);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
@@ -83,6 +85,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         cmdBuff->jsonPath = rbuf->jsonPath;
                     }
+		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
                     if (cmdBuff->mdata)
                     {
@@ -120,6 +123,8 @@ void processIssueTypeEvent(data_buf *rbuf)
 static void processIssueType(data_buf *rbuf)
 {
     issueNodeData *pIssueNode = NULL;
+    issueData *dynamicprofiledata = NULL;
+    issueData *staticprofiledata = NULL;    
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     if (rbuf->mdata != NULL) // issue data exits
@@ -129,14 +134,60 @@ static void processIssueType(data_buf *rbuf)
         {
             getIssueInfo((char *)rbuf->mdata, pIssueNode); // issue data extract
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Extracted Node %s and Sub Node %s \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode);
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking if Issue marked inDynamic... \n", __FUNCTION__, __LINE__);
-            if (rbuf->inDynamic)
+            if (rbuf->appendMode)
             {
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received append request to process static and dynamic profiles... \n", __FUNCTION__, __LINE__);
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Reading dynamic profile command info... \n", __FUNCTION__, __LINE__);
+                dynamicprofiledata = processIssueTypeInDynamicProfileappend(rbuf, pIssueNode);
+                if (dynamicprofiledata == NULL)
+                {
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profie Info not found, Download RDM package... \n", __FUNCTION__, __LINE__);
+                }
+                else
+                {
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Read complete for Dynamic Profile: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicprofiledata->rfcvalue, dynamicprofiledata->command, dynamicprofiledata->timeout);
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Reading static profile command info... \n", __FUNCTION__, __LINE__);
+                    staticprofiledata = processIssueTypeInStaticProfileappend(rbuf, pIssueNode);
+                    if (staticprofiledata == NULL)
+                    {
+                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Command Info not found for IssueType!!! \n", __FUNCTION__, __LINE__);
+                    }
+                    else
+                    {
+                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Read complete for Static Profile: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticprofiledata->rfcvalue, staticprofiledata->command, staticprofiledata->timeout);
+                        //Remove the double quotes
+                        size_t staticstrlen = strlen(staticprofiledata->command);
+                        size_t dynamicstrlen = strlen(dynamicprofiledata->command);
+                        if (staticstrlen > 0 && staticprofiledata->command[staticstrlen - 1] == '"') {
+                            staticprofiledata->command[staticstrlen - 1] = '\0';
+                        }
+                        if (dynamicprofiledata->command[0] == '"') {
+                            dynamicprofiledata->command[0] = COMMAND_DELIM;
+                        }
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamicprofiledata->command);
+
+                        size_t appendstrlen = ((staticstrlen - 1) + dynamicstrlen + 1);
+                        char *appendcommandstr = (char *)realloc(staticprofiledata->command, appendstrlen);
+                        if (appendcommandstr == NULL) {
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                        }
+                        strcat(appendcommandstr, dynamicprofiledata->command);
+                        staticprofiledata->command = appendcommandstr;
+                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Updated command after append from dynamic and static profile: %s \n", __FUNCTION__, __LINE__, staticprofiledata->command);
+                        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
+                        checkIssueNodeInfo(pIssueNode, NULL, rbuf, false, staticprofiledata); 
+                    }
+                }
+	    }	    
+	    else if (rbuf->inDynamic)
+            {
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking if Issue marked inDynamic... \n", __FUNCTION__, __LINE__);
                 processIssueTypeInDynamicProfile(rbuf, pIssueNode);
             }
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue not marked as inDynamic... \n", __FUNCTION__, __LINE__);
+		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking Issue from Static... \n", __FUNCTION__, __LINE__);
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
         }
@@ -202,7 +253,7 @@ static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIss
             {
                 // Issue found in Dynamic Prof JSON
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, rbuf->jsonPath);
-                checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false);
+                checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
             }
         }
         freeParsedJson(jsonParsed);
@@ -245,7 +296,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     {
         // Issue in Static Profile JSON
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
-        checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false); // sanity Check and Get Command List
+        checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
     }
     else
     {
@@ -257,6 +308,100 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
+}
+
+issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode)
+{
+    issueData *dynamicdata = NULL;
+    cJSON *jsonParsed = NULL;
+    char *dynJSONPath = NULL;
+    int rrdjsonlen = 0, persistentAppslen = 0, issueNodelen = 0, prefixlen = 0, suffixlen = 0;
+    bool isDynamicIssue = false;
+
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    rrdjsonlen = strlen(RRD_JSON_FILE);
+    persistentAppslen = strlen(RRD_MEDIA_APPS);
+    prefixlen = strlen(RDM_PKG_PREFIX);
+    suffixlen = strlen(RDM_PKG_SUFFIX);
+    dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
+
+    if(dynJSONPath == NULL)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+        return dynamicdata;
+    }
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_MEDIA_APPS, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Dynamic Profile... \n", __FUNCTION__, __LINE__);
+    jsonParsed = readAndParseJSON(dynJSONPath);
+    if (jsonParsed == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
+        RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Dynamic JSON... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+        if (isDynamicIssue)
+        {
+            // Issue Data in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+            free(dynJSONPath);
+            // Get the command for received Issue Type of the Issue Category
+            dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+        }
+        else
+        {
+            // Issue Data not in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Requested Issue Data not found in Dynamic Profile JSON!!! \n", __FUNCTION__, __LINE__);
+        }
+    }
+    freeParsedJson(jsonParsed);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return dynamicdata;
+}
+
+issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *pIssueNode)
+{
+    cJSON *jsonParsed = NULL;
+    bool isStaticIssue = false;
+    issueData *staticdata = NULL;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Static Profile Commands... \n", __FUNCTION__, __LINE__);
+
+    jsonParsed = readAndParseJSON(RRD_JSON_FILE);
+    if (jsonParsed == NULL)
+    { // Static Profile JSON Parsing or Read Fail
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+        return staticdata;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Static JSON... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    isStaticIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+    if (isStaticIssue)
+    {
+        // Issue in Static Profile JSON
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
+        // Get the command for received Issue Type of the Issue Category
+        staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
+    }
+
+    freeParsedJson(jsonParsed);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return staticdata;
 }
 
 /*
@@ -318,7 +463,7 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
             // Issue Data in Dynamic Profile JSON
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
             free(dynJSONPath);
-            checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false);
+            checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
         }
         else
         {
