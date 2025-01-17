@@ -29,7 +29,6 @@ extern "C"
 #include "rrdCommon.h"
 #if !defined(GTEST_ENABLE)
 #include "rbus.h"
-#include "Client_Mock.h"
 #ifdef IARMBUS_SUPPORT
 #include "libIARM.h"
 #include "libIBus.h"
