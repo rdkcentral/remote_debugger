@@ -23,6 +23,7 @@
 #else
 #define RRD_SCRIPT "./mockSampleUploadScript.sh"
 #endif
+#include "secure_wrapper.h"
 
 static void normalizeIssueName(char *str);
 

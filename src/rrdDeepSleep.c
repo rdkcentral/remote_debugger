@@ -52,9 +52,7 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
     issueNodeData issueStructNode = {NULL, NULL};
     char *jsonParsed = NULL;
     char *dynJSONPath = NULL;
-    char *issueNodeString = NULL;
     int dynJSONPathLen = 0;
-    int deepSleepStrLen = 0;
 
     if ((rbuf) && (rbuf->mdata)) // issue data exits
     {
@@ -69,7 +67,7 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
             dynJSONPath = (char *)malloc(dynJSONPathLen);
             if (dynJSONPath)
             {
-                char *profile = getRrdProfileName(&devPropData);
+                const char *profile = getRrdProfileName(&devPropData);
                 if(profile && strlen(profile) > 0)
                 {
                     dynJSONPathLen += 1;
@@ -100,11 +98,7 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
                 jsonParsed = RRDCheckIssueInDynamicProfile(rbuf, &issueStructNode);
                 if (jsonParsed)
                 {
-#if !defined(GTEST_ENABLE)
-                    checkIssueNodeInfo(&issueStructNode, jsonParsed, rbuf, true);
-#else
                     checkIssueNodeInfo(&issueStructNode, cJSON_Parse(jsonParsed), rbuf, true);
-#endif
                 }
             }
             break;
@@ -134,7 +128,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
     if (isDeepSleepAwakeEvent)
     {
         suffixlen += strlen(DEEP_SLEEP_STR);
-        char *profileName = getRrdProfileName(&devPropData);
+        const char *profileName = getRrdProfileName(&devPropData);
 
         if(profileName && strlen(profileName) > 0){
             length = prefixlen + strlen(profileName) + suffixlen + 1;
@@ -187,7 +181,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                 /* Get paramString for Device */
                 if (isDeepSleepAwakeEvent)
                 {
-                    char *profileName = getRrdProfileName(&devPropData);
+                    const char *profileName = getRrdProfileName(&devPropData);
                     msgDataStringSize = strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(RDM_PKG_SUFFIX);
 
                     if(profileName && strlen(profileName) > 0) 
@@ -287,11 +281,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
         else
         {
             /* Parse Dynamic Profile JSON from Package */
-#if !defined(GTEST_ENABLE)
-            jsonParsed = readAndParseJSON(rbuf->jsonPath);
-#else
             jsonParsed = cJSON_Print(readAndParseJSON(rbuf->jsonPath));
-#endif
             if (!jsonParsed)
             {
                 /* Parsing Failed */
@@ -313,11 +303,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
             else
             {
                 /* Find the issue in Parsed Json File */
-#if !defined(GTEST_ENABLE)
-                isDynamicIssueInJSON = findIssueInParsedJSON(issueStructNode, jsonParsed);
-#else
                 isDynamicIssueInJSON = findIssueInParsedJSON(issueStructNode, cJSON_Parse(jsonParsed));
-#endif
                 if (!isDynamicIssueInJSON) /* Issue Data not in Dynamic Profile JSON */
                 {
                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue Data not found in Dynamic JSON %s... \n", __FUNCTION__, __LINE__, rbuf->jsonPath);

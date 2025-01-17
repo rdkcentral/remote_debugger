@@ -80,8 +80,10 @@ int RRD_IARM_subscribe()
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
+#if !defined(ENABLE_WEBCFG_FEATURE)
     data_buf *sbuf = NULL;
     int msgLen = strlen(DEEP_SLEEP_STR) + 1;
+#endif
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
@@ -154,9 +156,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 {
     data_buf *sendbuf;
     IARM_Bus_RDMMgr_EventData_t *eventData;
-    int msgCacheIndex = -1;
     int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
-    int msgLen = 0;
     cacheData *cache = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
@@ -222,7 +222,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
                     RRDMsgDeliver(msqid, sendbuf);
-                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype);
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype);
                 }
                 else
                 {
