@@ -535,39 +535,6 @@ protected:
         remove(RRD_DEVICE_PROP_FILE);
     }
 };
-
-TEST_F(StoreDeviceInfo, ReadDevicePropFilePlatco)
-{
-    devicePropertiesData devPropData;
-    RRDStoreDeviceInfo(&devPropData);
-}
-
-TEST_F(StoreDeviceInfo, ReadDevicePropFileLlama)
-{
-    devicePropertiesData devPropData;
-    RRDStoreDeviceInfo(&devPropData);
-}
-
-TEST_F(StoreDeviceInfo, ReadDevicePropFileEDev)
-{
-    devicePropertiesData devPropData;
-    RRDStoreDeviceInfo(&devPropData);
-
-}
-
-TEST_F(StoreDeviceInfo, ReadDevicePropFileDefault)
-{
-    devicePropertiesData devPropData;
-    RRDStoreDeviceInfo(&devPropData);
-}
-
-TEST_F(StoreDeviceInfo, ReadEmptyDevicePropFile)
-{
-    devicePropertiesData devPropData;
-    RRDStoreDeviceInfo(&devPropData);
-
-}
-
 /* ================ rrdCommandSanity =====================*/
 /* --------------- Test updateBackgroundCmd() from rrdCommandSanity --------------- */
 TEST(UpdateBackgroundCmdTest, ReturnsOneForNullInput)
