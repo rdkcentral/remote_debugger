@@ -293,7 +293,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     if(issuestdata == NULL)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failure \n",__FUNCTION__,__LINE__);
-	return issueData;
+	return issuestdata;
     }
     issuestdata->rfcvalue = NULL;
     issuestdata->command = NULL;
