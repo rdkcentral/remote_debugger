@@ -20,7 +20,6 @@
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
-#include "rrdCommon.h"
 #define COMMAND_DELIM ';'
 
 static void processIssueType(data_buf *rbuf);
