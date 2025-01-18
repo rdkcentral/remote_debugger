@@ -89,6 +89,26 @@ int RRD_subscribe()
     return ret;
 }
 
+bool checkAppendRequest(char *issueRequest)
+{
+    size_t issuestr_len = strlen(issueRequest);
+    size_t suffixstr_len = strlen(APPEND_SUFFIX);
+    char *suffixptr = NULL;
+
+    suffixptr = issueRequest + issuestr_len - suffixstr_len;
+
+    if (issuestr_len >= suffixstr_len)
+    {
+        if (strcmp(suffixptr, APPEND_SUFFIX) == 0)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Remove suffix from the issuetype to process the request \n", __FUNCTION__, __LINE__);
+            issueRequest[issuestr_len - suffixstr_len] = '\0';
+            return true;
+        }
+    }
+    return false;
+}
+
 void webconfigFrameworkInit()
 {
     char *sub_doc = "remotedebugger";
@@ -143,6 +163,7 @@ void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event
     sbuf->mdata = NULL;
     sbuf->jsonPath = NULL;
     sbuf->inDynamic = false;
+    sbuf->appendMode = false;
     sbuf->dsEvent = deepSleepEvent;
 }
 
@@ -245,8 +266,13 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
     {
         RRD_data_buff_init(sbuf, sndtype, RRD_DEEPSLEEP_INVALID_DEFAULT);
         sbuf->mdata = issueTypeList;
+        if (checkAppendRequest(sbuf->mdata))
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
+            sbuf->appendMode = true;
+        }	
         RRDMsgDeliver(msqid, sbuf);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
     }
 }
 
