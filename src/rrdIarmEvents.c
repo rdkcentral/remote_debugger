@@ -80,9 +80,6 @@ int RRD_IARM_subscribe()
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
-    data_buf *sbuf = NULL;
-    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
-
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
     if (strcmp(owner, IARM_BUS_PWRMGR_NAME) == 0)
@@ -95,10 +92,29 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Event ID found for IARM_BUS_RDK_REMOTE_DEBUGGER_DEEPSLEEP_AWAKE %d \n", __FUNCTION__, __LINE__, eventId);
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
-#ifdef ENABLE_WEBCFG_FEATURE
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
-            rbusValue_Init(&value);
+#if !defined(ENABLE_WEBCFG_FEATURE)
+	    /* Fix for Warning Unused Variable */
+	    data_buf *sbuf = NULL;
+	    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
+#endif
+
+#ifdef ENABLE_WEBCFG_FEATURE
+	    rc = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
+	    if (rc != RBUS_ERROR_SUCCESS)
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed!!! \n ", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed with Error %d !!! \n ", __FUNCTION__, __LINE__, rc);
+#else
+                return;
+#endif
+            }
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Open! \n", __FUNCTION__, __LINE__);
+            rc = RBUS_ERROR_BUS_ERROR; /* Re-assign failure to check rbus_set return */
+
+	    rbusValue_Init(&value);
             rbusValue_SetString(value,"root");
             rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
             if (rc != RBUS_ERROR_SUCCESS)
@@ -154,9 +170,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 {
     data_buf *sendbuf;
     IARM_Bus_RDMMgr_EventData_t *eventData;
-    int msgCacheIndex = -1;
     int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
-    int msgLen = 0;
     cacheData *cache = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
@@ -228,7 +242,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
                     RRDMsgDeliver(msqid, sendbuf);
-                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
                 }
                 else
                 {
@@ -262,6 +276,9 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 int RRD_IARM_unsubscribe()
 {
     int ret = 0;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
+
     ret = IARM_Bus_Disconnect();
     if (ret != 0)
     {
