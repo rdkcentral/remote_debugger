@@ -316,7 +316,7 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     issueData *dynamicdata = NULL;
     cJSON *jsonParsed = NULL;
     char *dynJSONPath = NULL;
-    int rrdjsonlen = 0, persistentAppslen = 0, issueNodelen = 0, prefixlen = 0;
+    int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0;
     bool isDynamicIssue = false;
 
 

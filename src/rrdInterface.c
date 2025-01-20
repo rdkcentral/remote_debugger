@@ -118,11 +118,6 @@ void webconfigFrameworkInit()
     memset(blobData, 0, sizeof(blobRegInfo));
     strncpy( blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
 
-    getVersion versionGet = getBlobVersion;
-
-    setVersion versionSet = setBlobVersion;
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:VersionGet = %d, versionSet=%d \n", __FUNCTION__, __LINE__, versionGet, versionSet);
     register_sub_docs(blobData, 1 /*SubDoc Count*/, NULL, NULL);
 }
 
