@@ -199,7 +199,7 @@ static void processIssueType(data_buf *rbuf)
     else
     {
         /* Fix for warning Wformat-overflow : directive argument is null*/
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Value is empty for RFC Parameter=%s \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Value is empty for RFC Parameter \n", __FUNCTION__, __LINE__);
     }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
@@ -316,7 +316,7 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     issueData *dynamicdata = NULL;
     cJSON *jsonParsed = NULL;
     char *dynJSONPath = NULL;
-    int rrdjsonlen = 0, persistentAppslen = 0, issueNodelen = 0, prefixlen = 0, suffixlen = 0;
+    int rrdjsonlen = 0, persistentAppslen = 0, issueNodelen = 0, prefixlen = 0;
     bool isDynamicIssue = false;
 
 
@@ -324,7 +324,6 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     rrdjsonlen = strlen(RRD_JSON_FILE);
     persistentAppslen = strlen(RRD_MEDIA_APPS);
     prefixlen = strlen(RDM_PKG_PREFIX);
-    suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 
     if(dynJSONPath == NULL)

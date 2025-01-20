@@ -22,6 +22,7 @@
 #include "rrdJsonParser.h"
 #include "rrdDeepSleep.h"
 #include "rrdEventProcess.h"
+#include "rrdInterface.h"
 
 #if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;

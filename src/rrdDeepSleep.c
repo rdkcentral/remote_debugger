@@ -99,11 +99,7 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
                 jsonParsed = RRDCheckIssueInDynamicProfile(rbuf, &issueStructNode);
                 if (jsonParsed)
                 {
-#if !defined(GTEST_ENABLE)
-                    checkIssueNodeInfo(&issueStructNode, jsonParsed, rbuf, true, NULL);
-#else
                     checkIssueNodeInfo(&issueStructNode, cJSON_Parse(jsonParsed), rbuf, true, NULL);
-#endif
                 }
             }
             break;
