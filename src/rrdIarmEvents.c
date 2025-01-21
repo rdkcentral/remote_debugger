@@ -96,6 +96,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Event ID found for IARM_BUS_RDK_REMOTE_DEBUGGER_DEEPSLEEP_AWAKE %d \n", __FUNCTION__, __LINE__, eventId);
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
+#ifdef ENABLE_WEBCFG_FEATURE
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
 	    rbusValue_Init(&value);
