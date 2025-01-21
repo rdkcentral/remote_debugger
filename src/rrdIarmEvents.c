@@ -18,6 +18,7 @@
  */
 
 #include "rrdInterface.h"
+#include "rrdRunCmdThread.h" 
 
 extern int msqid;
 extern rbusHandle_t rrdRbusHandle;
@@ -65,6 +66,7 @@ int RRD_IARM_subscribe()
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Register EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
         return ret;
     }
+    return ret;
 }
 
 /*
