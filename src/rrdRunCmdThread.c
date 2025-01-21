@@ -287,6 +287,7 @@ bool executeCommands(issueData *cmdinfo)
     char *printbuffer = NULL;
     FILE *filePointer;
     const char *remoteDebuggerPrefix = "remote_debugger_";
+    int retval;
 
     cmdData = (issueData *)cmdinfo;
  
@@ -315,10 +316,20 @@ bool executeCommands(issueData *cmdinfo)
             if(result != NULL)
             {
                 getcwd(pathname, BUF_LEN_256);
-		asprintf(&outdirpath, "%s/%s",pathname,dirname);
-                RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Replacing default location %s with Event Specific Output Directory:%s \n",__FUNCTION__,__LINE__,result,outdirpath);
-                cmdData->command = replaceRRDLocation(cmdData->command,outdirpath);
-		free(outdirpath);
+                retval = asprintf(&outdirpath, "%s/%s",pathname,dirname);
+                if(retval == -1)
+                {
+                    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Failed Setting outdirpath \n",__FUNCTION__,__LINE__);
+		    cmdData->command = NULL;
+                }
+		else
+                {
+                    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Replacing default location %s with Event Specific Output Directory:%s \n",__FUNCTION__,__LINE__,result,outdirpath);
+                    cmdData->command = replaceRRDLocation(cmdData->command,outdirpath);
+		    free(outdirpath);
+                    outdirpath = NULL;
+                }
+
                 if(cmdData->command == NULL)
                 {
                     /* Fix for warning Wformat-overflow : directive argument is null */
