@@ -281,12 +281,13 @@ bool executeCommands(issueData *cmdinfo)
     char *result = NULL;
     char dirname[BUF_LEN_256] =  {'\0'};
     char pathname[BUF_LEN_256] = {'\0'};
+    char outdirpath[BUF_LEN_256] = {'\0'};
     char finalOutFile[BUF_LEN_256] =  {'\0'};
     char remoteDebuggerServiceStr[BUF_LEN_256] =  {'\0'};
     char *printbuffer = NULL;
-    char *outdirpath = NULL;
     FILE *filePointer;
     const char *remoteDebuggerPrefix = "remote_debugger_";
+    size_t required_space = strlen(pathname) + 1 + strlen(dirname) + 1;
 
     cmdData = (issueData *)cmdinfo;
  
@@ -315,11 +316,16 @@ bool executeCommands(issueData *cmdinfo)
             if(result != NULL)
             {
                 getcwd(pathname, BUF_LEN_256);
-                /* Wformat-truncation : asprintf allocate a string large enough to hold the output including the terminating null byte */
-                asprintf(&outdirpath, "%s/%s",pathname,dirname);
+		if (required_space > BUF_LEN_256) {
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Buffer Size insufficient \n",__FUNCTION__,__LINE__);
+		    return false;
+		}
+		else
+                {
+		    snprintf(outdirpath,BUF_LEN_256,"%s/%s",pathname,dirname);
+		}
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Replacing default location %s with Event Specific Output Directory:%s \n",__FUNCTION__,__LINE__,result,outdirpath);
                 cmdData->command = replaceRRDLocation(cmdData->command,outdirpath);
-		free(outdirpath);
                 if(cmdData->command == NULL)
                 {
                     /* Fix for warning Wformat-overflow : directive argument is null */

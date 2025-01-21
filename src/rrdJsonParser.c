@@ -603,7 +603,8 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
                      strncpy(issuetypearray[i], rfcbuf, strlen(rfcbuf));
 		     /* Wstringop-overflow : strncat is to provide the length of the source argument rather than the remaining space in the destination.
 		      * Fix is to call the functions with the remaining space in the destination, with room for the terminating null byte */
-                     strncat(issuetypearray[i], RFC_DELIM, sizeof(issuetypearray[i]) - strlen(issuetypearray[i]) - 1);
+		     strncat(issuetypearray[i], RFC_DELIM, rfcDelimLen + 1);
+                     //strncat(issuetypearray[i], RFC_DELIM, sizeof(issuetypearray[i]) - strlen(issuetypearray[i]) - 1);
                      strncat(issuetypearray[i], issuearray[i]->string, strlen(issuearray[i]->string));
                      if (i != 0)
                      {
@@ -683,7 +684,8 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
                     strncpy(issuedCommand[_sindex], issueCategoryNode[_mindex]->string, issueCategoryLen);
 		    /* Wstringop-overflow: strncat is to provide the length of the source argument rather than the remaining space in the destination.
 		     * Fix is to call the functions with the remaining space in the destination, with room for the terminating null byte */
-                    strncat(issuedCommand[_sindex], RFC_DELIM, sizeof(issuedCommand[_sindex]) - strlen(issuedCommand[_sindex]) - 1);
+		    strncat(issuedCommand[_sindex], RFC_DELIM, rfcDelimLen + 1);
+                    //strncat(issuedCommand[_sindex], RFC_DELIM, sizeof(issuedCommand[_sindex]) - strlen(issuedCommand[_sindex]) - 1);
                     strncat(issuedCommand[_sindex], issueTypeNode[_sindex]->string, issueTypeLen);
 
                     issuestructNode->Node = strdup(issueCategoryNode[_mindex]->string);

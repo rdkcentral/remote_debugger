@@ -129,7 +129,6 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
     if (isDeepSleepAwakeEvent)
     {
         suffixlen += strlen(DEEP_SLEEP_STR);
-	/* Wdiscarded-qualifiers : Function returns Const char* value and assigned to a char* variable effectively discards the const qualifier */
         const char *profileName = getRrdProfileName(&devPropData);
 
         if(profileName && strlen(profileName) > 0){
@@ -184,7 +183,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                 /* Get paramString for Device */
                 if (isDeepSleepAwakeEvent)
                 {
-                    /* Wdiscarded-qualifiers : Function returns Const char* value and assigned to a char* variable effectively discards the const qualifier */
                     const char *profileName = getRrdProfileName(&devPropData);
                     msgDataStringSize = strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(RDM_PKG_SUFFIX);
 

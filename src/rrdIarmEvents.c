@@ -80,6 +80,10 @@ int RRD_IARM_subscribe()
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
+#if !defined(ENABLE_WEBCFG_FEATURE)
+    data_buf *sbuf = NULL;
+    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
     if (strcmp(owner, IARM_BUS_PWRMGR_NAME) == 0)
@@ -94,26 +98,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
-#if !defined(ENABLE_WEBCFG_FEATURE)
-	    /* Fix for Warning Unused Variable */
-	    data_buf *sbuf = NULL;
-	    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
-#endif
-
-#ifdef ENABLE_WEBCFG_FEATURE
-	    rc = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
-	    if (rc != RBUS_ERROR_SUCCESS)
-            {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed!!! \n ", __FUNCTION__, __LINE__);
-#if !defined(GTEST_ENABLE)
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed with Error %d !!! \n ", __FUNCTION__, __LINE__, rc);
-#else
-                return;
-#endif
-            }
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Open! \n", __FUNCTION__, __LINE__);
-            rc = RBUS_ERROR_BUS_ERROR; /* Re-assign failure to check rbus_set return */
-
 	    rbusValue_Init(&value);
             rbusValue_SetString(value,"root");
             rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
@@ -276,8 +260,6 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 int RRD_IARM_unsubscribe()
 {
     int ret = 0;
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 
     ret = IARM_Bus_Disconnect();
     if (ret != 0)
