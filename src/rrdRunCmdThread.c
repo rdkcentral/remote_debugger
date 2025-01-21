@@ -315,7 +315,7 @@ bool executeCommands(issueData *cmdinfo)
             if(result != NULL)
             {
                 getcwd(pathname, BUF_LEN_256);
-		snprintf(outdirpath,BUF_LEN_256,"%s/%s",pathname,dirname);
+		asprintf(&outdirpath, "%s/%s",pathname,dirname);
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Replacing default location %s with Event Specific Output Directory:%s \n",__FUNCTION__,__LINE__,result,outdirpath);
                 cmdData->command = replaceRRDLocation(cmdData->command,outdirpath);
 		free(outdirpath);
