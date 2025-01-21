@@ -279,9 +279,9 @@ bool executeCommands(issueData *cmdinfo)
     issueData *cmdData = NULL;
     struct tm *loc_time;
     char *result = NULL;
-    char dirname[BUF_LEN_254] =  {'\0'};
-    char pathname[BUF_LEN_254] = {'\0'};
-    char outdirpath[BUF_LEN_256] = {'\0'};
+    char dirname[BUF_LEN_256] =  {'\0'};
+    char pathname[BUF_LEN_256] = {'\0'};
+    char *outdirpath = NULL;
     char finalOutFile[BUF_LEN_256] =  {'\0'};
     char remoteDebuggerServiceStr[BUF_LEN_256] =  {'\0'};
     char *printbuffer = NULL;
@@ -318,6 +318,7 @@ bool executeCommands(issueData *cmdinfo)
 		snprintf(outdirpath,BUF_LEN_256,"%s/%s",pathname,dirname);
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Replacing default location %s with Event Specific Output Directory:%s \n",__FUNCTION__,__LINE__,result,outdirpath);
                 cmdData->command = replaceRRDLocation(cmdData->command,outdirpath);
+		free(outdirpath);
                 if(cmdData->command == NULL)
                 {
                     /* Fix for warning Wformat-overflow : directive argument is null */
