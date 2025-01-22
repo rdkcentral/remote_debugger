@@ -118,10 +118,6 @@ void webconfigFrameworkInit()
     memset(blobData, 0, sizeof(blobRegInfo));
     strncpy( blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
 
-    getVersion versionGet = getBlobVersion;
-
-    setVersion versionSet = setBlobVersion;
-
     register_sub_docs(blobData, 1 /*SubDoc Count*/, NULL, NULL);
 }
 
@@ -147,7 +143,7 @@ void RRDMsgDeliver(int msgqid, data_buf *sbuf)
 
     if (msgsnd(msgqid, (void *)&msgHdr, msgLen, 0) < 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%ld MbufSize=%d !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%u MbufSize=%d !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen);
         exit(1);
     }
 }
@@ -273,7 +269,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
             sbuf->appendMode = true;
         }	
         RRDMsgDeliver(msqid, sbuf);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%ld AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
     }
 }
 
