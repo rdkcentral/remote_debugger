@@ -219,7 +219,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     dataMsg = (char *) calloc(1, len);
     if(!dataMsg)
     {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed for %s \n",__FUNCTION__,__LINE__,value);
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed for %s \n", __FUNCTION__, __LINE__, rbusValue_ToString(value, NULL, 0));
         return;
     }
     strncpy(dataMsg, rbusValue_GetString(value, NULL), len);
@@ -241,7 +241,8 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_WEBCFG_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_WEBCFG_ISSUE_EVENT);
     if (value)
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, value);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
+			                        rbusValue_ToString(value, NULL, 0));
         int len = strlen(rbusValue_GetString(value, NULL));
         inString = (char *)calloc(1, len);
         if(inString)
