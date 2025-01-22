@@ -24,10 +24,6 @@ COMMON_CPPFLAGS = -I../ -I../../ -I./mocks -I/usr/include/cjson -I/usr/include/n
 # Define the libraries to link against
 COMMON_LDADD = -lgtest -lgtest_main -lgmock_main -lgmock -lcjson -lmsgpackc -lgcov
 
-if IS_YOCTO_ENABLED
-AM_LDFLAGS = -lsecure_wrapper
-endif
-
 # Define the compiler flags
 COMMON_CXXFLAGS = -frtti -fprofile-arcs -ftest-coverage
 
