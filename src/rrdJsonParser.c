@@ -276,12 +276,10 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     cJSON *sanity = NULL;
     cJSON *check = NULL;
     cJSON *cmdlist = NULL;
-    cJSON *root = NULL;
     cJSON *category = NULL;
     cJSON *type = NULL;
     char *checkval = NULL;
     cJSON *elem = NULL;
-    bool exresult = false;
     char *tmpCommand = NULL;
 
     category = cJSON_GetObjectItem(jsoncfg, issuestructNode->Node);
