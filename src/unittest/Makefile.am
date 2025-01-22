@@ -22,7 +22,7 @@ bin_PROGRAMS = remotedebugger_gtest
 COMMON_CPPFLAGS = -I../ -I../../ -I./mocks -I/usr/include/cjson -I/usr/include/nettle -I/usr/include/msgpack -DGTEST_ENABLE
 
 # Define the libraries to link against
-COMMON_LDADD = -lgtest -lgtest_main -lgmock_main -lgmock -lcjson -lmsgpackc -lgcov
+COMMON_LDADD = -lgtest -lgtest_main -lgmock_main -lgmock -lcjson -lmsgpackc -lgcov -lsecure_wrapper
 
 # Define the compiler flags
 COMMON_CXXFLAGS = -frtti -fprofile-arcs -ftest-coverage
