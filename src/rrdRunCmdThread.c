@@ -24,7 +24,9 @@
 #include <sys/stat.h>
 #include "rrdRunCmdThread.h"
 #include "rrdCommandSanity.h"
+#if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
+#endif
 
 pthread_mutex_t rrdCacheMut;
 static cacheData *cacheDataNode = NULL;
