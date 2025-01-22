@@ -25,9 +25,8 @@ extern "C"
 {
 #endif
 
-#if !defined(GTEST_ENABLE)
 #include <rbus.h>
-
+#if !defined(GTEST_ENABLE)
 rbusEventSubscription_t subscriptions[2];
 #endif
 
