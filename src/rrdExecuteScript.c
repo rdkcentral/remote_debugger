@@ -23,7 +23,9 @@
 #else
 #define RRD_SCRIPT "./mockSampleUploadScript.sh"
 #endif
+#if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
+#endif
 
 static void normalizeIssueName(char *str);
 
