@@ -543,7 +543,7 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
         if (*str2 == delimeter && *(str2 + 1) != delimeter && *(str2 + 1) != 0)
             cnt++;
 
-    (*args) = (char **)malloc(sizeof(char *) * cnt);
+    args = (char **)malloc(sizeof(char *) * cnt);
 
     if (*args == NULL)
     {
