@@ -297,7 +297,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
         {
             /* Parse Dynamic Profile JSON from Package */
             /* Fix for warning : Wincompatible-pointer-types */ 
-            jsonParsed = cJSON_Print(readAndParseJSON(rbuf->jsonPath));
+            jsonParsed = readAndParseJSON(rbuf->jsonPath);
             if (!jsonParsed)
             {
                 /* Parsing Failed */
@@ -320,7 +320,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
             {
                 /* Find the issue in Parsed Json File */
                 /* Fix for warning : Wincompatible-pointer-types */
-                isDynamicIssueInJSON = findIssueInParsedJSON(issueStructNode, cJSON_Parse(jsonParsed));
+                isDynamicIssueInJSON = findIssueInParsedJSON(issueStructNode, jsonParsed);
                 if (!isDynamicIssueInJSON) /* Issue Data not in Dynamic Profile JSON */
                 {
                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue Data not found in Dynamic JSON %s... \n", __FUNCTION__, __LINE__, rbuf->jsonPath);
@@ -347,5 +347,5 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
     }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-    return jsonParsed;
+    return cJSON_Print(jsonParsed);
 }
