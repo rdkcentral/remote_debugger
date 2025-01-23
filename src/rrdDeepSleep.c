@@ -273,7 +273,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNode)
 {
     bool isDynamicIssueInJSON = false;
-    char *jsonParsed = NULL;
+    cJSON *jsonParsed = NULL;
 
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
@@ -327,8 +327,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
 #if !defined(GTEST_ENABLE)
                     free(rbuf->mdata);
                     free(rbuf->jsonPath);
-                    free(jsonParsed);
-                    jsonParsed = NULL;
+                    cJSON_Delete(jsonParsed);
 #else
                     if (rbuf->mdata) {
                         free(rbuf->mdata);
@@ -339,8 +338,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
                         rbuf->jsonPath = NULL;
                     }
                     if (jsonParsed) {
-                        free(jsonParsed);
-                        jsonParsed = NULL;
+                        cJSON_Delete(jsonParsed);
                     }
 #endif
                 }
