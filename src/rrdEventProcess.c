@@ -558,9 +558,9 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
                    str++;
 
             int len = (str - ts + 1);
-            (*args)[i] = (char *)malloc(sizeof(char) * len);
-            memcpy((*args)[i], ts, sizeof(char) * (len - 1));
-            (*args)[i][len - 1] = 0;
+            args[i] = (char *)malloc(sizeof(char) * len);
+            memcpy(args[i], ts, sizeof(char) * (len - 1));
+            args[i][len - 1] = 0;
 
             while (*str == delimeter)
                 str++;
