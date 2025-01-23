@@ -327,8 +327,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
 #if !defined(GTEST_ENABLE)
                     free(rbuf->mdata);
                     free(rbuf->jsonPath);
-                    free(jsonParsed);
-                    jsonParsed = NULL;
+                    cJSON_Delete(jsonParsed);
 #else
                     if (rbuf->mdata) {
                         free(rbuf->mdata);
@@ -339,8 +338,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
                         rbuf->jsonPath = NULL;
                     }
                     if (jsonParsed) {
-                        free(jsonParsed);
-                        jsonParsed = NULL;
+                        cJSON_Delete(jsonParsed);
                     }
 #endif
                 }
