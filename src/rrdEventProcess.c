@@ -198,7 +198,8 @@ static void processIssueType(data_buf *rbuf)
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Value is empty for RFC Parameter=%s \n", __FUNCTION__, __LINE__, rbuf->mdata);
+        /* Fix for warning Wformat-overflow : directive argument is null*/
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Value is empty for RFC Parameter \n", __FUNCTION__, __LINE__);
     }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
@@ -216,7 +217,7 @@ static void processIssueType(data_buf *rbuf)
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode)
 {
     cJSON *jsonParsed = NULL;
-    bool isDynamicIssue=false, isStaticIssue=false;
+    bool isDynamicIssue=false;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Marked as inDynamic... \n", __FUNCTION__, __LINE__);
@@ -315,7 +316,7 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     issueData *dynamicdata = NULL;
     cJSON *jsonParsed = NULL;
     char *dynJSONPath = NULL;
-    int rrdjsonlen = 0, persistentAppslen = 0, issueNodelen = 0, prefixlen = 0, suffixlen = 0;
+    int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0;
     bool isDynamicIssue = false;
 
 
@@ -323,7 +324,6 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     rrdjsonlen = strlen(RRD_JSON_FILE);
     persistentAppslen = strlen(RRD_MEDIA_APPS);
     prefixlen = strlen(RDM_PKG_PREFIX);
-    suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 
     if(dynJSONPath == NULL)
@@ -338,8 +338,10 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     if (jsonParsed == NULL)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+#ifdef IARMBUS_SUPPORT
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
         RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
+#endif
     }
     else
     {
@@ -416,7 +418,7 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
 {
     cJSON *jsonParsed = NULL;
     char *dynJSONPath = NULL;
-    int rrdjsonlen = 0, persistentAppslen = 0, issueNodelen = 0, prefixlen = 0, suffixlen = 0;
+    int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0, suffixlen = 0;
     bool isDynamicIssue = false;
 
 
@@ -426,7 +428,7 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     persistentAppslen = strlen(RRD_MEDIA_APPS);
     prefixlen = strlen(RDM_PKG_PREFIX);
     suffixlen = strlen(RDM_PKG_SUFFIX);
-    dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
+    dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 #else
     int utjsonlen = strlen(rbuf->jsonPath);
     dynJSONPath = (char *)malloc(utjsonlen + 1);
@@ -567,3 +569,4 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
+

@@ -128,7 +128,21 @@ rbusError_t RBusApiWrapper::rbus_set(rbusHandle_t handle, char const *objectName
     EXPECT_NE(impl, nullptr);
     return impl->rbus_set(handle, objectName, value, respHandler);
 }
+const char* rbusError_ToString(rbusError_t e)
+{
+    #define rbusError_String(E, S) case E: s = S; break;
 
+  char const * s = NULL;
+  switch (e)
+  {
+    rbusError_String(RBUS_ERROR_SUCCESS, "ok");
+    rbusError_String(RBUS_ERROR_BUS_ERROR, "generic error");
+    rbusError_String(RBUS_ERROR_NOT_INITIALIZED, "not initialized");
+    default:
+      s = "unknown error";
+  }
+  return s;
+}
 rbusError_t (*rbus_open)(rbusHandle_t *, char const *) = &RBusApiWrapper::rbus_open;
 rbusError_t (*rbus_close)(rbusHandle_t) = &RBusApiWrapper::rbus_close;
 rbusError_t (*rbusValue_Init)(rbusValue_t *) = &RBusApiWrapper::rbusValue_Init;
@@ -228,3 +242,4 @@ extern "C"
         return;
     }
 }
+

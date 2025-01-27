@@ -22,6 +22,7 @@
 #include "rrdJsonParser.h"
 #include "rrdDeepSleep.h"
 #include "rrdEventProcess.h"
+#include "rrdInterface.h"
 
 #if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;
@@ -49,7 +50,7 @@ void *RRDEventThreadFunc(void *arg)
             break;
         }
         rbuf = (data_buf *)msgHdr.mbody;
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:SUCCESS: Message Reception Done for ID=%d MSG=%s TYPE=%ld... \n", __FUNCTION__, __LINE__, msqid, rbuf->mdata, rbuf->mtype);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:SUCCESS: Message Reception Done for ID=%d MSG=%s TYPE=%u... \n", __FUNCTION__, __LINE__, msqid, rbuf->mdata, rbuf->mtype);
 
         switch (rbuf->mtype)
         {
