@@ -19,6 +19,8 @@
 
 bin_PROGRAMS = remotedebugger
 
+CFLAGS += " -Wall -Werror"
+
 remotedebuggerincludedir = $(includedir)/rrd
 remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h
 
