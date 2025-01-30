@@ -239,18 +239,23 @@ void remotedebuggerdoc_destroy(remotedebuggerdoc_t *ld)
 {
     if (NULL != ld)
     {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: remotedebuggerdoc_destroy Called with %p \n", __FUNCTION__, __LINE__, (void *)ld);
         if (NULL != ld->param)
         {
             if (NULL != ld->param->commandList)
             {
+		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Free Commandlist. \n", __FUNCTION__, __LINE__);
                 free(ld->param->commandList);
             }
+	    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Free Param \n", __FUNCTION__, __LINE__);
             free(ld->param);
         }
         if (NULL != ld->subdoc_name)
         {
+	    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Free subdoc name. \n", __FUNCTION__, __LINE__);
             free(ld->subdoc_name);
         }
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Free structure pointer %p. \n", __FUNCTION__, __LINE__,(void *)ld);
         free(ld);
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Remote Debugger SubDoc Destroyed. \n", __FUNCTION__, __LINE__);
     }
@@ -334,8 +339,7 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
                 resultLen = getReqTotalSizeOfIssueTypesStr(arr);
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%d \n", __FUNCTION__, __LINE__,resultLen);
                 rrdParam->length = resultLen;
-                rrdParam->commandList = (char *)malloc(resultLen * sizeof(char));
-                memset(rrdParam->commandList, '\0', resultLen * sizeof(char));
+		rrdParam->commandList = (char *)calloc(resultLen, sizeof(char));
                 if(rrdParam->commandList != NULL)
                 {
                     for(index = 0; index < arr->size; index++)
@@ -434,6 +438,7 @@ int rollback_Debugger()
 void FreeResources_RemoteDebugger(void *arg)
 {
 
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Enter...\n", __FUNCTION__, __LINE__);
     execData *blob_exec_data = (execData *)arg;
     if (!blob_exec_data)
         return;
@@ -442,6 +447,7 @@ void FreeResources_RemoteDebugger(void *arg)
 
     if (premotedebuggerInfo != NULL)
     {
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: remotedebuggerdoc_destroy Called with %s \n", __FUNCTION__, __LINE__, premotedebuggerInfo->subdoc_name);    
         remotedebuggerdoc_destroy(premotedebuggerInfo);
         premotedebuggerInfo = NULL;
     }
@@ -451,6 +457,7 @@ void FreeResources_RemoteDebugger(void *arg)
         free(blob_exec_data);
         blob_exec_data = NULL;
     }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 
 /*
@@ -508,12 +515,23 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
         return -1;
 
     decodeMsgSize = b64_get_decoded_buffer_size(strlen(pString));
+    decodeMsg = (char *)calloc(decodeMsgSize, sizeof(char));
+    if (decodeMsg == NULL)
+    {
+         return -1;
+    }
+
     decodeMsg = (char *)malloc(sizeof(char) * decodeMsgSize);
 
     if (!decodeMsg)
         return -1;
 
     *size = b64_decode((const uint8_t *)pString, strlen(pString), (uint8_t *)decodeMsg);
+    if (*size < 0)
+    {
+        free(decodeMsg);
+        return -1;
+    }    
     *buffer = decodeMsg;
 
     return 0;
@@ -532,13 +550,14 @@ void PrepareDataToPush(remotedebuggerparam_t *param)
     char *commandList = param->commandList;
     char *issueTypeList = NULL;
     
-    issueTypeList = (char *)malloc(issueTypeListLen * sizeof(char));
+    issueTypeList = (char *)malloc(issueTypeListLen * sizeof(char) + 1);
     if (issueTypeList == NULL)
     {
          RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId\n", __FUNCTION__, __LINE__);
          return;
     }
     strncpy(issueTypeList, commandList, issueTypeListLen);
+    issueTypeList[issueTypeListLen] = '\0';
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data Prepared for Message Queue\n", __FUNCTION__, __LINE__);
     pushIssueTypesToMsgQueue(issueTypeList, EVENT_MSG);
     return;
