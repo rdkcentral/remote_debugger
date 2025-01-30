@@ -221,9 +221,10 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                     rbusValue_SetString(value,paramString);
                     rc = rbus_set(rrdRbusHandle,RDM_MGR_PKG_INST, value, NULL);
 		    //tr181status = setParam("rrd", RDM_MGR_PKG_INST, paramString);
-                    if (rc == tr181Success)
+                    if (rc == RBUS_ERROR_SUCCESS)
                     {
-                        /* Append Package string in Cache */
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters using rbus success...\n", __FUNCTION__, __LINE__);
+			/* Append Package string in Cache */
                         if (rbuf->appendMode)
                         {
                             appendData = (char *)malloc(strlen(APPEND_SUFFIX) + strlen(rbuf->mdata) + 1);
