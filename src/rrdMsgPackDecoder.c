@@ -515,16 +515,13 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
         return -1;
 
     decodeMsgSize = b64_get_decoded_buffer_size(strlen(pString));
-    decodeMsg = (char *)calloc(decodeMsgSize, sizeof(char));
+    decodeMsg = (char *)malloc((decodeMsgSize + 1) * sizeof(char));
     if (decodeMsg == NULL)
     {
+	 free(decodeMsg);
          return -1;
     }
-
-    decodeMsg = (char *)malloc(sizeof(char) * decodeMsgSize);
-
-    if (!decodeMsg)
-        return -1;
+    decodeMsg[decodeMsgSize] = '\0';
 
     *size = b64_decode((const uint8_t *)pString, strlen(pString), (uint8_t *)decodeMsg);
     if (*size < 0)
