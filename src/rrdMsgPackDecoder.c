@@ -339,7 +339,7 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
                 resultLen = getReqTotalSizeOfIssueTypesStr(arr);
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%d \n", __FUNCTION__, __LINE__,resultLen);
                 rrdParam->length = resultLen;
-		rrdParam->commandList = (char *)calloc(resultLen, sizeof(char));
+		rrdParam->commandList = (char *)calloc(resultLen + 1, sizeof(char));
                 if(rrdParam->commandList != NULL)
                 {
                     for(index = 0; index < arr->size; index++)
