@@ -160,7 +160,6 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
  */
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent)
 {
-    tr181ErrorCode_t tr181status = tr181Failure;
     char *paramString = NULL;
     char *msgDataString = NULL;
     char *appendData = NULL;
