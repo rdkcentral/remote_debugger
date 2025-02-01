@@ -467,10 +467,8 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         }
         else
         {
-#ifdef IARMBUS_SUPPORT
             // Issue Data not in Dynamic Profile JSON
             RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false);
-#endif
         }
     }
     freeParsedJson(jsonParsed);
