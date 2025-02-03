@@ -183,6 +183,11 @@ msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
         return MSGPACK_UNPACK_NOMEM_ERROR;
 
     msgpack_zone_init(&mempool, 2048);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: MYYYY PRRRRIINNNTTSSSS : : : : \n", __FUNCTION__, __LINE__);
+    for (size_t i = 0; i < size; ++i) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: %02x ", __FUNCTION__, __LINE__, (unsigned char)decodebuf[i]);
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "\n");
     unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
 
         switch(unpack_ret)
