@@ -184,12 +184,10 @@ msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
 
     msgpack_zone_init(&mempool, 2048);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: MYYYY PRRRRIINNNTTSSSS : : : : \n", __FUNCTION__, __LINE__);
-    for (size_t i = 0; i < size; ++i) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%02x ", (unsigned char)decodedbuf[i]);
-    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Decoded Buffer = %s \n", __FUNCTION__, __LINE__, decodedbuf);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "\n");
     unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
-
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: String: %.*s\n", __FUNCTION__, __LINE__, deserialized.via.str.size, deserialized.via.str.ptr);
         switch(unpack_ret)
         {
             case MSGPACK_UNPACK_SUCCESS:
@@ -518,7 +516,8 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
   
     if (buffer == NULL || size == NULL || pString == NULL)
         return -1;
-
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Encoded Message before b64_decode is = %s\n", __FUNCTION__, __LINE__, pString);
+	
     decodeMsgSize = b64_get_decoded_buffer_size(strlen(pString));
     decodeMsg = (char *)malloc((decodeMsgSize + 1) * sizeof(char));
     if (decodeMsg == NULL)
@@ -535,6 +534,8 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
         return -1;
     }    
     *buffer = decodeMsg;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Decoded Message after b64_decode is = %s\n", __FUNCTION__, __LINE__, decodeMsg);
 
     return 0;
 
