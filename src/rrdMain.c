@@ -23,6 +23,7 @@
 #include "rrdDeepSleep.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
+extern rbusHandle_t rrdRbusHandle;
 
 #if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;
@@ -102,10 +103,12 @@ bool isRRDEnabled(void)
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
     }
 #else
-    char RRDValue[64]={'\0'};
+    rbusValue_t RRDValue;
+    rbusError_t rc = RBUS_ERROR_BUS_ERROR;
+    rbusValue_t value;
     if(0 == syscfg_init())
     {
-        if( 0 == syscfg_get( NULL, "RemoteDebuggerEnabled", RRDValue, sizeof(RRDValue)))
+        if(RBUS_ERROR_SUCCESS == rbus_get(rrdRbusHandle, "RemoteDebuggerEnabled", &RRDValue)
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
            if ((RRDValue[0] != '\0' && strncmp(RRDValue, "true", strlen("true")) == 0))
             {
