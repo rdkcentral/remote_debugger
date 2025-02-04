@@ -175,6 +175,7 @@ void *helper_convert(const void *buf, size_t len,
 msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
 {
 
+    FILE *fd = fopen("/tmp/RRD_MSGPACK_OP.bin", "w+");
     //msgpack_zone mempool;
     msgpack_unpacked deserialized;
     msgpack_unpacked_init(&deserialized);
@@ -190,6 +191,8 @@ msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "\n");
     //unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
     unpack_ret = msgpack_unpack_next(&deserialized, decodedbuf, size, NULL);
+	msgpack_object obj = deserialized.data;
+	msgpack_object_print(fd, obj);
         switch(unpack_ret)
         {
             case MSGPACK_UNPACK_SUCCESS:
@@ -212,6 +215,8 @@ msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
         }
     
     //msgpack_zone_destroy(&mempool);
+    msgpack_unpacked_destroy( &deserialized );
+    fclose(fd);
     // End of msgpack decoding
 
     return unpack_ret;
