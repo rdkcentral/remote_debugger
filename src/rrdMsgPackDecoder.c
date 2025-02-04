@@ -175,7 +175,7 @@ void *helper_convert(const void *buf, size_t len,
 msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
 {
 
-    msgpack_zone mempool;
+    //msgpack_zone mempool;
     msgpack_unpacked deserialized;
     msgpack_unpacked_init(&deserialized);
     msgpack_unpack_return unpack_ret;
@@ -211,7 +211,7 @@ msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Message Pack decode failed with error\n", __FUNCTION__, __LINE__);
         }
     
-    msgpack_zone_destroy(&mempool);
+    //msgpack_zone_destroy(&mempool);
     // End of msgpack decoding
 
     return unpack_ret;
