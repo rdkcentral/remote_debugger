@@ -175,18 +175,19 @@ void *helper_convert(const void *buf, size_t len,
 msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
 {
 
-    msgpack_zone mempool;
-    msgpack_object deserialized;
+    //msgpack_zone mempool;
+    msgpack_unpacked deserialized;
     msgpack_unpack_return unpack_ret;
 
     if (decodedbuf == NULL || !size)
         return MSGPACK_UNPACK_NOMEM_ERROR;
 
-    msgpack_zone_init(&mempool, 2048);
+    msgpack_zone_init(deserialized.zone, 2048);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: MYYYY PRRRRIINNNTTSSSS : : : : \n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Decoded Buffer = %s \n", __FUNCTION__, __LINE__, decodedbuf);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "\n");
-    unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
+    //unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
+    unpack_ret = msgpack_unpack_next(&deserialized, decodedbuf, size, NULL);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: String: %.*s\n", __FUNCTION__, __LINE__, deserialized.via.str.size, deserialized.via.str.ptr);
         switch(unpack_ret)
         {
