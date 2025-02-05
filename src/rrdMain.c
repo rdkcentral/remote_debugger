@@ -28,6 +28,8 @@
 devicePropertiesData devPropData;
 #endif
 
+rbusHandle_t rrdRbusHandle;
+
 /*
  * @function RRDEventThreadFunc
  * @brief Infinite thread created from the main function to read messages received from the TR181 parameter 
@@ -87,37 +89,30 @@ void *RRDEventThreadFunc(void *arg)
  */
 bool isRRDEnabled(void)
 {
-    bool ret = true;
+    bool ret = false;
+    rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
+    rbusValue_t value = NULL;
+    rbusValue_Init(&value);
+
 #if !defined(GTEST_ENABLE)
-#ifdef IARMBUS_SUPPORT
-    RFC_ParamData_t param;
-    WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
-    if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
-	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:getRFCParameter() name=%s,type=%d,value=%s\n", __FUNCTION__, __LINE__, param.name, param.type, param.value);
-	    if (strcasecmp("false", param.value) == 0) {
-		    ret = false;
-	    }
-    } 
-    else {
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
-    }
-#else
-    char RRDValue[64]={'\0'};
-    if(0 == syscfg_init())
-    {
-        if( 0 == syscfg_get( NULL, "RemoteDebuggerEnabled", RRDValue, sizeof(RRDValue)))
-            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
-           if ((RRDValue[0] != '\0' && strncmp(RRDValue, "true", strlen("true")) == 0))
-            {
+     retCode = rbus_get(rrdRbusHandle, RRD_RFC, &value);
+     if ((retCode == RBUS_ERROR_SUCCESS) && (value != NULL)) 
+     {
+          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"RemoteDebugger Status: = [%d]\n", rbusValue_GetBoolean(value));
+          ret = rbusValue_GetBoolean(value);
+          if(ret) 
+	  {
                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is enabled, starting remote-debugger\n", __FUNCTION__, __LINE__);
-                ret = true;
-            }
-           else
-            {
-                ret = false;
-            }
-    }
-#endif
+          }
+          else 
+	  { 
+               RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is disabled, stopping remote-debugger\n", __FUNCTION__, __LINE__);
+          }
+     }
+     else 
+     {
+          RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_get failed with error [%d]\n\n", __FUNCTION__, __LINE__,rbusError_ToString((rbusError_t)ret));
+     }
 #endif
     return ret;
 }
@@ -137,6 +132,7 @@ int main(int argc, char *argv[])
 #endif
 {
     pthread_t RRDTR69ThreadID;
+    rbusError_t ret = RBUS_ERROR_BUS_ERROR;
 
     rdk_logger_init(DEBUG_INI_FILE);
 #if !defined(GTEST_ENABLE)
@@ -146,10 +142,18 @@ int main(int argc, char *argv[])
     /* Initialize Cache */
     initCache();
 
+    //RBUS Event Subscribe for RRD
+    ret = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
+    if (ret != 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed %s !!! \n ", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Open! \n", __FUNCTION__, __LINE__);
+
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
     if(!isEnabled) {
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:RFC is disabled, stopping remote-debugger\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopping RDK Remote Debugger Daemon \n", __FUNCTION__, __LINE__);
         exit(0);
     }
     
