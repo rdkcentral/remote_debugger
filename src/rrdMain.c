@@ -109,7 +109,7 @@ bool isRRDEnabled(void)
     if(0 == syscfg_init())
     {
         if(RBUS_ERROR_SUCCESS == rbus_get(rrdRbusHandle, "RemoteDebuggerEnabled", &RRDValue))
-            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
+           RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
            if ((RRDValue[0] != '\0' && strncmp(RRDValue, "true", strlen("true")) == 0))
             {
                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is enabled, starting remote-debugger\n", __FUNCTION__, __LINE__);
