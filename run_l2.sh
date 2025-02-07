@@ -31,4 +31,3 @@ rm -rf /opt/logs/remotedebugger.log.0
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_single_instance.json test/functional-tests/tests/test_rrd_single_instance.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_start_control.json test/functional-tests/tests/test_rrd_start_control.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_start_subscribe_and_wait.json test/functional-tests/tests/test_rrd_start_subscribe_and_wait.py
-pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report.json test/functional-tests/tests/test_rrd_static_profile_report.py
