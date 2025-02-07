@@ -1,7 +1,7 @@
 name: L2 Integration Tests
 
 on:
-  pull_request:
+  workflow_dispatch:
     branches: [ develop ]
 
 env:
