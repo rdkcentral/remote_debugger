@@ -21,13 +21,13 @@
 Feature: Remote Debugger Enable or Disable with WebPA Value
 
   Scenario: Remote Debugger Starts when Enabled
-    Given RFC Value for RDKRemoteDebugger.Enable is enabled
+    Given RFC Value for Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable is enabled
     When the remotedebugger is started check the value of the RFC parameter
     And  the RDKRemoteDebugger Enable value is true
     Then the remotedebugger should be started and running as daemon
 
   Scenario: Remote Debugger Starts when Disabled
-    Given RFC Value for RDKRemoteDebugger.Enable is disabled
+    Given RFC Value for Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable is disabled
     When the remotedebugger is started check the value of the RFC parameter
     And  the RDKRemoteDebugger Enable value is false
     Then the remotedebugger must be stopped and process should not be running
