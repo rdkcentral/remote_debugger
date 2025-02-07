@@ -20,11 +20,13 @@
 
 RESULT_DIR="/tmp/remotedebugger_test_report"
 OUTPUT_DIR="/tmp/rrd"
+LIB_DIR="/lib/rdk"
 mkdir -p "$RESULT_DIR"
 mkdir -p "$OUTPUT_DIR"
+mkdir -p "$LIB_DIR"
 
 cp remote_debugger.json /etc/rrd/
-cp scripts/uploadRRDL2Logs.sh /lib/rdk/
+cp scripts/uploadRRDLogs.sh /lib/rdk/uploadRRDLogs.sh
 rm -rf /opt/logs/remotedebugger.log.0
 
 # Run L2 Test cases
