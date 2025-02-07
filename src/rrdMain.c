@@ -95,7 +95,8 @@ bool isRRDEnabled(void)
 
 #if !defined(GTEST_ENABLE)
      retCode = rbus_get(rrdRbusHandle, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable", &value);
-     if (retCode == RBUS_ERROR_SUCCESS) 
+     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"RemoteDebugger get value Status: = [%S]\n", retCode);
+     if ((retCode == RBUS_ERROR_SUCCESS) && (value != NULL) ) 
      {
           RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"RemoteDebugger Status: = [%d]\n", rbusValue_GetBoolean(value));
           ret = rbusValue_GetBoolean(value);
