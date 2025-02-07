@@ -67,6 +67,8 @@
 #include "rrdMain.h"
 #include "rrdMain.c"
 
+#include "power_controller.h"
+
 #define GTEST_DEFAULT_RESULT_FILEPATH "/tmp/Gtest_Report/"
 #define GTEST_DEFAULT_RESULT_FILENAME "rdkRemoteDebugger_gtest_report.json"
 #define GTEST_REPORT_FILEPATH_SIZE 256
@@ -2200,7 +2202,8 @@ TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_Success)
     EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, PowerController_UnRegisterPowerModeChangedCallback(::testing::_, nullptr)).WillOnce(::testing::Return(0));
+
     IARM_Result_t result = RRD_unsubscribe();
 
     EXPECT_EQ(result, IARM_RESULT_SUCCESS);
@@ -2250,7 +2253,8 @@ TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailu
     EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    EXPECT_CALL(mock, PowerController_UnRegisterPowerModeChangedCallback(::testing::_, nullptr)).WillOnce(::testing::Return(0));
+
     IARM_Result_t result = RRD_unsubscribe();
 
     EXPECT_EQ(result, IARM_RESULT_FAILURE);
@@ -2645,61 +2649,52 @@ protected:
 
 TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
 {
-    const char *owner = "InvalidOwner";
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    char data[] = "Test data";
-    _pwrManagerEventHandler(owner, eventId, data, sizeof(data));
+    PowerController_PowerState_t curState = -1;
+    PowerController_PowerState_t newState = -1;
+    void* userdata;
+    _pwrManagerEventHandler(curState, newState, userdata);
 }
 
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
 {
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+    PowerController_PowerState_t curState = POWER_STATE_ON;
+    PowerController_PowerState_t newState = POWER_STATE_STANDBY_DEEP_SLEEP;
+    void* userdata;
+    _pwrManagerEventHandler(curState, newState, userdata);
 }
 
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
 {
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+    PowerController_PowerState_t curState = POWER_STATE_STANDBY_DEEP_SLEEP;
+    PowerController_PowerState_t newState = POWER_STATE_ON;
+    void* userdata;
+    _pwrManagerEventHandler(curState, newState, userdata);
 }
 
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail)
 {
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    PowerController_PowerState_t curState = POWER_STATE_STANDBY_DEEP_SLEEP;
+    PowerController_PowerState_t newState = POWER_STATE_ON;
+    void* userdata;
 
     EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+    _pwrManagerEventHandler(curState, newState, userdata);
 }
 
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess)
 {
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    PowerController_PowerState_t curState = POWER_STATE_STANDBY_DEEP_SLEEP;
+    PowerController_PowerState_t newState = POWER_STATE_ON;
+    void* userdata;
 
     EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+    _pwrManagerEventHandler(curState, newState, userdata);
 }
 
 /* --------------- Test RRD_subscribe() from rrdIarm --------------- */
@@ -2729,7 +2724,8 @@ TEST_F(RRDSubscribeTest, TestRRD_Subscribe_AllSuccess)
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, PowerController_RegisterPowerModeChangedCallback(::testing::_, nullptr)).WillOnce(::testing::Return(0));
+
     EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
     IARM_Result_t result = RRD_subscribe();
 
@@ -2793,7 +2789,8 @@ TEST_F(RRDSubscribeTest, TestRRD_Subscribe_PwrMgrHandlerFail)
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    EXPECT_CALL(mock, PowerController_RegisterPowerModeChangedCallback(::testing::_, nullptr)).WillOnce(::testing::Return(0));
+
     IARM_Result_t result = RRD_subscribe();
 
     EXPECT_NE(result, IARM_RESULT_SUCCESS);
