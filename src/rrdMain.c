@@ -88,39 +88,30 @@ void *RRDEventThreadFunc(void *arg)
  */
 bool isRRDEnabled(void)
 {
-    bool ret = true;
+    bool ret = false;
+    rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
+    rbusValue_t value = NULL;
+    rbusValue_Init(&value);
+
 #if !defined(GTEST_ENABLE)
-#ifdef IARMBUS_SUPPORT
-    RFC_ParamData_t param;
-    WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
-    if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
-	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:getRFCParameter() name=%s,type=%d,value=%s\n", __FUNCTION__, __LINE__, param.name, param.type, param.value);
-	    if (strcasecmp("false", param.value) == 0) {
-		    ret = false;
-	    }
-    } 
-    else {
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
-    }
-#else
-    rbusValue_t RRDValue;
-    rbusError_t rc = RBUS_ERROR_BUS_ERROR;
-    rbusValue_t value;
-    if(0 == syscfg_init())
-    {
-        if(RBUS_ERROR_SUCCESS == rbus_get(rrdRbusHandle, "RemoteDebuggerEnabled", &RRDValue))
-           RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: syscfg_get RemoteDebuggerEnabled %s\n", __FUNCTION__, __LINE__, RRDValue);
-           if ((RRDValue[0] != '\0' && strncmp(RRDValue, "true", strlen("true")) == 0))
-            {
+     retCode = rbus_get(rrdRbusHandle, RRD_RFC, &value);
+     if (retCode == RBUS_ERROR_SUCCESS) 
+     {
+          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"RemoteDebugger Status: = [%d]\n", rbusValue_GetBoolean(value));
+          ret = rbusValue_GetBoolean(value);
+          if(ret) 
+	  {
                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is enabled, starting remote-debugger\n", __FUNCTION__, __LINE__);
-                ret = true;
-            }
-           else
-            {
-                ret = false;
-            }
-    }
-#endif
+          }
+          else 
+	  { 
+               RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is disabled, stopping remote-debugger\n", __FUNCTION__, __LINE__);
+          }
+     }
+     else 
+     {
+          RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_get failed with error [%d]\n\n", __FUNCTION__, __LINE__,rbusError_ToString((rbusError_t)ret));
+     }
 #endif
     return ret;
 }
