@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 #endif
     /* Initialize Cache */
     initCache();
-
+    RRD_subscribe();
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
     if(!isEnabled) {
@@ -156,8 +156,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:SUCCESS: Message Queue ID Creation Done, msqid=%d...\n",__FUNCTION__,__LINE__,msqid);
-
-    RRD_subscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Started RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
 
     /* Create Thread for listening TR69 events */
