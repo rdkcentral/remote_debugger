@@ -61,7 +61,7 @@ int RRD_IARM_subscribe()
     }
 
     // Thunder client library register for Deep Sleep Event Handler
-    ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, nullptr);
+    ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Register EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
