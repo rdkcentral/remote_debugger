@@ -61,12 +61,17 @@ int RRD_IARM_subscribe()
     }
 
     // Thunder client library register for Deep Sleep Event Handler
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: start PowerController_Init().. \n", __FUNCTION__, __LINE__);
+    PowerController_Init();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Registering power mode change callback.. \n", __FUNCTION__, __LINE__);
     ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
     if (ret != 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Register EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Register power mode change callback EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
         return ret;
     }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Registered power mode change callback.. \n", __FUNCTION__, __LINE__);
    
     return ret;
 }
@@ -88,7 +93,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
     data_buf *sbuf = NULL;
     int msgLen = strlen(DEEP_SLEEP_STR) + 1;
 #endif
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. currentState =%d, newState = %d\n", __FUNCTION__, __LINE__, currentState, newState);
 
     if ((currentState == POWER_STATE_STANDBY_DEEP_SLEEP &&
             newState != POWER_STATE_STANDBY_DEEP_SLEEP))
@@ -279,13 +284,19 @@ int RRD_IARM_unsubscribe()
         return ret;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for RDMMGR done! \n", __FUNCTION__, __LINE__);
-    // IARM Unregister for Deep Sleep Event Handler
+    
+    // Thunder client Unregister for Deep Sleep Event Handler
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: start PowerController_Term().. \n", __FUNCTION__, __LINE__);
+    PowerController_Term();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Term().. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: UnRegistering power mode change callback.. \n", __FUNCTION__, __LINE__);
+
     ret = PowerController_UnRegisterPowerModeChangedCallback(_pwrManagerEventHandler);
     if (ret != 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Unregister EventHandler for PWRMGR failed!!! \n ", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Thunder client Unregister EventHandler for PWRMGR failed!!! \n ", __FUNCTION__, __LINE__);
         return ret;
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for PWRMGR done! \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: UnRegistering power mode change callback for PWRMGR done! \n", __FUNCTION__, __LINE__);
     return ret;
 }
