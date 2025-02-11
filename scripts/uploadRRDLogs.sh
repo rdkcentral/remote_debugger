@@ -77,31 +77,33 @@ uploadRRDLogsSTB()
 if [ "$BUILD_TYPE" != "prod" ] && [ -f /opt/dcm.properties ]; then
     uploadLog "Configurable service end-points will not be used for $BUILD_TYPE Builds due to overriden /opt/dcm.properties!!!"
 else
-    #Fetch Upload LogUrl information
-    uploadLog "Using Log Server Url from RFC parameter:Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl..."
-    LOG_SERVER=$(tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl 2>&1)
+    if [ -f /usr/bin/tr181 ]; then
+        #Fetch Upload LogUrl information
+        uploadLog "Using Log Server Url from RFC parameter:Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl..."
+        LOG_SERVER=$(tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl 2>&1)
+        if [ -z "$HTTP_UPLOAD_LINK" ]; then
+            uploadLog "'LogUploadSettings:UploadRepository:URL' is not found in DCMSettings.conf, Reading from RFC"
+            UPLOAD_HTTPLINK_URL=$(tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl 2>&1)
+            if [ ! -z "$UPLOAD_HTTPLINK_URL" ]; then
+                HTTP_UPLOAD_LINK=${UPLOAD_HTTPLINK_URL}/cgi-bin/S3.cgi
+            fi
+        fi
+    fi
     #Fetch Upload HttpLink information
     uploadLog "Using Upload HttpLink from DCMSettings.conf..."
     if [ -f $OUTFILE ]; then
         HTTP_UPLOAD_LINK=`cat $OUTFILE | grep 'LogUploadSettings:UploadRepository:URL' | cut -d '=' -f2 | sed 's/^"//' | sed 's/"$//'`
-    fi
-    if [ -z "$HTTP_UPLOAD_LINK" ]; then
-        uploadLog "'LogUploadSettings:UploadRepository:URL' is not found in DCMSettings.conf, Reading from RFC"
-        UPLOAD_HTTPLINK_URL=$(tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl 2>&1)
-        if [ ! -z "$UPLOAD_HTTPLINK_URL" ]; then
-             HTTP_UPLOAD_LINK=${UPLOAD_HTTPLINK_URL}/cgi-bin/S3.cgi
+        #Fetch Upload Protocol information
+        uploadLog "Using Upload Protocol from DCMSettings.conf..."
+        UPLOAD_PROTOCOL=`cat $OUTFILE | grep 'LogUploadSettings:UploadRepository:uploadProtocol' | cut -d '=' -f2 | sed 's/^"//' | sed 's/"$//'`
+        if [ -z "$UPLOAD_PROTOCOL" ]; then
+            uploadLog "urn:settings:LogUploadSettings:Protocol' is not found in DCMSettings.conf"
+            UPLOAD_PROTOCOL="HTTP"
         fi
-    fi
-    #Fetch Upload Protocol information
-    uploadLog "Using Upload Protocol from DCMSettings.conf..."
-    UPLOAD_PROTOCOL=`cat $OUTFILE | grep 'LogUploadSettings:UploadRepository:uploadProtocol' | cut -d '=' -f2 | sed 's/^"//' | sed 's/"$//'`
-    if [ -z "$UPLOAD_PROTOCOL" ]; then
-        uploadLog "urn:settings:LogUploadSettings:Protocol' is not found in DCMSettings.conf"
-        UPLOAD_PROTOCOL="HTTP"
     fi
 fi
 
-if [[ -z $LOG_SERVER || -z $HTTP_UPLOAD_LINK ]]; then
+if [ -z $LOG_SERVER ] || [ -z $HTTP_UPLOAD_LINK ]; then
     echo "DCM params read using RFC/tr181 is empty..!!!"
     if [ "$BUILD_TYPE" != "prod" ] && [ -f /opt/dcm.properties ]; then
         . /opt/dcm.properties
@@ -128,7 +130,7 @@ if [ -d $RRD_LOG_PATH ] && [ "$(ls -A $RRD_LOG_PATH)" ]; then
     retval=$?
     if [ $retval -ne 0 ];then
         uploadLog "RRD $ISSUETYPE Debug Information Report upload Failed!!!"
-	rm -rf $UPLOAD_DEBUG_FILE $RRD_LOG_PATH
+        rm -rf $UPLOAD_DEBUG_FILE $RRD_LOG_PATH
     else
         uploadLog "RRD $ISSUETYPE Debug Information Report upload Success"
         uploadLog "Removing uploaded report $UPLOAD_DEBUG_FILE"

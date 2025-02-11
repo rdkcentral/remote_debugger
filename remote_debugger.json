@@ -7,27 +7,33 @@
     },
     "Sanity": {
         "Check" : {
-            "Commands" : [ "rm -rf ", "kill ", "pkill ", "iptables ", "ip6tables " ]
+            "Commands" : [ "rm -rf;kill;pkill;iptables;ip6tables" ]
         }
     },
     "Device" : {
         "Info" : {
-            "Commands": "cat /version.txt",
+            "Commands": "cat /version.txt;tcpdump -w RRD_LOCATION/capture.pcap &",
             "Timeout" : 10
         },
         "Uptime" : {
             "Commands": "uptime",
             "Timeout" : 10
         }
-   }, 
-   "Process" : {
-        "ProcessStatus" : {
-            "Commands": "cat /opt/logs/top_log.txt*",
-            "Timeout" : 10
-        },
-        "ServiceStatus" : {
-            "Commands": "systemctl list-units --type=service --all",
+    },
+    "Command" : {
+        "Harm" : {
+            "Commands": "rm -rf;kill;pkill;iptables;ip6tables",
             "Timeout" : 10
         }
-   }
+    },
+   "Process" : {
+       "ProcessStatus" : {
+            "Commands": "cat /opt/logs/top_log.txt*",
+            "Timeout" : 10
+       },
+       "ServiceStatus" : {
+            "Commands": "systemctl list-units --type=service --all",
+            "Timeout" : 10
+       }
+    }
 }
