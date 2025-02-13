@@ -33,11 +33,19 @@ apt-get update && apt-get install -y tcpdump
 
 cp remote_debugger.json /etc/rrd/remote_debugger.json
 cp scripts/uploadRRDLogs.sh /lib/rdk/uploadRRDLogs.sh
+chmod -R 777 /lib/rdk/uploadRRDLogs.sh
+
 cp scripts/systemd-run /usr/local/bin/systemd-run
+chmod -R 777 /usr/local/bin/systemd-run
 ln -s /usr/local/bin/systemd-run /usr/bin/systemd-run
 
-chmod -R 777 /lib/rdk/uploadRRDLogs.sh
-chmod -R 777 /usr/local/bin/systemd-run
+touch /usr/local/bin/systemctl
+chmod -R 777 /usr/local/bin/systemctl
+ln -s /usr/local/bin/systemctl /usr/bin/systemctl
+
+touch /usr/local/bin/journalctl
+chmod -R 777 /usr/local/bin/journalctl
+ln -s /usr/local/bin/journalctl /usr/bin/journalctl
 
 rm -rf /tmp/rrd/*
 rm -rf /opt/logs/remotedebugger.log*
@@ -49,8 +57,8 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_st
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report.json test/functional-tests/tests/test_rrd_static_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_corrupted_static_profile_report.json test/functional-tests/tests/test_rrd_corrupted_static_profile_report.py
 cp remote_debugger.json /etc/rrd/
-pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_harmfull_static_profile_report.json test/functional-tests/tests/test_rrd_harmfull_static_profile_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_harmfull_static_profile_report.json test/functional-tests/tests/test_rrd_harmful_command_static_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_category_report.json test/functional-tests/tests/test_rrd_static_profile_category_report.py
-pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_empty_event.json test/functional-tests/tests/test_rrd_empty_event.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_empty_event.json test/functional-tests/tests/test_rrd_empty_issuetype_event.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_missing_command_report.json test/functional-tests/tests/test_rrd_static_profile_missing_command_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
