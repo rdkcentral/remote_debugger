@@ -16,6 +16,7 @@ ISSUE_STRING = "Device.Info"
 CATEGORY_STRING = "Device"
 HARMFULL_STRING = "Command.Harm"
 MISSING_STRING = "Test.TestRun"
+BACKGROUND_STRING = "Device.Dump"
 
 def remove_logfile():
     try:
