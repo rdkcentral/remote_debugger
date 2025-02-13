@@ -58,7 +58,7 @@ uploadRRDLogsSTB()
     result=1
 
     cd $PARAM_RRD_LOG_DIR
-    while (( attempt <= max_attempts )); do
+    while [ $attempt -le $max_attempts ]; do
         if [ ! -f /tmp/.log-upload.pid ]; then
             # Call the LogUploadSTB.sh to upload RRD Logs
             sh $RDK_PATH/uploadSTBLogs.sh "$PARAM_LOG_SERVER" 1 1 0 "$PARAM_UPLOAD_PROTOCOL" "$PARAM_HTTP_UPLOAD_LINK" 0 1 "$PARAM_UPLOAD_DEBUG_FILE"
