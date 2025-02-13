@@ -12,13 +12,17 @@
     },
     "Device" : {
         "Info" : {
-            "Commands": "cat /version.txt;tcpdump -w RRD_LOCATION/capture.pcap &",
+            "Commands": "cat /version.txt;cat /etc/device.properties;uname -r",
             "Timeout" : 10
         },
         "Uptime" : {
             "Commands": "uptime",
             "Timeout" : 10
-        }
+        },
+        "Dump" : {
+            "Commands": "tcpdump -w RRD_LOCATION/capture.pcap &",
+            "Timeout" : 10
+        }        
     },
     "Command" : {
         "Harm" : {
