@@ -4,13 +4,19 @@ import os
 import time
 import re
 import signal
+import shutil
 from time import sleep
 
 RRD_LOG_FILE = "/opt/logs/remotedebugger.log.0"
 LOG_FILE = "/opt/logs/remotedebugger.log.0"
 JSON_FILE = "/etc/rrd/remote_debugger.json"
+UPLOAD_SCRIPT = "/lib/rdk/uploadRRDLogs.sh"
 OUTPUT_DIR = "/tmp/rrd"
 ISSUE_STRING = "Device.Info"
+CATEGORY_STRING = "Device"
+HARMFULL_STRING = "Command.Harm"
+MISSING_STRING = "Test.TestRun"
+BACKGROUND_STRING = "Device.Dump"
 
 def remove_logfile():
     try:
@@ -63,3 +69,25 @@ def run_shell_silent(command):
 def run_shell_command(command):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout.strip()
+
+def get_issue_type():
+    command = [
+        'rbuscli', 'get',
+        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType'
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0
+    return result.stdout.strip()
+
+def remove_outdir_contents(directory):
+    if os.path.exists(directory):
+        for filename in os.listdir(directory):
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f'Failed to delete {file_path}. Reason: {e}')
+

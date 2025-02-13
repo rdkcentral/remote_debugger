@@ -19,15 +19,39 @@ def test_check_remotedebugger_is_starting():
     pid = run_shell_command(command_to_get_pid)
     assert pid != "", "remotedebugger process did not start"
 
-def test_remote_debugger_rbus_subscription():
     sleep(2)
     SUBSCRIBE = "SUCCESS: RBUS Event Subscribe for RRD done!"
     assert SUBSCRIBE in grep_rrdlogs(SUBSCRIBE)
 
-def test_remote_debugger_waiting_for_events():
     sleep(2)
     EVENT_MSG = "Waiting for for TR69/RBUS Events."
     assert EVENT_MSG in grep_rrdlogs(EVENT_MSG)
 
-    remove_logfile()
+def test_remote_debugger_trigger_event():
+    sleep(10)
+    command = [
+        'rbuscli', 'set',
+        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
+        'string', ''
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0
+
+    sleep(15)
+
+    QUERY_MSG = "Received event for RRD_SET_ISSUE_EVENT"
+    assert QUERY_MSG in grep_rrdlogs(QUERY_MSG)
+
+    MSG_SEND = "SUCCESS: Message sending Done"
+    sleep(2)
+    assert MSG_SEND in grep_rrdlogs(MSG_SEND)
+
+    MSG_EMPTY = "Message Received is empty, Exit Processing"
+    sleep(2)
+    assert MSG_EMPTY in grep_rrdlogs(MSG_EMPTY)
+
+    EVENT_MSG = "Waiting for for TR69/RBUS Events."
+    assert EVENT_MSG in grep_rrdlogs(EVENT_MSG)
+
     kill_rrd()
+    remove_logfile()

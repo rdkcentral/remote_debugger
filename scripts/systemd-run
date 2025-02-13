@@ -1,0 +1,30 @@
+#!/bin/sh
+log_output()
+{
+    echo "$0: $*"
+}
+
+log_output "Running as unit: $2"
+log_output "Starting "
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -c)
+      shift
+      command_to_execute="$@"
+      break
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+eval "$command_to_execute"
+
+pid=$(pidof tcpdump)
+if [ ! -z "$pid" ];then
+    sleep 2
+    kill -s 9 $pid
+fi
+log_output "Started "
