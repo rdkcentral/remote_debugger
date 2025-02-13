@@ -22,28 +22,25 @@ RESULT_DIR="/tmp/remotedebugger_test_report"
 STATIC_PROFILE_DIR="/etc/rrd"
 OUTPUT_DIR="/tmp/rrd"
 LIB_DIR="/lib/rdk"
+
 mkdir -p "$RESULT_DIR"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$STATIC_PROFILE_DIR"
 mkdir -p "$LIB_DIR"
 
-touch  /etc/include.properties
-echo "RDK_PATH=/lib/rdk" > /etc/include.properties
+apt-get remove systemd
+apt-get update && apt-get install -y tcpdump
 
-touch  /etc/dcm.properties
-echo "LOG_SERVER=logs.xcal.tv" > /etc/dcm.properties
-echo "HTTP_UPLOAD_LINK=https://ssr.ccp.xcal.tv/cgi-bin/S3.cgi" >> /etc/dcm.properties
-
-touch  /bin/timestamp
-echo "#!/bin/sh" > /bin/timestamp
-echo "date -u +'%Y-%m-%dT%H:%M:%S.%3NZ'" > /bin/timestamp
-chmod -R 777 /bin/timestamp
-
-cp remote_debugger.json /etc/rrd/
-rm -rf /opt/logs/remotedebugger.log*
+cp remote_debugger.json /etc/rrd/remote_debugger.json
 cp scripts/uploadRRDLogs.sh /lib/rdk/uploadRRDLogs.sh
+cp scripts/systemd-run /usr/local/bin/systemd-run
+ln -s /usr/local/bin/systemd-run /usr/bin/systemd-run
+
 chmod -R 777 /lib/rdk/uploadRRDLogs.sh
+chmod -R 777 /usr/local/bin/systemd-run
+
 rm -rf /tmp/rrd/*
+rm -rf /opt/logs/remotedebugger.log*
 
 # Run L2 Test cases
 pytest  --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_single_instance.json test/functional-tests/tests/test_rrd_single_instance.py
@@ -56,3 +53,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_ha
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_category_report.json test/functional-tests/tests/test_rrd_static_profile_category_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_empty_event.json test/functional-tests/tests/test_rrd_empty_event.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_missing_command_report.json test/functional-tests/tests/test_rrd_static_profile_missing_command_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
