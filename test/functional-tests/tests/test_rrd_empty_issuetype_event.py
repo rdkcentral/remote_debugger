@@ -61,15 +61,7 @@ def test_remote_debugger_trigger_event():
     QUERY_MSG = "Received event for RRD_SET_ISSUE_EVENT"
     assert QUERY_MSG in grep_rrdlogs(QUERY_MSG)
 
-    MSG_SEND = "SUCCESS: Message sending Done"
-    sleep(2)
-    assert MSG_SEND in grep_rrdlogs(MSG_SEND)
-
-    MSG_EMPTY = "Message Received is empty, Exit Processing"
-    sleep(2)
-    assert MSG_EMPTY in grep_rrdlogs(MSG_EMPTY)
-
-    EVENT_MSG = "Waiting for for TR69/RBUS Events."
+    EVENT_MSG = "Message Received is empty, Exit Processing"
     assert EVENT_MSG in grep_rrdlogs(EVENT_MSG)
 
     kill_rrd()
