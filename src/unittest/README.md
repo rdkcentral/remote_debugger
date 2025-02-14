@@ -8,7 +8,7 @@ The project uses a `Makefile` for building the tests. Here are the steps to buil
 
 1. Clone the RDK Remote Debugger Repo from RDKE 
     ```
-    git clone git@github.com:rdk-e/remote_debugger.git
+    git clone git@github.com:rdkcentral/remote_debugger.git
     ```
 
 2. Checkout to target branch (optional)

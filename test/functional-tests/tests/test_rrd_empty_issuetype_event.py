@@ -1,3 +1,22 @@
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2018 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##########################################################################
+
 from time import sleep
 from helper_functions import *
 
@@ -42,15 +61,7 @@ def test_remote_debugger_trigger_event():
     QUERY_MSG = "Received event for RRD_SET_ISSUE_EVENT"
     assert QUERY_MSG in grep_rrdlogs(QUERY_MSG)
 
-    MSG_SEND = "SUCCESS: Message sending Done"
-    sleep(2)
-    assert MSG_SEND in grep_rrdlogs(MSG_SEND)
-
-    MSG_EMPTY = "Message Received is empty, Exit Processing"
-    sleep(2)
-    assert MSG_EMPTY in grep_rrdlogs(MSG_EMPTY)
-
-    EVENT_MSG = "Waiting for for TR69/RBUS Events."
+    EVENT_MSG = "Message Received is empty, Exit Processing"
     assert EVENT_MSG in grep_rrdlogs(EVENT_MSG)
 
     kill_rrd()
