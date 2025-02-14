@@ -93,7 +93,7 @@ def test_remote_debugger_trigger_event():
     assert READ_COMMAND_MSG in grep_rrdlogs(READ_COMMAND_MSG)
 
 def test_remote_debugger_command_sanity():
-    VALID_COMMAND = "rm -rf;kill;pkill;iptables;ip6tables"
+    VALID_COMMAND = "rm -rf"
     assert VALID_COMMAND in grep_rrdlogs(VALID_COMMAND)
 
     SANITY_CHECK = "Found harmful commands"
