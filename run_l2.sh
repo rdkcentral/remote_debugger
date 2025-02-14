@@ -31,9 +31,12 @@ mkdir -p "$LIB_DIR"
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
 
+echo "LOG_PATH=/opt/logs" >> /etc/include.properties
+
 cp remote_debugger.json /etc/rrd/remote_debugger.json
 cp scripts/uploadRRDLogs.sh /lib/rdk/uploadRRDLogs.sh
 chmod -R 777 /lib/rdk/uploadRRDLogs.sh
+sed -i 's/remote-debugger\.log/remotedebugger\.log\.0/g' /lib/rdk/uploadRRDLogs.sh
 
 cp scripts/systemd-run /usr/local/bin/systemd-run
 chmod -R 777 /usr/local/bin/systemd-run
@@ -62,3 +65,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_st
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_empty_event.json test/functional-tests/tests/test_rrd_empty_issuetype_event.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_missing_command_report.json test/functional-tests/tests/test_rrd_static_profile_missing_command_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py

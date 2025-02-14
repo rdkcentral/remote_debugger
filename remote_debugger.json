@@ -7,7 +7,7 @@
     },
     "Sanity": {
         "Check" : {
-            "Commands" : [ "rm -rf;kill;pkill;iptables;ip6tables" ]
+            "Commands" : [ "rm -rf", "kill", "pkill", "iptables", "ip6tables" ]
         }
     },
     "Device" : {
@@ -26,7 +26,7 @@
     },
     "Command" : {
         "Harm" : {
-            "Commands": "rm -rf;kill;pkill;iptables;ip6tables",
+            "Commands": "rm -rf",
             "Timeout" : 10
         }
     },
