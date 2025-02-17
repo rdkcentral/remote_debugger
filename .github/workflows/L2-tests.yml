@@ -65,7 +65,7 @@ jobs:
 
       - name: Start mock-xconf service
         run: |
-          docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
+          docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -p 50054:50054 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
 
       - name: Start l2-container service
         run: |
