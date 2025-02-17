@@ -73,13 +73,13 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
-    subscriptions[2].eventName = RRD_DOWNLOAD_STATUS_EVENT;
+    subscriptions[2].eventName = Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus;
     subscriptions[2].filter = NULL;
     subscriptions[2].duration = 0;
     subscriptions[2].handler  = _rdmDownloadEventHandler;
     subscriptions[2].userData = NULL;
 
-    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
 #endif
     if(ret != 0)
     {
@@ -200,6 +200,10 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
  * @return void
  */
 #if !defined(GTEST_ENABLE)
+void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
+{
+RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);	
+}
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *dataMsg = NULL;
