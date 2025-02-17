@@ -55,8 +55,17 @@ def validate_file(filename):
     else:
         return f"File {filename} not found."
 
+def check_server_status():
+    url = "https://mockxconf:50054/rrdDebugReport"
+    result = subprocess.run(["curl", "-k", "-I", "-w", "%{http_code}", url, "-o", "/dev/null"], capture_output=True, text=True)
+    status_code = result.stdout.strip()
+    return status_code
+
 def test_check_and_start_remotedebugger():
     kill_rrd()
+    status_code = check_server_status()
+    assert status_code == "200", f"Unexpected status code: {status_code}"
+
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
@@ -146,6 +155,14 @@ def test_remotedebugger_upload_report():
     else:
         print("Upload status not found in logs")
 
+    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
+    SCRIPT_FAILURE = "Debug Information Report upload Success"
+    if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
+        print("Script execution success")
+    elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
+        print("Script execution failed")
+    else:
+        print("Script execution not found in logs")
 
 def test_remotedebugger_download_report():
     tgz_file = get_rrd_tarfile()
