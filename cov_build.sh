@@ -22,7 +22,9 @@ WORKDIR=`pwd`
 export ROOT=/usr
 export INSTALL_DIR=${ROOT}/local
 mkdir -p $INSTALL_DIR
-#Build rfc
+
+
+# Build tr181api from rfc source code
 cd ${ROOT}
 git clone https://github.com/rdkcentral/rfc.git
 cd rfc
@@ -35,17 +37,19 @@ cd /usr/rfc/tr181api
 g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c
 mv ./libtr181api.so /usr/local/lib
 cp ./tr181api.h /usr/local/include
+
+# Install header files alone from armmgrs and iarmbus repositories
 cd $ROOT
-rm -rf iarmmgrs
-rm -rf iarmbus
 git clone https://github.com/rdkcentral/iarmmgrs.git
 cp /usr/iarmmgrs/rdmmgr/include/rdmMgr.h /usr/local/include
+
 git clone https://github.com/rdkcentral/iarmbus.git
 cp /usr/iarmbus/core/include/libIBusDaemon.h /usr/local/include
 cp /usr/iarmbus/core/include/libIBus.h /usr/local/include
 cp /usr/iarmbus/core/libIARMCore.h /usr/local/include
 cp /usr/iarmmgrs/hal/include/pwrMgr.h /usr/local/include/
 
+# Build and install stubs from tr69hostif
 git clone https://github.com/rdkcentral/tr69hostif.git
 cd tr69hostif
 cd ./src/unittest/stubs
