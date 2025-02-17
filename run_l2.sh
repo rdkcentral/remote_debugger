@@ -31,10 +31,14 @@ mkdir -p "$LIB_DIR"
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
 
+echo "LOG_PATH=/opt/logs" >> /etc/include.properties
 cp remote_debugger.json /etc/rrd/remote_debugger.json
 cp scripts/uploadRRDLogs.sh /lib/rdk/uploadRRDLogs.sh
 chmod -R 777 /lib/rdk/uploadRRDLogs.sh
 sed -i 's/remote-debugger\.log/remotedebugger\.log\.0/g' /lib/rdk/uploadRRDLogs.sh
+
+cp test/functional-tests/tests/uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
+chmod -R 777 /lib/rdk/uploadRRDLogs.sh
 
 cp scripts/systemd-run /usr/local/bin/systemd-run
 chmod -R 777 /usr/local/bin/systemd-run
