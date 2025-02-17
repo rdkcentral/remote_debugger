@@ -14,8 +14,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout code rfc code
+        uses: actions/checkout@v4
+        with:
+          path: remote_debugger
+
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/rfc'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: rfc
+
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/iarmmgrs'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: iarmmgrs
+          
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/iarmbus'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: iarmbus
+
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/tr69hostif'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: tr69hostif
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
@@ -41,13 +71,14 @@ jobs:
         run: |
           docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
 
-      - name: Update netrc file for native-platform container
+
+      - name: Move dependent repositories in native-platform container to /usr
         run: |
-          docker exec -i native-platform /bin/bash -c "echo -e 'machine github.com\nlogin ${{ github.actor }}\\npassword ${{ secrets.GITHUB_TOKEN }}' > ~/.netrc"
+          docker exec -i native-platform /bin/bash -c "mv /mnt/L2_CONTAINER_SHARED_VOLUME/rfc /usr/ && mv /mnt/L2_CONTAINER_SHARED_VOLUME/iarmmgrs /usr/ && mv /mnt/L2_CONTAINER_SHARED_VOLUME/iarmbus /usr/ && mv /mnt/L2_CONTAINER_SHARED_VOLUME/tr69hostif /usr/"
 
       - name: Enter Inside Platform native container and run L2 Test
         run: |
-          docker exec -i native-platform /bin/bash -c "cd /mnt/L2_CONTAINER_SHARED_VOLUME/ && sh cov_build.sh && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/local/lib: && find / -name downloadUtil.h && ls -l && sh run_l2.sh" 
+          docker exec -i native-platform /bin/bash -c "cd /mnt/L2_CONTAINER_SHARED_VOLUME/remote_debugger && sh cov_build.sh && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/local/lib: && find / -name downloadUtil.h && ls -l && sh run_l2.sh" 
 
       - name: Copy l2 test results to runner 
         run: |
