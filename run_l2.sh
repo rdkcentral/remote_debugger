@@ -18,7 +18,7 @@
 # limitations under the License.
 ####################################################################################
 
-RESULT_DIR="/tmp/remotedebugger_test_report"
+RESULT_DIR="/tmp/l2_test_report"
 STATIC_PROFILE_DIR="/etc/rrd"
 OUTPUT_DIR="/tmp/rrd"
 LIB_DIR="/lib/rdk"
