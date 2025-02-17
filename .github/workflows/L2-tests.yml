@@ -1,7 +1,7 @@
 name: L2 Integration Tests
 
 on:
-  workflow_dispatch:
+  pull_request:
     branches: [ develop ]
 
 env:
@@ -32,15 +32,23 @@ jobs:
           docker pull ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
           docker pull ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
           docker pull ghcr.io/rdkcentral/docker-rdk-ci:latest
+
       - name: Start mock-xconf service
         run: |
           docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
+
       - name: Start l2-container service
         run: |
           docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
+
+      - name: Update netrc file for native-platform container
+        run: |
+          docker exec -i native-platform /bin/bash -c "echo -e 'machine github.com\nlogin ${{ github.actor }}\\npassword ${{ secrets.GITHUB_TOKEN }}' > ~/.netrc"
+
       - name: Enter Inside Platform native container and run L2 Test
         run: |
           docker exec -i native-platform /bin/bash -c "cd /mnt/L2_CONTAINER_SHARED_VOLUME/ && sh cov_build.sh && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/local/lib: && find / -name downloadUtil.h && ls -l && sh run_l2.sh" 
+
       - name: Copy l2 test results to runner 
         run: |
           docker cp native-platform:/tmp/l2_test_report /tmp/L2_TEST_RESULTS
