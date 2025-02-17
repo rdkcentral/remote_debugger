@@ -73,6 +73,12 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
+    subscriptions[2].eventName = RRD_DOWNLOAD_STATUS_EVENT;
+    subscriptions[2].filter = NULL;
+    subscriptions[2].duration = 0;
+    subscriptions[2].handler  = _rdmDownloadEventHandler;
+    subscriptions[2].userData = NULL;
+
     ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
 #endif
     if(ret != 0)
