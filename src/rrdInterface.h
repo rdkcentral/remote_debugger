@@ -65,7 +65,7 @@ int RRD_IARM_unsubscribe(void);
 void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 #endif
-void RRD_data_buff_deAlloc(data_buf *sbuf);;
+void RRD_data_buff_deAlloc(data_buf *sbuf);
 void RRDMsgDeliver(int msgqid, data_buf *sbuf);
 int RRD_subscribe(void);
 int RRD_unsubscribe(void);
