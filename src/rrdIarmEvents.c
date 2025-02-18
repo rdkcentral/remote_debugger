@@ -390,6 +390,7 @@ int RRD_IARM_unsubscribe()
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Unregister EventHandler for PWRMGR failed!!! \n ", __FUNCTION__, __LINE__);
         return ret;
     }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for PWRMGR done! \n", __FUNCTION__, __LINE__);
 #endif
     return ret;
 }
