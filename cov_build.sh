@@ -20,11 +20,30 @@
 WORKDIR=`pwd`
 # Build and install critical dependency
 export ROOT=/usr
-export INSTALL_DIR=${ROOT}/local
+export INSTALL_DIR=/usr/local
 mkdir -p $INSTALL_DIR
-#Build rfc
+
+
+# Build tr181api from rfc source code
 cd ${ROOT}
-git clone https://github.com/rdkcentral/rfc.git
+
+# Clone all dependencies if not present already
+if [ ! -d rfc ]; then
+    git clone https://github.com/rdkcentral/rfc.git
+fi
+
+if [ ! -d iarmmgrs ]; then
+    git clone https://github.com/rdkcentral/iarmmgrs.git
+fi
+
+if [ ! -d iarmbus ]; then
+    git clone https://github.com/rdkcentral/iarmbus.git
+fi
+
+if [ ! -d tr69hostif ]; then
+    git clone https://github.com/rdkcentral/tr69hostif.git
+fi
+
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
@@ -35,18 +54,20 @@ cd /usr/rfc/tr181api
 g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c
 mv ./libtr181api.so /usr/local/lib
 cp ./tr181api.h /usr/local/include
+
+# Install header files alone from armmgrs repositories
 cd $ROOT
-rm -rf iarmmgrs
-rm -rf iarmbus
-git clone https://github.com/rdkcentral/iarmmgrs.git
+
 cp /usr/iarmmgrs/rdmmgr/include/rdmMgr.h /usr/local/include
-git clone https://github.com/rdkcentral/iarmbus.git
+
+# Install header files alone from iarmbus repositories
 cp /usr/iarmbus/core/include/libIBusDaemon.h /usr/local/include
 cp /usr/iarmbus/core/include/libIBus.h /usr/local/include
 cp /usr/iarmbus/core/libIARMCore.h /usr/local/include
 cp /usr/iarmmgrs/hal/include/pwrMgr.h /usr/local/include/
 
-git clone https://github.com/rdkcentral/tr69hostif.git
+# Build and install stubs from tr69hostif
+
 cd tr69hostif
 cd ./src/unittest/stubs
 g++ -fPIC -shared -o libIARMBus.so iarm_stubs.cpp  -I/usr/tr69hostif/src/hostif/parodusClient/pal -I/usr/tr69hostif/src/unittest/stubs -I/usr/tr69hostif/src/hostif/parodusClient/waldb -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/tr69hostif/src/hostif/include -I/usr/tr69hostif/src/hostif/profiles/DeviceInfo -I/usr/tr69hostif/src/hostif/parodusClient/pal -fpermissive
