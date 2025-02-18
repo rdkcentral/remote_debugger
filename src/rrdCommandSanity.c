@@ -141,7 +141,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          }
          else
          {
-             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Found valid Commands, Execute... \n",__FUNCTION__,__LINE__);
+             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Found valid Commands, Execute... %s \n",__FUNCTION__,__LINE__,sanitystr);
          }
     }
 
