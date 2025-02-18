@@ -19,7 +19,9 @@
 
 #include "rrdInterface.h"
 #include "rrdRunCmdThread.h" 
+#if defined(PWRMGR_PLUGIN)
 #include "power_controller.h"
+#endif
 
 extern int msqid;
 extern rbusHandle_t rrdRbusHandle;
