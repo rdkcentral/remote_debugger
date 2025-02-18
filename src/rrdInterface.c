@@ -200,7 +200,7 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
  * @return void
  */
 #if !defined(GTEST_ENABLE)
-void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
+void _rdmDownloadEventHandler()
 {
 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);	
 }
