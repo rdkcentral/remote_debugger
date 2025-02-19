@@ -73,7 +73,7 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
-    subscriptions[2].eventName = "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus";
+    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
     subscriptions[2].filter = NULL;
     subscriptions[2].duration = 0;
     subscriptions[2].handler  = _rdmDownloadEventHandler;
