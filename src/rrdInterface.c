@@ -311,7 +311,7 @@ int RRD_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
 #endif
 #if !defined(GTEST_ENABLE)
-    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 2);
+    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);
