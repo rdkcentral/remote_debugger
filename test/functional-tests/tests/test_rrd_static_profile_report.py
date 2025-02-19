@@ -34,6 +34,7 @@ def reset_issuetype_rfc():
 
 def test_check_and_start_remotedebugger():
     kill_rrd()
+    remove_logfile()
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
@@ -105,6 +106,9 @@ def test_remote_debugger_trigger_event():
     SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING} service"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
+    result = check_output_dir()
+    print(result)
+
     UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
@@ -117,6 +121,15 @@ def test_remotedebugger_upload_report():
         print("Upload failed")
     else:
         print("Upload status not found in logs")
+
+    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
+    SCRIPT_FAILURE = "Debug Information Report upload Success"
+    if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
+        print("Script execution success")
+    elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
+        print("Script execution failed")
+    else:
+        print("Script execution not found in logs")
 
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)

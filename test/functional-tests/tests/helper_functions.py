@@ -110,3 +110,24 @@ def remove_outdir_contents(directory):
             except Exception as e:
                 print(f'Failed to delete {file_path}. Reason: {e}')
 
+def check_output_dir():
+    try:
+        find_command = 'find /tmp/rrd/ -iname debug_outputs.txt'
+        find_result = subprocess.run(find_command, shell=True, capture_output=True, text=True)
+        if find_result.returncode == 0:
+            files = find_result.stdout.strip().split('\n')
+            for file in files:
+                if file:  # Ensure the file path is not empty
+                    cat_command = f'cat {file}'
+                    cat_result = subprocess.run(cat_command, shell=True, capture_output=True, text=True)
+                    if cat_result.returncode == 0 and cat_result.stdout.strip():
+                        print(f"Contents of {file}:")
+                        print(cat_result.stdout)
+                        return "Success: File and content are present."
+                    else:
+                        print(f"Error reading {file} or file is empty: {cat_result.stderr}")
+            return "Error: No valid debug_outputs.txt files found with content."
+        else:
+            return f"Error finding files: {find_result.stderr}"
+    except Exception as e:
+        return f"An error occurred: {e}"

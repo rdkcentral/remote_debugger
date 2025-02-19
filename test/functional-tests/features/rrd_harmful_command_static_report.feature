@@ -19,6 +19,16 @@
 
 Feature: Remote Debugger Harmful Commands Report
 
+  Scenario: Check if remote debugger configuration file exists
+    Given the configuration file path is set
+    When I check if the configuration file exists
+    Then the configuration file should exist
+
+  Scenario: Check if /tmp/rrd output directory exists
+    Given the /tmp/rrd directory path is set
+    When I check if the /tmp/rrd directory exists
+    Then the /tmp/rrd directory should exist
+
   Scenario: Verify remote debugger process is running
     Given the remote debugger process is not running
     When I start the remote debugger process

@@ -20,14 +20,6 @@
 from time import sleep
 from helper_functions import *
 
-def test_check_remote_debugger_config_file():
-    config_file_path = JSON_FILE
-    assert check_file_exists(config_file_path)
-
-def test_check_rrd_directory_exists():
-    dir_path = OUTPUT_DIR
-    assert check_directory_exists(dir_path)
-
 def test_check_remotedebugger_is_starting():
     kill_rrd()
     remove_logfile()
@@ -64,5 +56,6 @@ def test_remote_debugger_trigger_event():
     EVENT_MSG = "Message Received is empty, Exit Processing"
     assert EVENT_MSG in grep_rrdlogs(EVENT_MSG)
 
-    kill_rrd()
+    remove_outdir_contents(OUTPUT_DIR)
     remove_logfile()
+    kill_rrd()

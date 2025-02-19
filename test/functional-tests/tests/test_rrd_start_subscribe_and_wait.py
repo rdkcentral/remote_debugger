@@ -43,10 +43,10 @@ def test_remote_debugger_rbus_subscription():
     SUBSCRIBE = "SUCCESS: RBUS Event Subscribe for RRD done!"
     assert SUBSCRIBE in grep_rrdlogs(SUBSCRIBE)
 
-def test_remote_debugger_waiting_for_events():
     sleep(2)
     EVENT_MSG = "Waiting for for TR69/RBUS Events."
     assert EVENT_MSG in grep_rrdlogs(EVENT_MSG)
 
     remove_logfile()
+    remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()

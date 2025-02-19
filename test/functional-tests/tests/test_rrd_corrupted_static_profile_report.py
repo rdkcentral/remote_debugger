@@ -39,6 +39,7 @@ def corrupt_json_file(file_path):
 
 def test_check_and_start_remotedebugger():
     kill_rrd()
+    remove_logfile()
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)

@@ -17,7 +17,7 @@
 # limitations under the License.
 ####################################################################################
 
-Feature: Remote Debugger Subscript to RBUS events
+Feature: Remote Debugger Subscribe to RBUS events
 
   Scenario: Remote debugger should subscribe to events
     Given the remote debugger binary is invoked

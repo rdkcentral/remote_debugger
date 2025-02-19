@@ -27,44 +27,14 @@ def test_check_rrd_directory_exists():
     dir_path = OUTPUT_DIR
     assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
 
-def get_issue_type():
-    command = [
-        'rbuscli', 'get',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType'
-    ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    assert result.returncode == 0
-    return result.stdout.strip()
-
 def reset_issuetype_rfc():
     command = 'rbuscli set Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType string ""'
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     assert result.returncode == 0
 
-def check_output_dir():
-    try:
-        find_command = 'find /tmp/rrd/ -iname debug_outputs.txt'
-        find_result = subprocess.run(find_command, shell=True, capture_output=True, text=True)
-        if find_result.returncode == 0:
-            files = find_result.stdout.strip().split('\n')
-            for file in files:
-                if file:  # Ensure the file path is not empty
-                    cat_command = f'cat {file}'
-                    cat_result = subprocess.run(cat_command, shell=True, capture_output=True, text=True)
-                    if cat_result.returncode == 0 and cat_result.stdout.strip():
-                        print(f"Contents of {file}:")
-                        print(cat_result.stdout)
-                        return "Success: File and content are present."
-                    else:
-                        print(f"Error reading {file} or file is empty: {cat_result.stderr}")
-            return "Error: No valid debug_outputs.txt files found with content."
-        else:
-            return f"Error finding files: {find_result.stderr}"
-    except Exception as e:
-        return f"An error occurred: {e}"
-
 def test_check_and_start_remotedebugger():
     kill_rrd()
+    remove_logfile()
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
@@ -73,7 +43,6 @@ def test_check_and_start_remotedebugger():
     assert pid != "", "remotedebugger process did not start"
 
 def test_remote_debugger_trigger_event():
-    get_issue_type()
     reset_issuetype_rfc()
     sleep(20)
     command = [
@@ -176,6 +145,15 @@ def test_remotedebugger_upload_report():
         print("Upload failed")
     else:
         print("Upload status not found in logs")
+
+    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
+    SCRIPT_FAILURE = "Debug Information Report upload Success"
+    if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
+        print("Script execution success")
+    elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
+        print("Script execution failed")
+    else:
+        print("Script execution not found in logs")
 
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
