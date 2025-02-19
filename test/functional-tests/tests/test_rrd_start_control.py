@@ -37,10 +37,11 @@ def stop_daemon():
     run_shell_command(command)
 
 def test_rdk_remote_debugger_enabled():
+    kill_rrd()
+    remove_logfile()    
     parameter = "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable"
     value = get_rfc_parameter(parameter)
 
-    kill_rrd()
     if value == "true":
         start_daemon()
         pid = run_shell_command("pidof remotedebugger")
@@ -52,3 +53,4 @@ def test_rdk_remote_debugger_enabled():
 
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
+    kill_rrd()
