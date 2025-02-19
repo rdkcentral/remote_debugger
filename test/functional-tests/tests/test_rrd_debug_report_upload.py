@@ -63,6 +63,7 @@ def check_server_status():
 
 def test_check_and_start_remotedebugger():
     kill_rrd()
+    remove_logfile()
     status_code = check_server_status()
     assert status_code == "200", f"Unexpected status code: {status_code}"
 
@@ -137,6 +138,9 @@ def test_remote_debugger_trigger_event():
     SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING} service"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
+    result = check_output_dir()
+    print(result)
+
     UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
@@ -173,6 +177,6 @@ def test_remotedebugger_download_report():
     message = validate_file(tgz_file)
     print(message)
 
-    kill_rrd()
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
+    kill_rrd()
