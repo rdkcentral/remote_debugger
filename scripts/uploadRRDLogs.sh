@@ -137,5 +137,5 @@ if [ -d $RRD_LOG_PATH ] && [ "$(ls -A $RRD_LOG_PATH)" ]; then
         rm -rf $UPLOAD_DEBUG_FILE $RRD_LOG_PATH
     fi
 else
-    uploadLog "$RRD_LOG_PATH is Empty, Exiting report upload!!!"
+    uploadLog "$RRD_LOG_PATH is Empty, Exiting!!!"
 fi
