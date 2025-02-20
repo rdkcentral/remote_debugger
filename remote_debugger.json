@@ -7,27 +7,7 @@
     },
     "Sanity": {
         "Check" : {
-            "Commands" : [ "rm -rf", "kill", "pkill", "iptables", "ip6tables" ]
-        }
-    },
-    "Device" : {
-        "Info" : {
-            "Commands": "cat /version.txt;cat /etc/device.properties;uname -r",
-            "Timeout" : 10
-        },
-        "Uptime" : {
-            "Commands": "uptime",
-            "Timeout" : 10
-        },
-        "Dump" : {
-            "Commands": "tcpdump -w RRD_LOCATION/capture.pcap &",
-            "Timeout" : 10
-        }        
-    },
-    "Command" : {
-        "Harm" : {
-            "Commands": "rm -rf",
-            "Timeout" : 10
+            "Commands" : [ "rm -rf ", "kill ", "pkill ", "iptables ", "ip6tables " ]
         }
     },
    "Process" : {
