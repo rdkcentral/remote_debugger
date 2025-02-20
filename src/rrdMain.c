@@ -111,7 +111,7 @@ bool isRRDEnabled(void)
      }
      else 
      {
-          RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_get failed with error [%d]\n\n", __FUNCTION__, __LINE__,rbusError_ToString((rbusError_t)ret));
+          RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_get failed with error [%s]\n\n", __FUNCTION__, __LINE__,rbusError_ToString((rbusError_t)ret));
      }
 #endif
     return ret;
