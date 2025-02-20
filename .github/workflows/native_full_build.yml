@@ -1,12 +1,9 @@
 name: Build Component in Native Environment
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to build'
-        required: true
-        default: 'develop'
+  pull_request:
+    branches: [ develop  ]
+    paths: ['**/*.c', '**/*.cpp', '**/*.cc', '**/*.cxx', '**/*.h', '**/*.hpp']
     
 jobs:
   build-systemtimemgr-on-pr:
@@ -18,45 +15,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          path: remote_debugger
-
-      - name: Checkout code rfc code
-        uses: actions/checkout@v4
-        with:
-          path: remote_debugger
-
-      - name: Check out dependent repostiories
-        uses: actions/checkout@v4
-        with:
-          repository: 'rdkcentral/rfc'
-          token: ${{ secrets.GH_ACTION_PULL }}
-          path: rfc
-
-      - name: Check out dependent repostiories
-        uses: actions/checkout@v4
-        with:
-          repository: 'rdkcentral/iarmmgrs'
-          token: ${{ secrets.GH_ACTION_PULL }}
-          path: iarmmgrs
-          
-      - name: Check out dependent repostiories
-        uses: actions/checkout@v4
-        with:
-          repository: 'rdkcentral/iarmbus'
-          token: ${{ secrets.GH_ACTION_PULL }}
-          path: iarmbus
-
-      - name: Check out dependent repostiories
-        uses: actions/checkout@v4
-        with:
-          repository: 'rdkcentral/tr69hostif'
-          token: ${{ secrets.GH_ACTION_PULL }}
-          path: tr69hostif
-
 
       - name: native build
         run: |
-          cd remote_debugger
           chmod +x cov_build.sh
           sh -e cov_build.sh
