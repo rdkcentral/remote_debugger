@@ -1,0 +1,101 @@
+name: L2 Integration Tests
+
+on:
+  pull_request:
+    branches: [ develop ]
+
+env:
+  AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME }}
+  AUTOMATICS_PASSCODE: ${{ secrets.AUTOMATICS_PASSCODE }}
+
+jobs:
+  execute-L2-tests-on-pr:
+    name: Execute L2 test suite in L2 container environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code rfc code
+        uses: actions/checkout@v4
+        with:
+          path: remote_debugger
+
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/rfc'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: rfc
+
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/iarmmgrs'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: iarmmgrs
+          
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/iarmbus'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: iarmbus
+
+      - name: Check out dependent repostiories
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/tr69hostif'
+          token: ${{ secrets.GH_ACTION_PULL }}
+          path: tr69hostif
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Pull docker images
+        run: |
+          docker pull ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
+          docker pull ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
+          docker pull ghcr.io/rdkcentral/docker-rdk-ci:latest
+
+      - name: Start mock-xconf service
+        run: |
+          docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -p 50054:50054 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
+
+      - name: Start l2-container service
+        run: |
+          docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
+
+
+      - name: Move dependent repositories in native-platform container to /usr
+        run: |
+          docker exec -i native-platform /bin/bash -c "mv /mnt/L2_CONTAINER_SHARED_VOLUME/rfc /usr/ && mv /mnt/L2_CONTAINER_SHARED_VOLUME/iarmmgrs /usr/ && mv /mnt/L2_CONTAINER_SHARED_VOLUME/iarmbus /usr/ && mv /mnt/L2_CONTAINER_SHARED_VOLUME/tr69hostif /usr/"
+
+      - name: Enter Inside Platform native container and run L2 Test
+        run: |
+          docker exec -i native-platform /bin/bash -c "cd /mnt/L2_CONTAINER_SHARED_VOLUME/remote_debugger && sh cov_build.sh && export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/local/lib: && find / -name downloadUtil.h && ls -l && sh run_l2.sh" 
+
+      - name: Copy l2 test results to runner 
+        run: |
+          docker cp native-platform:/tmp/l2_test_report /tmp/L2_TEST_RESULTS
+          ls -l
+          ls -l /tmp/L2_TEST_RESULTS
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+
+      - name: Run CI container
+        run: docker run -e AUTOMATICS_UNAME=${{ secrets.AUTOMATICS_UNAME }} -e AUTOMATICS_PASSCODE=${{ secrets.AUTOMATICS_PASSCODE }} -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME --name ci-container -d ghcr.io/rdkcentral/docker-rdk-ci:latest tail -f /dev/null
+
+      - name: Upload results
+        if: github.repository_owner == 'rdkcentral'
+        run: |
+          docker cp /tmp/L2_TEST_RESULTS ci-container:/tmp/L2_TEST_RESULTS
+          docker exec -i ci-container bash -c "echo 'Contents in workspace directory' && ls -l && echo '===============================' && echo 'Contents in /tmp/L2_TEST_RESULTS' && ls -l /tmp/L2_TEST_RESULTS && echo '===============================' && git config --global --add safe.directory /mnt/L2_CONTAINER_SHARED_VOLUME/remote_debugger && gtest-json-result-push.py /tmp/L2_TEST_RESULTS https://rdkeorchestrationservice.apps.cloud.comcast.net/rdke_orchestration_api/push_unit_test_results /mnt/L2_CONTAINER_SHARED_VOLUME/remote_debugger"
