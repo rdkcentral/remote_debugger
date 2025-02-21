@@ -116,6 +116,7 @@ void webconfigFrameworkInit()
     blobRegInfo *blobData;
     blobData = (blobRegInfo*) malloc( sizeof(blobRegInfo));
     memset(blobData, 0, sizeof(blobRegInfo));
+#    memset(blobData, 0, 10*sizeof(blobRegInfo));
     strncpy( blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
 
     register_sub_docs(blobData, 1 /*SubDoc Count*/, NULL, NULL);
