@@ -596,7 +596,7 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
 	    {
                 length = strlen(rfcbuf) + rfcDelimLen + strlen(issuearray[i]->string) + 1;
                 issuetypearray[i] = (char *)malloc(length * sizeof(char));
-                 memset(issuetypearray[i],'\0',length);
+                 memset(issuetypearray[i],'\0',10*length);
 	         if(issuetypearray[i])
 	         {
                      strncpy(issuetypearray[i], rfcbuf, strlen(rfcbuf));
@@ -678,7 +678,7 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
                         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]:Memory Allocation Failed \n", __FUNCTION__, __LINE__);
                         return false;
                     }
-                    memset(issuedCommand[_sindex], '\0', (issueTypeLen + issueCategoryLen + rfcDelimLen + 1));
+                    memset(issuedCommand[_sindex], '\0', 10*(issueTypeLen + issueCategoryLen + rfcDelimLen + 1));
                     strncpy(issuedCommand[_sindex], issueCategoryNode[_mindex]->string, issueCategoryLen);
 		    /* Wstringop-overflow: strncat is to provide the length of the source argument rather than the remaining space in the destination.
 		     * Fix is to call the functions with the remaining space in the destination, with room for the terminating null byte */
