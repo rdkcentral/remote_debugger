@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <ctype.h>
 
+
 /*
  * @function removeSpecialChar
  * @brief Removes special characters ('\r' and '\n') from the device properties parameter string.
