@@ -175,16 +175,24 @@ void *helper_convert(const void *buf, size_t len,
 msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
 {
 
-    msgpack_zone mempool;
-    msgpack_object deserialized;
+    FILE *fd = fopen("/tmp/RRD_MSGPACK_OP.bin", "w+");
+    //msgpack_zone mempool;
+    msgpack_unpacked deserialized;
+    msgpack_unpacked_init(&deserialized);
     msgpack_unpack_return unpack_ret;
 
     if (decodedbuf == NULL || !size)
         return MSGPACK_UNPACK_NOMEM_ERROR;
 
-    msgpack_zone_init(&mempool, 2048);
-    unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
-
+    //msgpack_zone_init(&mempool, 2048);
+    //deserialized.zone = &mempool;
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: MYYYY PRRRRIINNNTTSSSS : : : : \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Decoded Buffer = %s \n", __FUNCTION__, __LINE__, decodedbuf);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "\n");
+    //unpack_ret = msgpack_unpack(decodedbuf, size, NULL, &mempool, &deserialized);
+    unpack_ret = msgpack_unpack_next(&deserialized, decodedbuf, size, NULL);
+	msgpack_object obj = deserialized.data;
+	msgpack_object_print(fd, obj);
         switch(unpack_ret)
         {
             case MSGPACK_UNPACK_SUCCESS:
@@ -206,7 +214,9 @@ msgpack_unpack_return get_msgpack_unpack_status(char *decodedbuf, int size)
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Message Pack decode failed with error\n", __FUNCTION__, __LINE__);
         }
     
-    msgpack_zone_destroy(&mempool);
+    //msgpack_zone_destroy(&mempool);
+    msgpack_unpacked_destroy( &deserialized );
+    fclose(fd);
     // End of msgpack decoding
 
     return unpack_ret;
@@ -513,7 +523,8 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
   
     if (buffer == NULL || size == NULL || pString == NULL)
         return -1;
-
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Encoded Message before b64_decode is = %s\n", __FUNCTION__, __LINE__, pString);
+	
     decodeMsgSize = b64_get_decoded_buffer_size(strlen(pString));
     decodeMsg = (char *)malloc((decodeMsgSize + 1) * sizeof(char));
     if (decodeMsg == NULL)
@@ -530,6 +541,8 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
         return -1;
     }    
     *buffer = decodeMsg;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Decoded Message after b64_decode is = %s\n", __FUNCTION__, __LINE__, decodeMsg);
 
     return 0;
 
