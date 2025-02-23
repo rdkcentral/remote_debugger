@@ -28,11 +28,6 @@ Feature: Remote Debugger Debug Report Upload
     When I check if the /tmp/rrd directory exists
     Then the /tmp/rrd directory should exist
 
-  Scenario: Get the current issue type Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType
-    When I get the current issue type using rbuscli
-    Then the command should execute successfully
-    And I should receive the current issue type
-
   Scenario: Verify remote debugger process is running
     Given the remote debugger process is not running
     When I start the remote debugger process

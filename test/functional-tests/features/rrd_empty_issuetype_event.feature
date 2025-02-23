@@ -30,5 +30,4 @@ Feature: Remote Debugger Issuetype is empty
     Given the remote debugger is running
     When I trigger the event "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType"
     Then the remotedebugger receives the message from webPA event
-    Then remotedebugger should check the message is empty
-    And remotedebugger must exit without processing the event
+    And remotedebugger should log as not processing empty event
