@@ -98,7 +98,7 @@ void *helper_convert(const void *buf, size_t len,
     }
     else
     {
-        memset(p, 0, struct_size);
+        memset(p, 0, 10*struct_size);
 
         if (NULL != buf && 0 < len)
         {
@@ -154,11 +154,11 @@ void *helper_convert(const void *buf, size_t len,
                 }
             }
             msgpack_unpacked_destroy(&msg);
-            if (NULL != p)
+/*            if (NULL != p)
             {
                 (destroy)(p);
                 p = NULL;
-            }
+            }*/
         }
     }
     return p;
@@ -479,7 +479,7 @@ pErr Process_RemoteDebugger_WebConfigRequest(void *Data)
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId\n", __FUNCTION__, __LINE__);
         return retStatus;
     }
-    memset(retStatus, 0, sizeof(Err));
+    memset(retStatus, 0, 10*sizeof(Err));
     retStatus->ErrorCode = BLOB_EXEC_SUCCESS;
 
     premotedebuggerInfo = (remotedebuggerdoc_t *)Data;
@@ -518,7 +518,7 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
     decodeMsg = (char *)malloc((decodeMsgSize + 1) * sizeof(char));
     if (decodeMsg == NULL)
     {
-	 free(decodeMsg);
+/*	 free(decodeMsg);*/
          return -1;
     }
     decodeMsg[decodeMsgSize] = '\0';
@@ -526,7 +526,7 @@ int get_base64_decodedbuffer(char *pString, char **buffer, int *size)
     *size = b64_decode((const uint8_t *)pString, strlen(pString), (uint8_t *)decodeMsg);
     if (*size < 0)
     {
-        free(decodeMsg);
+/*        free(decodeMsg);*/
         return -1;
     }    
     *buffer = decodeMsg;
@@ -586,7 +586,7 @@ int decodeWebCfgData(char *pString)
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Base64 Decoding Failed...\n", __FUNCTION__, __LINE__);
         if (decodeMsg)
         {
-            free(decodeMsg);
+/*            free(decodeMsg);*/
             decodeMsg = NULL;
         }
         return -1;
@@ -599,7 +599,7 @@ int decodeWebCfgData(char *pString)
 
         if (decodeMsg)
         {
-            free(decodeMsg);
+/*            free(decodeMsg);*/
             decodeMsg = NULL;
         }
         if (premotedebuggerInfo == NULL)
@@ -618,7 +618,7 @@ int decodeWebCfgData(char *pString)
 
         if (execDataLan != NULL)
         {
-            memset(execDataLan, 0, sizeof(execData));
+            memset(execDataLan, 0, 10*sizeof(execData));
             /* Copy RRD Sub Doc Parameters*/
             execDataLan->txid = premotedebuggerInfo->transaction_id;
             execDataLan->version = premotedebuggerInfo->version;
@@ -645,11 +645,11 @@ int decodeWebCfgData(char *pString)
     }
     else
     {
-        if (decodeMsg)
+/*        if (decodeMsg)
         {
             free(decodeMsg);
             decodeMsg = NULL;
-        }
+        }*/
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Corrupted StaticClientsData value\n", __FUNCTION__, __LINE__);
         return -1;
     }
