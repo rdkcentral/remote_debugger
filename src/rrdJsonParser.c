@@ -97,7 +97,7 @@ char * readJsonFile(char *jsonfile)
     jsonfile_content = (char *) malloc(sizeof(char) * (ch_count + 1));
     fread(jsonfile_content, 1, ch_count,fp);
     jsonfile_content[ch_count] ='\0';
-    fclose(fp);
+/*    fclose(fp);*/
 
     return jsonfile_content;
 }
@@ -765,7 +765,7 @@ void RRDStoreDeviceInfo(devicePropertiesData *devPropData)
                 break; // Break after processing the first DEVICE_NAME entry
             }
         }
-        fclose(fp);
+/*        fclose(fp);*/
         if(line)
         {
             free(line);
