@@ -23,6 +23,7 @@
 #include "rrdRunCmdThread.h"
 #if !defined(GTEST_ENABLE)
 #include "webconfig_framework.h"
+#include "rdmMgr.h"
 
 extern int msqid;
 #else
