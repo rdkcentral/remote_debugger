@@ -204,18 +204,6 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-    data_buf *sendbuf;
-    IARM_Bus_RDMMgr_EventData_t *eventData;
-    int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
-    cacheData *cache = NULL;
-    eventData = (IARM_Bus_RDMMgr_EventData_t *)data;
-    cache = findPresentInCache(eventData->rdm_pkg_info.pkg_name);
-    if (cache != NULL)
-    {
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s, Installation Status: %d.. \n", __FUNCTION__, __LINE__, eventData->rdm_pkg_info.pkg_inst_path, (IARM_RDMMgr_Status_t)eventData->rdm_pkg_info.pkg_inst_status);   
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
