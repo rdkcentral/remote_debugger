@@ -2951,7 +2951,8 @@ TEST(GetMsgpackUnpackStatusTest, MsgpackUnpackReturnsExtraBytes)
     msgpack_pack_int(&pk, 1);
     sbuf.data[sbuf.size] = '\0'; // Add an extra byte
 
-    EXPECT_EQ(get_msgpack_unpack_status(sbuf.data, sbuf.size + 1), MSGPACK_UNPACK_EXTRA_BYTES);
+    // msg_unpack_next() internally handles EXTRABYTES. It should return SUCCESS.
+    EXPECT_EQ(get_msgpack_unpack_status(sbuf.data, sbuf.size + 1), MSGPACK_UNPACK_SUCCESS);
 
     msgpack_sbuffer_destroy(&sbuf);
 }
