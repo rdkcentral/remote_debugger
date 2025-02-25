@@ -203,7 +203,47 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
 #if !defined(GTEST_ENABLE)
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
+    data_buf *sendbuf;
+    int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
+    cacheData *cache = NULL;
+    const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
+    const char* pkg_name = "RDK-RRD-Test";
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
+    (void)(handle);
+    (void)(subscription);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
+    cache = findPresentInCache(pkg_name);
+    if (cache != NULL)
+    {
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s \n", __FUNCTION__, __LINE__, pkg_inst_path);
+    	rrdjsonlen = strlen(RRD_JSON_FILE);
+    	recPkglen = strlen(pkg_inst_path) + 1;
+    	recPkgNamelen = strlen(cache->issueString) + 1;
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
+	sendbuf = (data_buf *)malloc(sizeof(data_buf));
+    	RRD_data_buff_init(sendbuf, DEEPSLEEP_EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
+    	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
+    	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
+    	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
+    	snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
+    	sendbuf->inDynamic = true;
+	if (checkAppendRequest(sendbuf->mdata))
+    	{
+        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
+        	sendbuf->inDynamic = false;
+        	sendbuf->appendMode = true;
+    	}		    
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
+    	RRDMsgDeliver(msqid, sendbuf);
+	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
+    	remove_item(cache);
+    }
+    else
+    {
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
+    }
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
