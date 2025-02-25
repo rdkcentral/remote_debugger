@@ -221,7 +221,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     	recPkgNamelen = strlen(cache->issueString) + 1;
     	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
 	sendbuf = (data_buf *)malloc(sizeof(data_buf));
-    	RRD_data_buff_init(sendbuf, DEEPSLEEP_EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
+    	RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
     	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
     	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
     	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
