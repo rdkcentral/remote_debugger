@@ -105,7 +105,6 @@ void processIssueTypeEvent(data_buf *rbuf)
                 free(cmdMap[index]);
             }
             free(cmdMap);
-            free(rbuf->mdata);
         }
     }
     
