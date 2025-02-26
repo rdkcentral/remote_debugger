@@ -35,7 +35,7 @@
 
 #ifdef IARMBUS_SUPPORT
 // rrdDeepSleep
-#include "rrdDeepSleep.h"
+#include "rrdDynamic.h"
 #include "rrdDeepSleep.c"
 #endif
 
