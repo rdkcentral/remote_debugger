@@ -19,7 +19,6 @@
 
 #include "rrdDeepSleep.h"
 #include "rrdRunCmdThread.h"
-#include "rrdInterface.h"
 
 extern devicePropertiesData devPropData;
 
