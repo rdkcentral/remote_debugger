@@ -74,7 +74,16 @@ typedef enum _IARM_Bus_Daemon_PowerState_t
     IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP
 } IARM_Bus_PowerState_t;
 
-typedef IARM_Bus_PowerState_t IARM_Bus_PWRMgr_PowerState_t;
+typedef enum PowerController_PowerState {
+    POWER_STATE_UNKNOWN = 0 /* UNKNOWN */,
+    POWER_STATE_OFF = 1 /* OFF */,
+    POWER_STATE_STANDBY = 2 /* STANDBY */,
+    POWER_STATE_ON = 3 /* ON */,
+    POWER_STATE_STANDBY_LIGHT_SLEEP = 4 /* LIGHT_SLEEP */,
+    POWER_STATE_STANDBY_DEEP_SLEEP = 5 /* DEEP_SLEEP */
+} PowerController_PowerState_t;
+
+typedef PowerController_PowerState_t IARM_Bus_PWRMgr_PowerState_t;
 
 typedef enum _PWRMgr_EventId_t
 {

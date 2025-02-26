@@ -19,6 +19,9 @@
 
 #include "rrdInterface.h"
 #include "rrdRunCmdThread.h" 
+#if defined(PWRMGR_PLUGIN)
+#include "power_controller.h"
+#endif
 
 extern int msqid;
 extern rbusHandle_t rrdRbusHandle;
@@ -59,6 +62,18 @@ int RRD_IARM_subscribe()
         return ret;
     }
 
+#if defined(PWRMGR_PLUGIN)
+    // Thunder client library register for Deep Sleep Event Handler
+    PowerController_Init();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
+    ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
+    if (ret != 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Register power mode change callback EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
+        return ret;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Registered power mode change callback.. \n", __FUNCTION__, __LINE__);
+#else
     // IARM Reg for Deep Sleep Event Handler
     ret = IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, _pwrManagerEventHandler);
     if (ret != IARM_RESULT_SUCCESS)
@@ -66,9 +81,75 @@ int RRD_IARM_subscribe()
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Register EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
         return ret;
     }
+#endif
+   
     return ret;
 }
 
+#if defined(PWRMGR_PLUGIN)
+/*
+ * @function  _pwrManagerEventHandler
+ * @brief Receives the power manager event and sends the value as a message in the message-queue
+ *              to the thread function.
+ * @param
+ *        const PowerController_PowerState_t currentState - current power state.
+ *        const PowerController_PowerState_t newState - New power state.
+ *        void* userdata - user event data.
+ * Output: void
+ */
+void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
+    const PowerController_PowerState_t newState, void* userdata)
+{
+#if !defined(ENABLE_WEBCFG_FEATURE)
+    data_buf *sbuf = NULL;
+    int msgLen = strlen(DEEP_SLEEP_STR) + 1;
+#endif
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. currentState =%d, newState = %d\n", __FUNCTION__, __LINE__, currentState, newState);
+
+    if ((currentState == POWER_STATE_STANDBY_DEEP_SLEEP &&
+            newState != POWER_STATE_STANDBY_DEEP_SLEEP))
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, currentState, newState);
+#ifdef ENABLE_WEBCFG_FEATURE
+        rbusError_t rc = RBUS_ERROR_BUS_ERROR;
+        rbusValue_t value;
+	    rbusValue_Init(&value);
+        rbusValue_SetString(value,"root");
+        rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
+        if (rc != RBUS_ERROR_SUCCESS)
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_set failed for [%s] with error [%d]\n\n", __FUNCTION__, __LINE__,RRD_WEBCFG_FORCE_SYNC ,rc);
+            return;
+        }
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
+#else
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
+        sbuf = (data_buf *)malloc(sizeof(data_buf));
+        if (!sbuf)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__, eventId);
+            return;
+        }
+
+        RRD_data_buff_init(sbuf, DEEPSLEEP_EVENT_MSG, RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE);
+        sbuf->mdata = (char *)malloc(msgLen);
+        if (!sbuf->mdata)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__, eventId);
+            RRD_data_buff_deAlloc(sbuf);
+            return;
+        }
+        strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
+        RRDMsgDeliver(msqid, sbuf);
+#endif
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Event Triggred for DeepSleep\n", __FUNCTION__, __LINE__);
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
+}
+#else
 /*
  * @function  _pwrManagerEventHandler
  * @brief Receives the power manager event and sends the value as a message in the message-queue
@@ -142,6 +223,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
 }
+#endif
 
 /*
  * @function  _rdmManagerEventHandler
@@ -288,6 +370,19 @@ int RRD_IARM_unsubscribe()
         return ret;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for RDMMGR done! \n", __FUNCTION__, __LINE__);
+    
+#if defined(PWRMGR_PLUGIN)
+    // Thunder client Unregister for Deep Sleep Event Handler
+    ret = PowerController_UnRegisterPowerModeChangedCallback(_pwrManagerEventHandler);
+    if (ret != 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: UnRegistering power mode change EventHandler for PWRMGR-plugin failed!!! \n ", __FUNCTION__, __LINE__);
+        return ret;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: UnRegistering power mode change EventHandler for PWRMGR-plugin done! \n", __FUNCTION__, __LINE__);
+    PowerController_Term();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Term().. \n", __FUNCTION__, __LINE__);
+#else
     // IARM Unregister for Deep Sleep Event Handler
     ret = IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED);
     if (ret != 0)
@@ -296,5 +391,6 @@ int RRD_IARM_unsubscribe()
         return ret;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for PWRMGR done! \n", __FUNCTION__, __LINE__);
+#endif
     return ret;
 }
