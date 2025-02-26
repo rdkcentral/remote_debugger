@@ -12,7 +12,7 @@
     },
     "Device" : {
         "Info" : {
-            "Commands": "cat /version.txt;cat /etc/device.properties;uname -r",
+            "Commands": "uptime;kill",
             "Timeout" : 10
         },
         "Uptime" : {
