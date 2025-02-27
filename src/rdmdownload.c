@@ -1,4 +1,4 @@
-#include "rrdDynamic.h"
+#include "rrdDeepSleep.h"
 #include "rrdRunCmdThread.h"
 #include "rrdInterface.h"
 
