@@ -135,7 +135,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          {
             continue; // Skip if the command is not a string
          }
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands...issue_command : \"%s\ \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
+         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
          sanitystr = strstr(issuecmd,checkcmd);
          cJSON_free(checkcmd); // free each command from the sanity command array
          if (sanitystr)
