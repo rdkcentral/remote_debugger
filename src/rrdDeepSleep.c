@@ -17,7 +17,7 @@
  * limitations under the License.
 */
 
-#include "rrdDynamic.h"
+#include "rrdDeepSleep.h"
 #include "rrdRunCmdThread.h"
 
 extern devicePropertiesData devPropData;
