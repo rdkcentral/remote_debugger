@@ -449,10 +449,8 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     if (jsonParsed == NULL)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
-#ifdef IARMBUS_SUPPORT
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
         RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
-#endif
     }
     else
     {
@@ -468,10 +466,8 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         }
         else
         {
-#ifdef IARMBUS_SUPPORT
             // Issue Data not in Dynamic Profile JSON
             RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false);
-#endif
         }
     }
     freeParsedJson(jsonParsed);
