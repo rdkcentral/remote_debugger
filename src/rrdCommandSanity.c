@@ -140,7 +140,6 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
              }
          j++;
          }
-         // Null-terminate at the last non-space position
          checkcmd[last_non_space + 1] = '\0';
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands... \n",__FUNCTION__,__LINE__,checkcmd);
          sanitystr = strstr(issuecmd,checkcmd);
