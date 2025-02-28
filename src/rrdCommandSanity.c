@@ -131,6 +131,17 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     {
          subcmd = cJSON_GetArrayItem(sanitylist, i);
          checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
+         int j = 0, last_non_space = -1;
+         while (checkcmd[j]) 
+         {
+             if (!isspace(checkcmd[j])) 
+             {
+                 last_non_space = j;
+             }
+         j++;
+         }
+         // Null-terminate at the last non-space position
+         checkcmd[last_non_space + 1] = '\0';
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands... \n",__FUNCTION__,__LINE__,checkcmd);
          sanitystr = strstr(issuecmd,checkcmd);
          cJSON_free(checkcmd); // free each command from the sanity command array
