@@ -18,6 +18,7 @@
 */
 
 #include "rrdCommandSanity.h"
+#include <ctype.h>
 
 /*
  * @function updateBackgroundCmd
