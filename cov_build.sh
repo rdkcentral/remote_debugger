@@ -40,10 +40,6 @@ if [ ! -d iarmbus ]; then
     git clone https://github.com/rdkcentral/iarmbus.git
 fi
 
-if [ ! -d tr69hostif ]; then
-    git clone https://github.com/rdkcentral/tr69hostif.git
-fi
-
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
@@ -67,7 +63,7 @@ cp /usr/iarmbus/core/libIARMCore.h /usr/local/include
 cp /usr/iarmmgrs/hal/include/pwrMgr.h /usr/local/include/
 
 # Build and install stubs from tr69hostif
-
+git clone https://github.com/rdkcentral/tr69hostif.git
 cd tr69hostif
 cd ./src/unittest/stubs
 g++ -fPIC -shared -o libIARMBus.so iarm_stubs.cpp  -I/usr/tr69hostif/src/hostif/parodusClient/pal -I/usr/tr69hostif/src/unittest/stubs -I/usr/tr69hostif/src/hostif/parodusClient/waldb -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/tr69hostif/src/hostif/include -I/usr/tr69hostif/src/hostif/profiles/DeviceInfo -I/usr/tr69hostif/src/hostif/parodusClient/pal -fpermissive
@@ -78,6 +74,6 @@ cp libIARM.h /usr/local/include
 cd $WORKDIR
 autoreconf -i
 autoupdate
-./configure --prefix=${INSTALL_DIR}
+./configure --prefix=${INSTALL_DIR} --enable-iarmbusSupport=yes
 make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
 make install
