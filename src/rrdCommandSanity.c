@@ -147,7 +147,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          }
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
          sanitystr = strstr(issuecmd,checkcmd);
-         cJSON_free(checkcmd); // free each command from the sanity command array
+         //cJSON_free(checkcmd); // free each command from the sanity command array
          if (sanitystr)
          {
              RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
