@@ -133,17 +133,17 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          subcmd = cJSON_GetArrayItem(sanitylist, i);
          checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
          int len = strlen(checkcmd);
-         // Ensure the string starts and ends with double quotes
-         if (checkcmd[0] == '"' && checkcmd[len - 1] == '"') 
+         if (len >= 2 && checkcmd[0] == '"' && checkcmd[len - 1] == '"') 
          {
-             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Performing operation on \"%s\" before comaring with issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
-             int i = len - 2; // Start from the second-last character
-             while (i > 0 && isspace(checkcmd[i])) 
-             {
-                 checkcmd[i] = '"';  // Move the ending quote forward
-                 checkcmd[i + 1] = '\0';
-                 i--;
-             }
+             checkcmd[len - 1] = '\0'; // Remove closing quote
+             checkcmd++;               // Move pointer forward to skip opening quote
+             len -= 2;            // Adjust length after removing quotes
+         }
+         // Trim trailing spaces
+         int j = len - 1;
+         while (j >= 0 && isspace(checkcmd[j])) {
+         checkcmd[j] = '\0';
+         j--;
          }
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
          sanitystr = strstr(issuecmd,checkcmd);
