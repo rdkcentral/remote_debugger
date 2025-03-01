@@ -132,6 +132,14 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     {
          subcmd = cJSON_GetArrayItem(sanitylist, i);
          checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
+         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking Before operation : for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
+         sanitystr = strstr(issuecmd,checkcmd);
+         if (sanitystr)
+         {
+             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Before operation Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
+             sanitystr = NULL;
+         }
+        
          int j = 0, last_non_space = -1;
          while (checkcmd[j]) 
          {
@@ -142,7 +150,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          j++;
          }
          checkcmd[last_non_space + 1] = '\0';
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands... \n",__FUNCTION__,__LINE__,checkcmd);
+         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
          sanitystr = strstr(issuecmd,checkcmd);
          cJSON_free(checkcmd); // free each command from the sanity command array
          if (sanitystr)
