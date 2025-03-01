@@ -37,7 +37,7 @@
 // rrdDeepSleep
 #include "rrdDynamic.h"
 #include "rrdDeepSleep.c"
-#endif
+//#endif
 
 // rrdExecuteScript
 #include "rrdExecuteScript.h"
