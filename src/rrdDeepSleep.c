@@ -173,7 +173,11 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for a new Issue Type\n", __FUNCTION__, __LINE__);
 
         /* Get mSGLength */
+#ifdef IARMBUS_SUPPORT
+	mSGLength = RRDGetProfileStringLength(pissueStructNode, isDeepSleepAwakeEvent);
+#else
         mSGLength = RRDGetProfileStringLength(pissueStructNode, false);
+#endif
         if (mSGLength > 0)
         {
             paramString = (char *)calloc(mSGLength, objSize);
