@@ -134,7 +134,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
          int len = strlen(checkcmd);
          // Ensure the string starts and ends with double quotes
-         if (str[0] == '"' && str[len - 1] == '"') 
+         if (checkcmd[0] == '"' && checkcmd[len - 1] == '"') 
          {
              RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Performing operation on \"%s\" before comaring with issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
              int i = len - 2; // Start from the second-last character
