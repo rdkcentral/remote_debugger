@@ -132,24 +132,19 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     {
          subcmd = cJSON_GetArrayItem(sanitylist, i);
          checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking Before operation : for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
-         sanitystr = strstr(issuecmd,checkcmd);
-         if (sanitystr)
+         int len = strlen(checkcmd);
+         // Ensure the string starts and ends with double quotes
+         if (str[0] == '"' && str[len - 1] == '"') 
          {
-             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Before operation Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
-             sanitystr = NULL;
-         }
-        
-         int j = 0, last_non_space = -1;
-         while (checkcmd[j]) 
-         {
-             if (!isspace(checkcmd[j])) 
+             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Performing operation on \"%s\" before comaring with issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
+             int i = len - 2; // Start from the second-last character
+             while (i > 0 && isspace(checkcmd[i])) 
              {
-                 last_non_space = j;
+                 checkcmd[i] = '"';  // Move the ending quote forward
+                 checkcmd[i + 1] = '\0';
+                 i--;
              }
-         j++;
          }
-         checkcmd[last_non_space + 1] = '\0';
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands...issue_command : \"%s\" \n",__FUNCTION__,__LINE__,checkcmd, issuecmd);
          sanitystr = strstr(issuecmd,checkcmd);
          cJSON_free(checkcmd); // free each command from the sanity command array
