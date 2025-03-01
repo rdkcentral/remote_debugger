@@ -19,7 +19,9 @@
 
 #include "rrdDynamic.h"
 #include "rrdRunCmdThread.h"
+#include "rrdInterface.h"
 
+extern rbusHandle_t rrdRbusHandle;
 extern devicePropertiesData devPropData;
 
 /*
