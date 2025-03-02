@@ -205,6 +205,19 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     data_buf *sendbuf;
     int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
     cacheData *cache = NULL;
+
+    rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
+    rbusValue_t value = NULL;
+    rbusValue_Init(&value);
+    char const* issue = NULL;
+    retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
+    if ((retCode == RBUS_ERROR_SUCCESS) && (value != NULL)) 
+    {
+    	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"issue type_value: = [%s]\n", rbusValue_GetString(value, NULL));
+    	issue =rbusValue_GetString(value, NULL);	
+    	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"issue type_value: = [%s]\n", issue);
+    }
+	
     const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
     const char* pkg_name = "RDK-RRD-Test";
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
