@@ -230,7 +230,6 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     strcpy(pkg_name, RDM_PKG_PREFIX);
     strcat(pkg_name, issue);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_name_value: = [%s]\n", pkg_name);
-    free(pkg_name);
 	
     const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
     //const char* pkg_name = "RDK-RRD-Test";
@@ -270,6 +269,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     {
     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
     }
+free(pkg_name);
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
