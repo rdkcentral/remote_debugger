@@ -233,7 +233,6 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     if (pkg_inst_path == NULL) 
     {
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path memory allocation failed\n");
-        free(pkgname);
         return 1;
     }
     sprintf(pkg_inst_path, "%s%s", RRD_TMP_DIR, pkgname);
