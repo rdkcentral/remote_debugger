@@ -233,7 +233,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     free(pkg_name);
 	
     const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
-    const char* pkg_name = "RDK-RRD-Test";
+    //const char* pkg_name = "RDK-RRD-Test";
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
     (void)(handle);
     (void)(subscription);
