@@ -29,7 +29,7 @@ extern int msqid;
 int msqid = 0;
 key_t key = 1234;
 #endif
-#define TMP_DIR "/tmp/"
+#define RRD_TMP_DIR "/tmp/"
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
 
@@ -221,25 +221,22 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
     // Allocate memory for the new concatenated string
     char *pkg_name = (char *)malloc(len);
-
     if (pkg_name == NULL) {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_name memory allocation failed\n");
         return 1;
     }
-
-    // Concatenate the strings
     strcpy(pkg_name, RDM_PKG_PREFIX);
     strcat(pkg_name, issue);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_name_value: = [%s]\n", pkg_name);
 
-    char *pkg_inst_path = (char *)malloc(strlen(TMP_DIR) + strlen(pkgname) + 1);
+    char *pkg_inst_path = (char *)malloc(strlen(RRD_TMP_DIR) + strlen(pkgname) + 1);
     if (pkg_inst_path == NULL) 
     {
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path memory allocation failed\n");
         free(pkgname);
         return 1;
     }
-    sprintf(pkg_inst_path, "%s%s", TMP_DIR, pkgname);
+    sprintf(pkg_inst_path, "%s%s", RRD_TMP_DIR, pkgname);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path_value: = [%s]\n", pkg_inst_path);
 	
     //const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
