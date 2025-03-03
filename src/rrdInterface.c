@@ -29,6 +29,7 @@ extern int msqid;
 int msqid = 0;
 key_t key = 1234;
 #endif
+#define TMP_DIR "/tmp/"
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
 
@@ -230,8 +231,18 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     strcpy(pkg_name, RDM_PKG_PREFIX);
     strcat(pkg_name, issue);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_name_value: = [%s]\n", pkg_name);
+
+    char *pkg_inst_path = (char *)malloc(strlen(TMP_DIR) + strlen(pkgname) + 1);
+    if (pkg_inst_path == NULL) 
+    {
+	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path memory allocation failed\n");
+        free(pkgname);
+        return 1;
+    }
+    sprintf(pkg_inst_path, "%s%s", TMP_DIR, pkgname);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path_value: = [%s]\n", pkg_inst_path);
 	
-    const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
+    //const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
     //const char* pkg_name = "RDK-RRD-Test";
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
     (void)(handle);
@@ -269,7 +280,8 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     {
     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
     }
-free(pkg_name);
+    free(pkg_name);
+    free(pkg_inst_path);
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
