@@ -33,11 +33,11 @@
 #include "rrdCommandSanity.h"
 #include "rrdCommandSanity.c"
 
-//#ifdef IARMBUS_SUPPORT
+#ifdef IARMBUS_SUPPORT
 // rrdDeepSleep
 #include "rrdDynamic.h"
 #include "rrdDeepSleep.c"
-//#endif
+#endif
 
 // rrdExecuteScript
 #include "rrdExecuteScript.h"
