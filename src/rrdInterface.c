@@ -216,34 +216,18 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     rbusValue_Init(&value);
     char const* issue = NULL;
     retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
-   // if ((retCode == RBUS_ERROR_SUCCESS) && (value != NULL)) 
-    //{
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"issue type_value: = [%s]\n", rbusValue_GetString(value, NULL));
     issue =rbusValue_GetString(value, NULL);	
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"issue type_value: = [%s]\n", issue);
-   // }
     size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
-    // Allocate memory for the new concatenated string
     char *pkg_name = (char *)malloc(len);
-    //if (pkg_name == NULL) {
-        //RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_name memory allocation failed\n");
-        //return 1;
-    //}
     strcpy(pkg_name, RDM_PKG_PREFIX);
     strcat(pkg_name, issue);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_name_value: = [%s]\n", pkg_name);
 
     char *pkg_inst_path = (char *)malloc(strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1);
-    //if (pkg_inst_path == NULL) 
-    //{
-	//RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path memory allocation failed\n");
-       // return 1;
-    //}
     sprintf(pkg_inst_path, "%s%s", RRD_TMP_DIR, pkg_name);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"pkg_inst_path_value: = [%s]\n", pkg_inst_path);
-	
-    //const char* pkg_inst_path = "/tmp/RDK-RRD-Test"; 
-    //const char* pkg_name = "RDK-RRD-Test";
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
     (void)(handle);
     (void)(subscription);
