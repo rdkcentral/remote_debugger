@@ -65,7 +65,9 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
         case RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE:
 
             /*Prepare Dynamic JSON File Path*/
+#ifdef IARMBUS_SUPPORT
             dynJSONPathLen = RRDGetDeepSleepdynJSONPathLen();
+#endif
             dynJSONPath = (char *)malloc(dynJSONPathLen);
             if (dynJSONPath)
             {
