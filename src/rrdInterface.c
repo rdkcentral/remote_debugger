@@ -244,9 +244,24 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 	sendbuf = (data_buf *)malloc(sizeof(data_buf));
     	RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
     	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
+	if(!sendbuf->mdata)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
+            RRD_data_buff_deAlloc(sendbuf);
+            return;
+        }
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:JSON_PATH_LEN=%d \n", __FUNCTION__, __LINE__, recPkglen + rrdjsonlen);
     	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
+    	if (!sendbuf->jsonPath)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
+            RRD_data_buff_deAlloc(sendbuf);
+            return;
+        }
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
     	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
-    	snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
+        snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
     	sendbuf->inDynamic = true;
 	if (checkAppendRequest(sendbuf->mdata))
     	{
