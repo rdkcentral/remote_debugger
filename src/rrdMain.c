@@ -23,9 +23,9 @@
 #include "rrdDeepSleep.h"
 #include "rrdEventProcess.h"
 
-#if !defined(GTEST_ENABLE)
+//#if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;
-#endif
+//#endif
 
 /*
  * @function RRDEventThreadFunc
