@@ -36,7 +36,7 @@
 //#ifdef IARMBUS_SUPPORT
 // rrdDeepSleep
 #include "rrdDynamic.h"
-#include "rrdDeepSleep.c"
+#include "rrdDynamic.c"
 //#endif
 
 // rrdExecuteScript
