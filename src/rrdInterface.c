@@ -212,7 +212,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     cacheData *cache = NULL;
 
     rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
-    rbusValue_t value = NULL;
+    rbusValue_t value;
     rbusValue_Init(&value);
     char const* issue = NULL;
     retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
