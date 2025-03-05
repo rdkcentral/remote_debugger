@@ -24,9 +24,7 @@
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
 
-//#if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;
-//#endif
 
 /*
  * @function RRDEventThreadFunc
