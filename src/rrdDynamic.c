@@ -17,9 +17,11 @@
  * limitations under the License.
 */
 
-#include "rrdDeepSleep.h"
+#include "rrdDynamic.h"
 #include "rrdRunCmdThread.h"
+#include "rrdInterface.h"
 
+extern rbusHandle_t rrdRbusHandle;
 extern devicePropertiesData devPropData;
 
 /*
@@ -81,7 +83,7 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
                 /*Initiate RDM Manager Download Request*/
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sending RDM Download Request for DeepSleep dynamic package...\n", __FUNCTION__, __LINE__);
                 RRDRdmManagerDownloadRequest(&issueStructNode, dynJSONPath, rbuf, true);
-
+ 
                 /*Free Recieved Buffer and Dynamic Json Path Pointer*/
                 free(dynJSONPath);
                 free(rbuf->mdata);
@@ -158,7 +160,6 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
  */
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent)
 {
-    tr181ErrorCode_t tr181status = tr181Failure;
     char *paramString = NULL;
     char *msgDataString = NULL;
     char *appendData = NULL;
@@ -174,13 +175,18 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for a new Issue Type\n", __FUNCTION__, __LINE__);
 
         /* Get mSGLength */
-        mSGLength = RRDGetProfileStringLength(pissueStructNode, isDeepSleepAwakeEvent);
+#ifdef IARMBUS_SUPPORT
+	mSGLength = RRDGetProfileStringLength(pissueStructNode, isDeepSleepAwakeEvent);
+#else
+        mSGLength = RRDGetProfileStringLength(pissueStructNode, false);
+#endif
         if (mSGLength > 0)
         {
             paramString = (char *)calloc(mSGLength, objSize);
             if (paramString)
             {
                 /* Get paramString for Device */
+#ifdef IARMBUS_SUPPORT
                 if (isDeepSleepAwakeEvent)
                 {
                     const char *profileName = getRrdProfileName(&devPropData);
@@ -200,23 +206,36 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                     snprintf(paramString, mSGLength, "%s%s%s", RDM_PKG_PREFIX, pissueStructNode->Node, RDM_PKG_SUFFIX);
                     msgDataStringSize = strlen(RDM_PKG_PREFIX) + strlen(pissueStructNode->Node) + 1;
                 }
-
+#else
+                snprintf(paramString, mSGLength, "%s%s%s", RDM_PKG_PREFIX, pissueStructNode->Node, RDM_PKG_SUFFIX);
+                msgDataStringSize = strlen(RDM_PKG_PREFIX) + strlen(pissueStructNode->Node) + 1;
+#endif
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package TAR File Name : %s\n", __FUNCTION__, __LINE__, paramString);
 
                 msgDataString = (char *)calloc(msgDataStringSize, objSize);
                 if (msgDataString)
                 {
+#ifdef IARMBUS_SUPPORT
                     if (isDeepSleepAwakeEvent)
                         strncpy(msgDataString, paramString, msgDataStringSize);
                     else
                         snprintf(msgDataString, msgDataStringSize, "%s%s", RDM_PKG_PREFIX, pissueStructNode->Node);
+#else
+		    snprintf(msgDataString, msgDataStringSize, "%s%s", RDM_PKG_PREFIX, pissueStructNode->Node);
+#endif
 
                     /* Send RDM Manager Download Request */
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for... %s\n", __FUNCTION__, __LINE__, paramString);
-                    tr181status = setParam("rrd", RDM_MGR_PKG_INST, paramString);
-                    if (tr181status == tr181Success)
+                    rbusError_t rc = RBUS_ERROR_BUS_ERROR;
+                    rbusValue_t value;
+	            rbusValue_Init(&value);
+                    rbusValue_SetString(value,paramString);
+                    rc = rbus_set(rrdRbusHandle,RDM_MGR_PKG_INST, value, NULL);
+		    //tr181status = setParam("rrd", RDM_MGR_PKG_INST, paramString);
+                    if (rc == RBUS_ERROR_SUCCESS)
                     {
-                        /* Append Package string in Cache */
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters using rbus success...\n", __FUNCTION__, __LINE__);
+			/* Append Package string in Cache */
                         if (rbuf->appendMode)
                         {
                             appendData = (char *)malloc(strlen(APPEND_SUFFIX) + strlen(rbuf->mdata) + 1);
