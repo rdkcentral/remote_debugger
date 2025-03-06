@@ -82,7 +82,9 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
                 }
                 /*Initiate RDM Manager Download Request*/
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sending RDM Download Request for DeepSleep dynamic package...\n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)
                 RRDRdmManagerDownloadRequest(&issueStructNode, dynJSONPath, rbuf, true);
+#endif
                 /*Free Recieved Buffer and Dynamic Json Path Pointer*/
                 free(dynJSONPath);
                 free(rbuf->mdata);
