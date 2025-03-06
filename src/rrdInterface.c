@@ -29,6 +29,7 @@ extern int msqid;
 int msqid = 0;
 key_t key = 1234;
 #endif
+#define RRD_TMP_DIR "/tmp/"
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
 
@@ -73,7 +74,17 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
+#ifndef IARMBUS_SUPPORT
+    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
+    subscriptions[2].filter = NULL;
+    subscriptions[2].duration = 0;
+    subscriptions[2].handler  = _rdmDownloadEventHandler;
+    subscriptions[2].userData = NULL;
+
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
+#else
     ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+#endif
 #endif
     if(ret != 0)
     {
@@ -194,6 +205,93 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
  * @return void
  */
 #if !defined(GTEST_ENABLE)
+void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
+{
+    data_buf *sendbuf;
+    int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
+    cacheData *cache = NULL;
+
+    rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
+    rbusValue_t value;
+    rbusValue_Init(&value);
+    char const* issue = NULL;
+    retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
+    issue =rbusValue_GetString(value, NULL);	
+    size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
+
+    char *pkg_name = (char *)malloc(len);
+    if(pkg_name == NULL)
+    {
+        return;
+    }
+    strncpy(pkg_name, RDM_PKG_PREFIX, strlen(RDM_PKG_PREFIX) + 1);
+    strncat(pkg_name, issue, len - strlen(RDM_PKG_PREFIX) - 1);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: pkg_name : [%s]\n",  __FUNCTION__, __LINE__, pkg_name);
+
+    char *pkg_inst_path = (char *)malloc(strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1);
+    if( pkg_inst_path == NULL)
+    {
+        return;
+    }
+    snprintf(pkg_inst_path, strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1, "%s%s", RRD_TMP_DIR, pkg_name);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: pkg_inst_path : [%s]\n",  __FUNCTION__, __LINE__, pkg_inst_path);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
+
+    (void)(handle);
+    (void)(subscription);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
+    cache = findPresentInCache(pkg_name);
+    if (cache != NULL)
+    {
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s \n", __FUNCTION__, __LINE__, pkg_inst_path);
+    	rrdjsonlen = strlen(RRD_JSON_FILE);
+    	recPkglen = strlen(pkg_inst_path) + 1;
+    	recPkgNamelen = strlen(cache->issueString) + 1;
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
+	sendbuf = (data_buf *)malloc(sizeof(data_buf));
+    	RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
+    	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
+	if(!sendbuf->mdata)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
+            RRD_data_buff_deAlloc(sendbuf);
+            return;
+        }
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:JSON_PATH_LEN=%d \n", __FUNCTION__, __LINE__, recPkglen + rrdjsonlen);
+    	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
+    	if (!sendbuf->jsonPath)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
+            RRD_data_buff_deAlloc(sendbuf);
+            return;
+        }
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
+    	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
+        snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
+    	sendbuf->inDynamic = true;
+	if (checkAppendRequest(sendbuf->mdata))
+    	{
+        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
+        	sendbuf->inDynamic = false;
+        	sendbuf->appendMode = true;
+    	}		    
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
+    	RRDMsgDeliver(msqid, sendbuf);
+	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
+    	RRD_data_buff_deAlloc(sendbuf);
+        remove_item(cache);
+    }
+    else
+    {
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
+    }
+    free(pkg_name);
+    free(pkg_inst_path);
+}
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *dataMsg = NULL;
@@ -301,7 +399,7 @@ int RRD_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
 #endif
 #if !defined(GTEST_ENABLE)
-    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 2);
+    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);
