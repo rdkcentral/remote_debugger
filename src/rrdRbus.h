@@ -28,7 +28,7 @@ extern "C"
 #if !defined(GTEST_ENABLE)
 #include <rbus.h>
 
-rbusEventSubscription_t subscriptions[2];
+rbusEventSubscription_t subscriptions[3];
 #endif
 
 void webconfigFrameworkInit();

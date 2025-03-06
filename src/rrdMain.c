@@ -20,13 +20,11 @@
 #include "rrdMain.h"
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
-#include "rrdDeepSleep.h"
+#include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
 
-#if !defined(GTEST_ENABLE)
 devicePropertiesData devPropData;
-#endif
 
 /*
  * @function RRDEventThreadFunc
