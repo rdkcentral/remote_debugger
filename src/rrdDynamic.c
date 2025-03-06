@@ -227,7 +227,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                     /* Send RDM Manager Download Request */
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for... %s\n", __FUNCTION__, __LINE__, paramString);
                     rbusError_t rc = RBUS_ERROR_BUS_ERROR;
-                    rbusValue_t value = NULL;
+                    rbusValue_t value;
 	            //rbusValue_Init(&value);
                     rbusValue_SetString(value,paramString);
                     rc = rbus_set(rrdRbusHandle,RDM_MGR_PKG_INST, value, NULL);
