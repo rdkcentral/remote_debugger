@@ -17,8 +17,8 @@
  * limitations under the License.
 */
 
-#ifndef _RRDDEEPSLEEP_H_
-#define _RRDDEEPSLEEP_H_
+#ifndef _RRDDYNAMIC_H_
+#define _RRDDYNAMIC_H_
 
 #ifdef __cplusplus
 extern "C"
