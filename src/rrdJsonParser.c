@@ -329,6 +329,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
 	if(!checkval)
 	{
+	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Entering checkval null case : \n",__FUNCTION__,__LINE__);
             jsoncfg = readAndParseJSON(RRD_JSON_FILE);
 	    sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
 	    check = cJSON_GetObjectItem(sanity, "Check");
