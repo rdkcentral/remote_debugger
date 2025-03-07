@@ -218,7 +218,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
     if(retCode != RBUS_ERROR_SUCCESS)
     {
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Rbus get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT));
+         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RBUS get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
     }
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
     issue =rbusValue_GetString(value, NULL);	
