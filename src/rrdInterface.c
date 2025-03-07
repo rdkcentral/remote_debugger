@@ -215,7 +215,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     rbusValue_t value = NULL;
     rbusValue_Init(&value);
     char const* issue = NULL;
-    retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
+    rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
     issue =rbusValue_GetString(value, NULL);	
     size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
