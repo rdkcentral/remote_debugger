@@ -338,7 +338,9 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)
         RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
+#endif
     }
     else
     {
@@ -448,7 +450,9 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)	    
         RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
+#endif
     }
     else
     {
@@ -465,7 +469,9 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         else
         {
             // Issue Data not in Dynamic Profile JSON
+#if !defined(GTEST_ENABLE)
             RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false);
+#endif
         }
     }
     freeParsedJson(jsonParsed);
