@@ -323,11 +323,13 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     }
     else
     {
+	jsoncfg = readAndParseJSON(RRD_JSON_FILE);
         sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
         check = cJSON_GetObjectItem(sanity, "Check");
         checkval = cJSON_Print(check);  // Print list of sanity commands received
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
-	if(checkval ==NULL)
+	/*
+        if(checkval ==NULL)
 	{
 	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Entering checkval null case : \n",__FUNCTION__,__LINE__);
             jsoncfg = readAndParseJSON(RRD_JSON_FILE);
@@ -336,6 +338,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             checkval = cJSON_Print(check);  // Print list of sanity commands received
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
         }
+	*/
         cmdlist = cJSON_GetObjectItem(check, "Commands");
         cJSON_free(checkval); // free sanity command list
         ret = isCommandsValid(issuestdata->command, cmdlist);
