@@ -52,7 +52,9 @@ void *RRDEventThreadFunc(void *arg)
         if (rbuf->mdata[0] == '\0')
 	{
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
-            break;
+#if !defined(GTEST_ENABLE)       
+	    break;
+#endif
         }
         else {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:SUCCESS: Message Reception Done for ID=%d MSG=%s TYPE=%u... \n", __FUNCTION__, __LINE__, msqid, rbuf->mdata, rbuf->mtype);
