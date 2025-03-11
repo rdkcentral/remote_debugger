@@ -49,7 +49,6 @@ void *RRDEventThreadFunc(void *arg)
         }
         rbuf = (data_buf *)msgHdr.mbody;
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:SUCCESS: Message Reception Done for ID=%d MSG=%s TYPE=%u... \n", __FUNCTION__, __LINE__, msqid, rbuf->mdata, rbuf->mtype);
-//#if !defined(GTEST_ENABLE) 
 	if (rbuf->mdata != NULL && (rbuf->mdata[0] == '\0' || strchr(rbuf->mdata, ' ') != NULL))
 	{
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);      
@@ -59,7 +58,6 @@ void *RRDEventThreadFunc(void *arg)
 	{
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:SUCCESS: Message Reception Done for ID=%d MSG=%s TYPE=%u... \n", __FUNCTION__, __LINE__, msqid, rbuf->mdata, rbuf->mtype);
         }
-//#endif
         switch (rbuf->mtype)
         {
         case EVENT_MSG:
