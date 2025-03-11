@@ -53,7 +53,7 @@ void *RRDEventThreadFunc(void *arg)
 	if (rbuf->mdata != NULL && (rbuf->mdata[0] == '\0' || strchr(rbuf->mdata, ' ') != NULL))
 	{
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);      
-	    continue;
+	    break;
         }
         else 
 	{
