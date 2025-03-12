@@ -21,7 +21,7 @@
 #include "rrdRunCmdThread.h" 
 #if defined(PWRMGR_PLUGIN)
 #include "power_controller.h"
-#include <pthread>
+#include <pthread.h>
 #endif
 
 extern int msqid;
@@ -55,12 +55,12 @@ static void* getPwrCtrlInterface(void *arg)
     ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
     if (ret != 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Register power mode change callback EventHandler for RDMMGR failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Register power mode change callback EventHandler for RDMMGR failed!!! ret = %d\n ", __FUNCTION__, __LINE__, ret);
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Registered power mode change callback.. \n", __FUNCTION__, __LINE__);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Exit  \r\n \n", __FUNCTION__, __LINE__);
+    pthread_exit(NULL);
 }
 #endif
 
@@ -109,7 +109,7 @@ int RRD_IARM_subscribe()
     {
         if(pthread_detach(pwrConnectThreadID) != 0) 
         {
-            INT_ERROR("DSMgr getPwrCtrlInterface Thread detach Failed\r\n");
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: getPwrCtrlInterface Thread detach Failed\r\n ", __FUNCTION__, __LINE__);
         }
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
@@ -412,6 +412,7 @@ int RRD_IARM_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus_UnRegisterEventHandler for RDMMGR done! \n", __FUNCTION__, __LINE__);
 #if defined(PWRMGR_PLUGIN)
     if (isPwrCtlInterface)
+    {
         // Thunder client Unregister for Deep Sleep Event Handler
         ret = PowerController_UnRegisterPowerModeChangedCallback(_pwrManagerEventHandler);
         if (ret != 0)
@@ -424,7 +425,7 @@ int RRD_IARM_unsubscribe()
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed:  isPwrCtlInterface is \n", __FUNCTION__, __LINE__, isPwrCtlInterface);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed:  isPwrCtlInterface is %d\n", __FUNCTION__, __LINE__, isPwrCtlInterface);
     }
 #else
     // IARM Unregister for Deep Sleep Event Handler
