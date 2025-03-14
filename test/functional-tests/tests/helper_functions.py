@@ -29,6 +29,7 @@ from time import sleep
 RRD_LOG_FILE = "/opt/logs/remotedebugger.log.0"
 LOG_FILE = "/opt/logs/remotedebugger.log.0"
 JSON_FILE = "/etc/rrd/remote_debugger.json"
+DYNAMIC_JSON_FILE = "/media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json"
 UPLOAD_SCRIPT = "/lib/rdk/uploadRRDLogs.sh"
 OUTPUT_DIR = "/tmp/rrd"
 ISSUE_STRING = "Device.Info"
