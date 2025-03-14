@@ -208,6 +208,11 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     rbusValue_Init(&value);
     char const* issue = NULL;
     retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
+    if(retCode != RBUS_ERROR_SUCCESS || value == NULL)
+    {
+         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RBUS get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
+	 return;
+    }	
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
     issue =rbusValue_GetString(value, NULL);	
     size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
@@ -274,7 +279,6 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
     	RRDMsgDeliver(msqid, sendbuf);
 	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
-    	RRD_data_buff_deAlloc(sendbuf);
 	remove_item(cache);
     }
     else
