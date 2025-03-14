@@ -20,12 +20,14 @@
 
 RESULT_DIR="/tmp/l2_test_report"
 STATIC_PROFILE_DIR="/etc/rrd"
+DYNAMIC_DIR= "/media/apps/RDK-RRD-Test/etc/rrd"
 OUTPUT_DIR="/tmp/rrd"
 LIB_DIR="/lib/rdk"
 
 mkdir -p "$RESULT_DIR"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$STATIC_PROFILE_DIR"
+mkdir -p "$DYNAMIC_DIR"
 mkdir -p "$LIB_DIR"
 
 apt-get remove systemd
