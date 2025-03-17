@@ -20,7 +20,7 @@
 [Unit]
 Description=RDK Remote Debugger
 
-After=wpeframework-powermanager.service tr69hostif.service
+After=tr69hostif.service
 Requires=tr69hostif.service
 
 [Service]
