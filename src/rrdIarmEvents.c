@@ -28,7 +28,7 @@ extern int msqid;
 extern rbusHandle_t rrdRbusHandle;
 
 #if defined(PWRMGR_PLUGIN)
-#define RETRYSLEEP 300 //Retry sleep time 
+#define RETRYSLEEP (300 * 1000)//Retry sleep time 
 
 static uint8_t isPwrCtlInterface = 0;
 
