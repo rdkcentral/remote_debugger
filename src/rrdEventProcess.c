@@ -22,6 +22,7 @@
 #include "rrdEventProcess.h"
 
 #define COMMAND_DELIM ';'
+#define RRD_TMP_DIR "/tmp/"
 
 static void processIssueType(data_buf *rbuf);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
@@ -424,7 +425,11 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
     rrdjsonlen = strlen(RRD_JSON_FILE);
+#ifdef IARMBUS_SUPPORT
     persistentAppslen = strlen(RRD_MEDIA_APPS);
+else
+    persistentAppslen = strlen(RRD_TMP_DIR);
+#endif
     prefixlen = strlen(RDM_PKG_PREFIX);
     suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
@@ -439,7 +444,11 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         return;
     }
 #if !defined(GTEST_ENABLE)
+#ifdef IARMBUS_SUPPORT
     sprintf(dynJSONPath, "%s%s%s%s", RRD_MEDIA_APPS, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#else
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_TMP_DIR, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#endif
 #else
     sprintf(dynJSONPath, "%s", rbuf->jsonPath);
 #endif
