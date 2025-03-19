@@ -322,7 +322,11 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     rrdjsonlen = strlen(RRD_JSON_FILE);
+#ifdef IARMBUS_SUPPORT
     persistentAppslen = strlen(RRD_MEDIA_APPS);
+#else
+    persistentAppslen = strlen(RRD_TMP_DIR);
+#endif
     prefixlen = strlen(RDM_PKG_PREFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 
@@ -331,8 +335,11 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
         return dynamicdata;
     }
+#ifdef IARMBUS_SUPPORT
     sprintf(dynJSONPath, "%s%s%s%s", RRD_MEDIA_APPS, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
-
+#else	
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_TMP_DIR, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Dynamic Profile... \n", __FUNCTION__, __LINE__);
     jsonParsed = readAndParseJSON(dynJSONPath);
     if (jsonParsed == NULL)
@@ -427,7 +434,7 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     rrdjsonlen = strlen(RRD_JSON_FILE);
 #ifdef IARMBUS_SUPPORT
     persistentAppslen = strlen(RRD_MEDIA_APPS);
-else
+#else
     persistentAppslen = strlen(RRD_TMP_DIR);
 #endif
     prefixlen = strlen(RDM_PKG_PREFIX);
