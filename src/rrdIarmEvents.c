@@ -37,6 +37,11 @@ static void* getPwrCtrlInterface(void *arg)
     int ret;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Entry  \r\n \n", __FUNCTION__, __LINE__);
 
+    /*TODO: remove this sleep after fix METROL-1045*/
+    sleep(5);//added sleep wait for the WPEframework active. 
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: start PowerController_Init().. \n", __FUNCTION__, __LINE__);
+    PowerController_Init();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
     while(1)
     {
         if(POWER_CONTROLLER_ERROR_NONE == PowerController_Connect())
@@ -104,7 +109,6 @@ int RRD_IARM_subscribe()
     }
 #if defined(PWRMGR_PLUGIN)
     // Thunder client library register for Deep Sleep Event Handler
-    PowerController_Init();
     if(pthread_create (&pwrConnectThreadID, NULL, getPwrCtrlInterface, NULL)  == 0)
     {
         if(pthread_detach(pwrConnectThreadID) != 0) 
@@ -112,7 +116,7 @@ int RRD_IARM_subscribe()
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: getPwrCtrlInterface Thread detach Failed\r\n ", __FUNCTION__, __LINE__);
         }
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: getPwrCtrlInterface Thread started to get power manager COM-RPC.. \n", __FUNCTION__, __LINE__);
 #else
     // IARM Reg for Deep Sleep Event Handler
     ret = IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, _pwrManagerEventHandler);
