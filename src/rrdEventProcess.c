@@ -299,7 +299,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
 	if ( pIssueNode->Node && pIssueNode->subNode ) // CID 336981: Use after free (USE_AFTER_FREE), CID 336980:Use after free (USE_AFTER_FREE)
 	{
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
-            checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
+            if( rbuf ) // CID 336984: Double free (USE_AFTER_FREE)
+	    {
+	        checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
+	    }
 	}
     }
     else
