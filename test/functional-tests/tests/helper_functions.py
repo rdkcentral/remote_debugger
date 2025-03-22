@@ -29,7 +29,6 @@ from time import sleep
 RRD_LOG_FILE = "/opt/logs/remotedebugger.log.0"
 LOG_FILE = "/opt/logs/remotedebugger.log.0"
 JSON_FILE = "/etc/rrd/remote_debugger.json"
-DYNAMIC_JSON_FILE = "/media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json"
 UPLOAD_SCRIPT = "/lib/rdk/uploadRRDLogs.sh"
 OUTPUT_DIR = "/tmp/rrd"
 ISSUE_STRING = "Device.Info"
@@ -37,7 +36,9 @@ CATEGORY_STRING = "Device"
 HARMFULL_STRING = "Command.Harm"
 MISSING_STRING = "Test.TestRun"
 BACKGROUND_STRING = "Device.Dump"
-
+DYNAMIC_DIR="/media/apps/RDK-RRD-Test/etc/rrd"
+DYNAMIC_JSON_FILE = "/media/apps/RDK-RRD-Device/etc/rrd/remote_debugger.json"
+DYNAMIC_STRING = "Test"
 def remove_logfile():
     try:
         if os.path.exists(RRD_LOG_FILE):
