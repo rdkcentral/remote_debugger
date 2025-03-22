@@ -302,7 +302,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
-        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+	if (pIssueNode->subNode)
+	{
+            processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+	}
     }
 
     freeParsedJson(jsonParsed);
