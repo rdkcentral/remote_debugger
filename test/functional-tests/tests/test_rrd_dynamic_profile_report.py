@@ -55,6 +55,7 @@ def reset_issuetype_rfc():
     assert result.returncode == 0
 
 def test_remote_debugger_trigger_event():
+    DYNAMIC_STRING = "Test"
     reset_issuetype_rfc()
     sleep(10)
     command = [
@@ -182,5 +183,8 @@ def test_remotedebugger_upload_report():
         print("Script execution not found in logs")
 
     remove_logfile()
+    #command = f"rm -rf /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json"
+    #print(f"Executing command: {command}")  # Debugging line
+    #result = subprocess.run(command, shell=True, capture_output=True, text=True)
     remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()
