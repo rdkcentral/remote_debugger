@@ -110,7 +110,8 @@ void processIssueTypeEvent(data_buf *rbuf)
     }
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-    return;
+    free(cmdMap);
+    return; // CID 336987: Resource leak (RESOURCE_LEAK)
 }
 
 /*
