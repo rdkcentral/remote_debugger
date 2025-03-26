@@ -39,6 +39,7 @@ BACKGROUND_STRING = "Device.Dump"
 DYNAMIC_DIR="/media/apps/RDK-RRD-Test/etc/rrd"
 DYNAMIC_JSON_FILE = "/media/apps/RDK-RRD-Device/etc/rrd/remote_debugger.json"
 DYNAMIC_STRING = "Test"
+DYNAMIC_HARMFUL_STRING = "Test.TestRun3"
 def remove_logfile():
     try:
         if os.path.exists(RRD_LOG_FILE):
