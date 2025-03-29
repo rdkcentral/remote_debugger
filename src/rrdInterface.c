@@ -222,7 +222,12 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 	 return;
     }	
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
-    issue =rbusValue_GetString(value, NULL);	
+    issue =rbusValue_GetString(value, NULL);
+    char *dot_position = strchr(issue, '.'); // Find the first occurrence of '.'
+    if (dot_position != NULL) 
+    {
+        *dot_position = '\0'; // Replace '.' with null terminator
+    }
     size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
 
     char *pkg_name = (char *)malloc(len);
