@@ -27,7 +27,6 @@ mkdir -p "$RESULT_DIR"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$STATIC_PROFILE_DIR"
 mkdir -p "$LIB_DIR"
-mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
