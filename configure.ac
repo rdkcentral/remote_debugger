@@ -72,5 +72,15 @@ AC_ARG_ENABLE([iarmbusSupport],
 esac],[iarmbusSupport=false])
 AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 
+# L2 Support
+AC_ARG_ENABLE([L2Support],
+[  --enable-L2Support    Turn on L2 support],
+[case "${enableval}" in
+  yes) L2Support=true ;;
+  no)  L2Support=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-L2Support]) ;;
+esac],[L2Support=false])
+AM_CONDITIONAL([L2_ENABLE], [test x$L2Support = xtrue])
+
 AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT
