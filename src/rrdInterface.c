@@ -74,7 +74,7 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
-#ifndef IARMBUS_SUPPORT
+#if !defined(IARMBUS_SUPPORT) || defined(L2_SUPPORT)
     subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
     subscriptions[2].filter = NULL;
     subscriptions[2].duration = 0;
