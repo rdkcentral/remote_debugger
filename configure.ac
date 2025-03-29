@@ -39,20 +39,27 @@ AC_ARG_ENABLE([gtestapp],
              [echo "Gtestapp is disabled"])
 AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
 
-L2_SUPPORT_ENABLED =""
+L2_SUPPORT_FLAG =""
 
 AC_ARG_ENABLE([l2support],
-             AS_HELP_STRING([--enable-l2support],[enable L2 support (default is no)]),
-             [
-               case "${enableval}" in
-                yes) L2_SUPPORT_ENABLED=true
-                     L2_ENABLE_FLAG="-L2_ENABLE"
-                     m4_if(m4_sysval,[0],[AC_CONFIG_FILES([Makefile])]);;
-                no) GTEST_SUPPORT_ENABLED=false AC_MSG_ERROR([L2 support is disabled]);;
-                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-L2 ]);;
-               esac
-             ],
-             [echo "L2 is disabled"])
+  AS_HELP_STRING([--enable-l2support], [enable L2 support (default is no)]),
+  [
+    case "${enableval}" in
+      yes)
+        L2_SUPPORT_ENABLED=true
+        L2_ENABLE_FLAG="-DL2_SUPPORT"
+        AC_CONFIG_FILES([./Makefile])
+        ;;
+      no)
+        L2_SUPPORT_ENABLED=false
+        ;;
+      *)
+        AC_MSG_ERROR([bad value ${enableval} for --enable-l2support])
+        ;;
+    esac
+  ],
+  [echo "L2 support is disabled"])
+AC_SUBST(L2_ENABLE_FLAG)
 AM_CONDITIONAL([WITH_L2_SUPPORT], [test x$L2_SUPPORT_ENABLED = xtrue])
 
 
@@ -98,6 +105,7 @@ AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 #  *) AC_MSG_ERROR([bad value ${enableval} for --enable-L2Support]) ;;
 #esac],[L2Support=false])
 #AM_CONDITIONAL([L2_ENABLE], [test x$L2Support = xtrue])
+
 AC_SUBST(L2_SUPPORT_ENABLED)
 AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT
