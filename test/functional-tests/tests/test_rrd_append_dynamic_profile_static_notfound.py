@@ -102,6 +102,6 @@ def test_check_issue_in_dynamic_profile():
     assert STATIC_NOTFOUND in grep_rrdlogs(STATIC_NOTFOUND)
 
 
-    #remove_logfile()
+    remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()
