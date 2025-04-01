@@ -90,6 +90,8 @@ char * readJsonFile(char *jsonfile)
     if(ch_count < 1)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s is Empty!!! \n",__FUNCTION__,__LINE__,jsonfile);
+	// CID 278332: Resource leak (RESOURCE_LEAK)
+	fclose(fp);
         return NULL;
     }
     fseek(fp, 0, SEEK_SET);
@@ -480,7 +482,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     char *rfcbuf = NULL;
     bool execstatus;
     char outdir[BUF_LEN_256] =  {'\0'};
+// CID: 341802 : Use of 32bit time_t
+#if defined(__aarch64__)
+    int64_t ctime;
+#else
     time_t ctime;
+#endif
     struct tm *ltime;
     rfcbuf = strdup(buff->mdata);
 
@@ -552,6 +559,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
 	}
+    }
+    if( rfcbuf != NULL )
+    {
+        //CID 320504: Resource leak (RESOURCE_LEAK)
+	free(rfcbuf);
     }
 }
 
