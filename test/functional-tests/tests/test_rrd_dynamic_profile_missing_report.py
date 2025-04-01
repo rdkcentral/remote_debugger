@@ -84,53 +84,10 @@ def test_check_issue_in_dynamic_profile():
     except subprocess.CalledProcessError as e:
         print("Error while executing the script:")
         print(e.stderr)
-    #script_path = "/root/rrd/remote_debugger/test/functional-tests/tests/create_json.sh"
-    #try:
-    #   result = subprocess.run(['bash', script_path], check=True, text=True, capture_output=True)
-    #    print("Script output:")
-    #    print(result.stdout)
-    #except subprocess.CalledProcessError as e:
-    #    print("Error while executing the script:")
-    #    print(f"Return code: {e.returncode}")
-    #    print(f"Command: {e.cmd}")
-    #    print(f"Output: {e.output}")
-    #    print(f"Error: {e.stderr}")
-    #except FileNotFoundError as fnf_error:
-    #    print("FileNotFoundError: The script path might be incorrect.")
-    #    print(fnf_error)
-
-
-
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()
-
-#def download_file(filename):
-#    url = f"https://mockxconf:50054/tmp/{filename}"
-#    command = f"curl -k -o /tmp/rrd/{filename} {url}"
-#    print(f"Executing command: {command}")  # Debugging line
-
-#    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-#    return result
-
-#tgz_file = "RDK-RRD-Test.tar"
-#download_file(tgz_file)
-
-
-#def download_file(filename):
-#    url = f"https://mockxconf:50054/tmp/{filename}"
-#    command = f"curl -k -o /media/apps/RDK-RRD-Test/etc/rrd/{filename} {url}"
-#    print(f"Executing command: {command}")  # Debugging line
-
-#    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    #command = f"tar -xvf /media/apps/RDK-RRD-Test/etc/rrd/{filename}"
-    #result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    #command = f"mv /media/apps/RDK-RRD-Test/etc/rrd/{filename} /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json"
-    #result = subprocess.run(command, shell=True, capture_output=True, text=True)
-#    return result
-
-#tgz_file = "RDK-RRD-Test.tar.gz"
-#download_file(tgz_file)
+    
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
     command = [
