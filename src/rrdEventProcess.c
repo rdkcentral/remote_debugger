@@ -59,7 +59,7 @@ void processWebCfgTypeEvent(data_buf *rbuf)
  */
 void processIssueTypeEvent(data_buf *rbuf)
 {
-    char **cmdMap;
+    char **cmdMap = NULL;
     int index = 0, count = 0, dataMsgLen = 0;
     data_buf *cmdBuff = NULL;
 
