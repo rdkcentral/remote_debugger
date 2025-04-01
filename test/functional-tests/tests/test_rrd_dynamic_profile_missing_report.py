@@ -75,7 +75,7 @@ def test_check_issue_in_dynamic_profile():
     RDM_PACKAGE = "Request RDM Manager Download for... RDK-RRD-Test:1.0"
     assert RDM_PACKAGE in grep_rrdlogs(RDM_PACKAGE)
 
-    script_path="create_json.sh"
+    script_path="./test/functional-tests/tests/create_json.sh"
 # Run the shell script
     try:
         result = subprocess.run(['bash', script_path], check=True, text=True, capture_output=True)
