@@ -24,6 +24,7 @@
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
 
+
 devicePropertiesData devPropData;
 
 /*

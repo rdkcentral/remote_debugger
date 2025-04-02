@@ -1,12 +1,9 @@
 name: Build Component in Native Environment
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to build'
-        required: true
-        default: 'develop'
+  pull_request:
+    branches: [ develop  ]
+    paths: ['**/*.c', '**/*.cpp', '**/*.cc', '**/*.cxx', '**/*.h', '**/*.hpp', '**/*.sh' ]
     
 jobs:
   build-systemtimemgr-on-pr:
