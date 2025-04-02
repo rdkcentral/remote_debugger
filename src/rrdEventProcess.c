@@ -110,11 +110,6 @@ void processIssueTypeEvent(data_buf *rbuf)
     }
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-    // CID 336987: Resource leak (RESOURCE_LEAK)
-    if (cmdMap != NULL)
-    {
-        free(cmdMap);
-    }
     return;
 }
 
@@ -510,11 +505,6 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     freeParsedJson(jsonParsed);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-    //CID 336982: Resource leak (RESOURCE_LEAK)
-    if( dynJSONPath )
-    {
-        free(dynJSONPath);
-    }
     return;
 }
 

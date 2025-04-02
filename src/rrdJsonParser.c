@@ -560,11 +560,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
 	}
     }
-    if( rfcbuf != NULL )
-    {
-        //CID 320504: Resource leak (RESOURCE_LEAK)
-	free(rfcbuf);
-    }
 }
 
 /*
