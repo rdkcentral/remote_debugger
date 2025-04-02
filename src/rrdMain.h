@@ -32,7 +32,6 @@ extern "C"
 #ifdef IARMBUS_SUPPORT
 #include "rfcapi.h"
 #else
-#include "syscfg/syscfg.h"
 #endif
 #endif
 
