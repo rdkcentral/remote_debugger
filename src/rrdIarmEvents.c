@@ -266,10 +266,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Owner Name found %s, use RDK_REMOTE_DEBUGGER_NAME!!! \n", __FUNCTION__, __LINE__, owner);
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
-    //CID 328981: Resource leak (RESOURCE_LEAK)
-#if !defined(ENABLE_WEBCFG_FEATURE)
-    free(sbuf);
-#endif
 }
 #endif
 

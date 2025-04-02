@@ -385,11 +385,6 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
     }
-    //CID 336983: Resource leak (RESOURCE_LEAK)
-    if(sbuf)
-    {
-        free(sbuf);
-    }
 }
 
 /*Function: RRD_unsubscribe
