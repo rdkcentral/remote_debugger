@@ -267,7 +267,9 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
     //CID 328981: Resource leak (RESOURCE_LEAK)
-    free(sendbuf);
+#if !defined(ENABLE_WEBCFG_FEATURE)
+    free(sbuf);
+#endif
 }
 #endif
 
