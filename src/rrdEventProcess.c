@@ -312,11 +312,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
-	//CID 336980: Double free (USE_AFTER_FREE)
-	//if ( pIssueNode->Node && pIssueNode->subNode )
-        //{
-            processIssueTypeInInstalledPackage(rbuf, pIssueNode);
-	//}
+        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
     }
 
     freeParsedJson(jsonParsed);
