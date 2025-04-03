@@ -277,7 +277,12 @@ bool executeCommands(issueData *cmdinfo)
 {
     int len = 0;
     pthread_t RRDCmdThreadID;
+//CID : 342155: Use of 32-bit time_t
+#if defined(__aarch64__)
+    int64_t curtime;
+#else
     time_t curtime;
+#endif
     issueData *cmdData = NULL;
     struct tm *loc_time;
     char *result = NULL;
