@@ -75,3 +75,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_em
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_missing_command_report.json test/functional-tests/tests/test_rrd_static_profile_missing_command_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_append_dynamic_profile_report.json test_rrd_append_dynamic_profile_report.py
