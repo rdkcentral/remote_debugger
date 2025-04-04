@@ -24,7 +24,3 @@ Feature: Remote Debugger Append Request Missing Issuetype
     And remotedebugger logs should contain the Json File Parse Success
     And remotedebugger should log as the Issue requested is not found in the profile
     And issuetype is not found in static json and abort command execution
-    
-    
-
- 
