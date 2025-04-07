@@ -68,18 +68,18 @@ int RRD_subscribe()
     subscriptions[0].handler  = _remoteDebuggerEventHandler;
     subscriptions[0].userData = NULL;
 
-    //subscriptions[1].eventName = RRD_WEBCFG_ISSUE_EVENT;
-    //subscriptions[1].filter = NULL;
-    //subscriptions[1].duration = 0;
-    //subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
-    //subscriptions[1].userData = NULL;
+    subscriptions[1].eventName = RRD_WEBCFG_ISSUE_EVENT;
+    subscriptions[1].filter = NULL;
+    subscriptions[1].duration = 0;
+    subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
+    subscriptions[1].userData = NULL;
 
 // #if !defined(IARMBUS_SUPPORT) || defined(L2_SUPPORT)
-    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-    subscriptions[2].filter = NULL;
-    subscriptions[2].duration = 0;
-    subscriptions[2].handler  = _rdmDownloadEventHandler;
-    subscriptions[2].userData = NULL;
+//    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
+//    subscriptions[2].filter = NULL;
+//    subscriptions[2].duration = 0;
+//   subscriptions[2].handler  = _rdmDownloadEventHandler;
+//    subscriptions[2].userData = NULL;
 
     subscriptions[3].eventName = RDM_DOWNLOAD_EVENT1;
     subscriptions[3].filter = NULL;
@@ -87,7 +87,7 @@ int RRD_subscribe()
     subscriptions[3].handler  = _rdmDownloadEventHandler;
     subscriptions[3].userData = NULL;
 
-    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 60);
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
 //#else
    // ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
 //#endif
