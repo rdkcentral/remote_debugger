@@ -482,12 +482,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     char *rfcbuf = NULL;
     bool execstatus;
     char outdir[BUF_LEN_256] =  {'\0'};
-// CID: 341802 : Use of 32bit time_t
-#if defined(__aarch64__)
-    int64_t ctime;
-#else
     time_t ctime;
-#endif
     struct tm *ltime;
     rfcbuf = strdup(buff->mdata);
 
