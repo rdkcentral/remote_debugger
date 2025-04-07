@@ -27,28 +27,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/rfc'
-          token: ${{ secrets.GH_ACTION_PULL }}
           path: rfc
 
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/iarmmgrs'
-          token: ${{ secrets.GH_ACTION_PULL }}
           path: iarmmgrs
           
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/iarmbus'
-          token: ${{ secrets.GH_ACTION_PULL }}
           path: iarmbus
 
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/tr69hostif'
-          token: ${{ secrets.GH_ACTION_PULL }}
           path: tr69hostif
 
 

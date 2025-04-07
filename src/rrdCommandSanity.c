@@ -18,6 +18,7 @@
 */
 
 #include "rrdCommandSanity.h"
+#include <ctype.h>
 
 /*
  * @function updateBackgroundCmd
@@ -131,9 +132,21 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     {
          subcmd = cJSON_GetArrayItem(sanitylist, i);
          checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
+         int len = strlen(checkcmd);
+         if (len >= 2 && checkcmd[0] == '"' && checkcmd[len - 1] == '"') 
+         {
+             checkcmd[len - 1] = '\0'; // Remove closing quote
+             checkcmd++;               // Move pointer forward to skip opening quote
+             len -= 2;            // Adjust length after removing quotes
+         }
+         // Trim trailing spaces
+         int j = len - 1;
+         while (j >= 0 && isspace(checkcmd[j])) {
+         checkcmd[j] = '\0';
+         j--;
+         }
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands... \n",__FUNCTION__,__LINE__,checkcmd);
          sanitystr = strstr(issuecmd,checkcmd);
-         cJSON_free(checkcmd); // free each command from the sanity command array
          if (sanitystr)
          {
              RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
