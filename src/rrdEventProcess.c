@@ -59,7 +59,7 @@ void processWebCfgTypeEvent(data_buf *rbuf)
  */
 void processIssueTypeEvent(data_buf *rbuf)
 {
-    char **cmdMap;
+    char **cmdMap = NULL;
     int index = 0, count = 0, dataMsgLen = 0;
     data_buf *cmdBuff = NULL;
 
@@ -190,6 +190,8 @@ static void processIssueType(data_buf *rbuf)
 		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking Issue from Static... \n", __FUNCTION__, __LINE__);
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
+	    //CID-336989: Resource leak
+	    free(pIssueNode);
         }
         else
         {
@@ -296,8 +298,16 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     if (isStaticIssue)
     {
         // Issue in Static Profile JSON
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
-        checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
+	// CID 336981: Use after free (USE_AFTER_FREE)
+	if ( pIssueNode->Node && pIssueNode->subNode )
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
+	    // CID 336988: Double free (USE_AFTER_FREE)
+	    if (rbuf)
+            {
+                checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
+            }
+	}
     }
     else
     {
