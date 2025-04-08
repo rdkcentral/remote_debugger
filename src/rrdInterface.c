@@ -256,7 +256,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 
     (void)(handle);
     (void)(subscription);
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT1 %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT1);
     cache = findPresentInCache(pkg_name);
     if (cache != NULL)
     {
