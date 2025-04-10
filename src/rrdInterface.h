@@ -44,7 +44,7 @@ extern "C"
 #if !defined(L2_SUPPORT)
 #define RDM_DOWNLOAD_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus"
 #else
-#define RDM_DOWNLOAD_EVENT1 "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus"
+#define RDM_DOWNLOAD_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus"
 #endif
 #define RRD_PROCESS_NAME "remotedebugger"
 #define RRD_RBUS_TIMEOUT 60
