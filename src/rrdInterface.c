@@ -83,9 +83,9 @@ int RRD_subscribe()
 
 
    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
-#else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
-#endif
+//#else
+   //ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+//#endif
 #endif
     if(ret != 0)
     {
