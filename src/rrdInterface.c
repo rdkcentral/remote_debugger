@@ -94,6 +94,7 @@ int RRD_subscribe()
    subscriptions[2].userData = NULL;
    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
 #endif
+#endif
 
     if(ret != 0)
     {
