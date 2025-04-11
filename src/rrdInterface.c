@@ -74,24 +74,27 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
-//#ifndef IARMBUS_SUPPORT
+#ifdef IARMBUS_SUPPORT
+#ifdef USE_WIFI_PROFILE
    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT1;
    subscriptions[2].filter = NULL;
    subscriptions[2].duration = 0;
    subscriptions[2].handler  = _rdmDownloadEventHandler;
    subscriptions[2].userData = NULL;
-//#else
-   //subscriptions[2].eventName = RDM_DOWNLOAD_EVENT1;
-   //subscriptions[2].filter = NULL;
-   //subscriptions[2].duration = 0;
-   //subscriptions[2].handler  = _rdmDownloadEventHandler;
-   //subscriptions[2].userData = NULL;
-//#endif
    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
-//#else
-   //ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
-//#endif
+#else
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
 #endif
+   
+#else
+   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
+   subscriptions[2].filter = NULL;
+   subscriptions[2].duration = 0;
+   subscriptions[2].handler  = _rdmDownloadEventHandler;
+   subscriptions[2].userData = NULL;
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
+#endif
+
     if(ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Event Subscribe for RRD return value is : %s \n ", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
