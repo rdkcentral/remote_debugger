@@ -48,7 +48,7 @@ AC_ARG_ENABLE([l2support],
       yes)
         L2_SUPPORT_ENABLED=true
         L2_ENABLE_FLAG="-DL2_SUPPORT"
-        AC_CONFIG_FILES([./Makefile])
+        AC_CONFIG_FILES([src/Makefile])
         ;;
       no)
         L2_SUPPORT_ENABLED=false
