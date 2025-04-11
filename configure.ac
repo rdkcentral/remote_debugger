@@ -39,6 +39,22 @@ AC_ARG_ENABLE([gtestapp],
              [echo "Gtestapp is disabled"])
 AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
 
+
+AC_ARG_ENABLE([wifi],
+        AS_HELP_STRING([--enable-wifi],[enable WiFi profile (default is no)]),
+        [
+          case "${enableval}" in
+           yes) WIFI_PROFILE_ENABLE=true
+                WIFI_PROFILE_FLAG="-DUSE_WIFI_PROFILE"
+                #m4_syscmd([test -d src/hostif/profiles/wifi])
+                m4_if(m4_sysval,[0],[AC_CONFIG_FILES([src/Makefile])])
+                m4_if(m4_sysval,[0],[SUBDIRS_WIFI="src"])  ;;
+           no) WIFI_PROFILE_ENABLE=false AC_MSG_ERROR([wifi profile is disabled]) ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-wifi ]) ;;
+           esac
+           ],
+         [echo "WiFi profile is disabled"])
+
 L2_SUPPORT_FLAG =""
 
 AC_ARG_ENABLE([l2support],
