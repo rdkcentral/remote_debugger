@@ -38,7 +38,8 @@ AC_ARG_ENABLE([gtestapp],
              [echo "Gtestapp is disabled"])
 AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
 
-
+AC_CONFIG_FILES([Makefile
+                 src/Makefile])
 AC_ARG_ENABLE([wifi],
         AS_HELP_STRING([--enable-wifi],[enable WiFi profile (default is no)]),
         [
@@ -46,7 +47,7 @@ AC_ARG_ENABLE([wifi],
            yes) WIFI_PROFILE_ENABLE=true
                 WIFI_PROFILE_FLAG="-DUSE_WIFI_PROFILE"
                 #m4_syscmd([test -d src/hostif/profiles/wifi])
-                m4_if(m4_sysval,[0],[AC_CONFIG_FILES([src/Makefile])])
+                #m4_if(m4_sysval,[0],[AC_CONFIG_FILES([src/Makefile])])
                 m4_if(m4_sysval,[0],[SUBDIRS_WIFI="src"])  ;;
            no) WIFI_PROFILE_ENABLE=false AC_MSG_ERROR([wifi profile is disabled]) ;;
           *) AC_MSG_ERROR([bad value ${enableval} for --enable-wifi ]) ;;
@@ -61,7 +62,7 @@ AC_ARG_ENABLE([l2support],
       yes)
         L2_SUPPORT_ENABLED=true
         L2_ENABLE_FLAG="-DL2_SUPPORT"
-        AC_CONFIG_FILES([Makefile src/Makefile])
+       # AC_CONFIG_FILES([Makefile src/Makefile])
         ;;
       no)
         L2_SUPPORT_ENABLED=false
@@ -91,8 +92,8 @@ AC_CHECK_HEADERS([stdio.h string.h unistd.h stdlib.h])
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_SIZE_T
 
-AC_CONFIG_FILES([Makefile
-                 src/Makefile])
+#AC_CONFIG_FILES([Makefile
+                # src/Makefile])
 
 # IARMBus Support
 AC_ARG_ENABLE([iarmbusSupport],
