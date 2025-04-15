@@ -90,7 +90,6 @@ char * readJsonFile(char *jsonfile)
     if(ch_count < 1)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s is Empty!!! \n",__FUNCTION__,__LINE__,jsonfile);
-	fclose(fp); // CID 278332: Resource leak (RESOURCE_LEAK)
         return NULL;
     }
     fseek(fp, 0, SEEK_SET);
@@ -553,10 +552,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
 	}
-    }
-    if( rfcbuf != NULL )
-    {
-        free(rfcbuf); //CID 320504: Resource leak (RESOURCE_LEAK)
     }
 }
 
