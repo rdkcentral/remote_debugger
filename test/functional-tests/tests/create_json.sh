@@ -29,14 +29,16 @@ echo '{
                 },
     "TestRun5": {
       "Commands": "cat /version.txt;uptime;cat /tmp/.deviceDetails.cache",
-      "Timeout": 10                                                                                                                      },
+      "Timeout": 10                                                                                                                      
+                },
     "TestRun4": {
       "Commands": "cat /version.txt;uptime;cat /tmp/.deviceDetails.cache",
-      "Timeout": 10                                                                                                                      },
+      "Timeout": 10                                                                                                                      
+                },
     "TestRun3": {
       "Commands": "cat /version.txt;uptime;rm -rf;cat /tmp/.deviceDetails.cache",
       "Timeout": 10
-    },
+                },
     "TestRun2": {
       "Commands": "cat /version.txt;uptime;/proc/version;cat /proc/buddyinfo;cat /proc/meminfo;cat /tmp/.deviceDetails.cache",
       "Timeout": 10
