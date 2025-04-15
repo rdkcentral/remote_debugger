@@ -502,10 +502,6 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     freeParsedJson(jsonParsed);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-    if( dynJSONPath )
-    {
-        free(dynJSONPath);
-    }
     return;
 }
 
