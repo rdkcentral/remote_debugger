@@ -74,16 +74,24 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
-#ifndef IARMBUS_SUPPORT
-    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-    subscriptions[2].filter = NULL;
-    subscriptions[2].duration = 0;
-    subscriptions[2].handler  = _rdmDownloadEventHandler;
-    subscriptions[2].userData = NULL;
-
-    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
+#ifdef IARMBUS_SUPPORT
+#ifdef USE_L2_SUPPORT
+   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT1;
+   subscriptions[2].filter = NULL;
+   subscriptions[2].duration = 0;
+   subscriptions[2].handler  = _rdmDownloadEventHandler;
+   subscriptions[2].userData = NULL;
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
 #else
-    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+#endif
+#else
+   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
+   subscriptions[2].filter = NULL;
+   subscriptions[2].duration = 0;
+   subscriptions[2].handler  = _rdmDownloadEventHandler;
+   subscriptions[2].userData = NULL;
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
 #endif
 #endif
     if(ret != 0)
@@ -250,7 +258,11 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 
     (void)(handle);
     (void)(subscription);
+#ifdef USE_L2_SUPPORT
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT1);
+#else
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
+#endif
     cache = findPresentInCache(pkg_name);
     if (cache != NULL)
     {
