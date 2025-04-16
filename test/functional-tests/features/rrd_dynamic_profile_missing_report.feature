@@ -43,3 +43,10 @@ Feature: Remote Debugger Missing Issuetype
     When the remotedebugger read the json file form the dynamic path
     Then remotedebugger json read and parse should be failed
     And remotedebugger should request RDM to download the package
+    
+  Scenario: Verify the Issuetype is found in downloaded package
+    Given downloaded package from RDM successfully
+    When the remotedebugger read the json file form the downloaded dynamic path
+    Then remotedebugger json read and parse should be success
+    And remotedebugger should execute the command
+    
