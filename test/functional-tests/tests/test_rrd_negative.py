@@ -95,16 +95,6 @@ def test_check_issue_in_dynamic_profile():
     RDM_PACKAGE = "Request RDM Manager Download for... RDK-RRD-Test:1.0"
     assert RDM_PACKAGE in grep_rrdlogs(RDM_PACKAGE)
 
-    script_path="./test/functional-tests/tests/create_json.sh"
-    # Run the shell script
-    try:
-        result = subprocess.run(['bash', script_path], check=True, text=True, capture_output=True)
-        print("Script output:")
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print("Error while executing the script:")
-        print(e.stderr)
-
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
     command = [
