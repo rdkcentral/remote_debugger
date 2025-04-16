@@ -96,7 +96,7 @@ def test_check_issue_in_dynamic_profile():
     assert RDM_PACKAGE in grep_rrdlogs(RDM_PACKAGE)
 
     script_path="./test/functional-tests/tests/create_json.sh"
-# Run the shell script
+    # Run the shell script
     try:
         result = subprocess.run(['bash', script_path], check=True, text=True, capture_output=True)
         print("Script output:")
@@ -104,10 +104,6 @@ def test_check_issue_in_dynamic_profile():
     except subprocess.CalledProcessError as e:
         print("Error while executing the script:")
         print(e.stderr)
-    #remove_logfile()
-    #remove_outdir_contents(OUTPUT_DIR)
-    #kill_rrd()
-
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
     command = [
@@ -118,7 +114,6 @@ def test_rdm_trigger_event():
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
 def test_rdm_rrd_trigger_event():
-#    INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus',
@@ -172,3 +167,7 @@ def test_rdm_rrd_dwnld_status():
 
     START_REMOTE_DEBUGGER = "Starting remote_debugger_Test.TestRun5 service success..."
     assert START_REMOTE_DEBUGGER in grep_rrdlogs(START_REMOTE_DEBUGGER)
+
+    remove_logfile()
+    remove_outdir_contents(OUTPUT_DIR)
+    kill_rrd()
