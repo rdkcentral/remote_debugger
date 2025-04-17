@@ -49,9 +49,7 @@ def download_file(filename):
     return result
 
 def validate_file(filename):
-    if filename is None:
-        return f"File Error."
-    elif os.path.isfile(filename):
+    if os.path.isfile(filename):
         os.remove(filename)
         return f"File {filename} found and removed."
     else:
