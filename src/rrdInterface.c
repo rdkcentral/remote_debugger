@@ -1,84 +1,87 @@
-/*
- * If not stated otherwise in this file or this component's LICENSE file the
- * following copyright and licenses apply:
- *
- * Copyright 2018 RDK Management
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
-*/
+##########################################################################
+# If not stated otherwise in this file or this component's LICENSE
+# file the following copyright and licenses apply:
+#
+# Copyright 2018 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##########################################################################
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
 
-#ifndef _RRDIARM_H_
-#define _RRDIARM_H_
+# Initialize component
+AC_INIT([remote-debugger], [1.0], [naveenkumar_hanasi@comcast.com])
+AM_INIT_AUTOMAKE([foreign])
+LT_INIT
+GTEST_ENABLE_FLAG = ""
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+AC_ARG_ENABLE([gtestapp],
+             AS_HELP_STRING([--enable-gtestapp],[enable Gtest support (default is no)]),
+             [
+               case "${enableval}" in
+                yes) GTEST_SUPPORT_ENABLED=true
+                     GTEST_ENABLE_FLAG="-DGTEST_ENABLE"
+                     m4_if(m4_sysval,[0],[AC_CONFIG_FILES([src/unittest/Makefile])]);;
+                no) GTEST_SUPPORT_ENABLED=false AC_MSG_ERROR([Gtest support is disabled]);;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-gtestapp ]);;
+               esac
+             ],
+             [echo "Gtestapp is disabled"])
+AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test x$GTEST_SUPPORT_ENABLED = xtrue])
 
-#include <sys/msg.h>
-#include "rrdCommon.h"
-#if !defined(GTEST_ENABLE)
-#include "rbus.h"
-#ifdef IARMBUS_SUPPORT
-#include "libIARM.h"
-#include "libIBus.h"
-#include "libIARMCore.h"
-#endif
-#endif
+# Config Source files.
+AC_CONFIG_SRCDIR([src/rrdMain.c])
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
-#define RDK_REMOTE_DEBUGGER_NAME "REMOTE_DEBUGGER"
-#define REMOTE_DEBUGGER_RBUS_HANDLE_NAME "rdkRrdRbus"
-#define RRD_WEBCFG_FORCE_SYNC "Device.X_RDK_WebConfig.ForceSync"
-#define RRD_SET_ISSUE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType"
-#define RRD_WEBCFG_ISSUE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.WebCfgData"
-#define RDM_DOWNLOAD_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus"
-#define RDM_DOWNLOAD_EVENT_MOCK "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus"
-#define RRD_PROCESS_NAME "remotedebugger"
-#define RRD_RBUS_TIMEOUT 60
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_INSTALL
+AM_PROG_LIBTOOL(libtool)
 
-#ifdef IARMBUS_SUPPORT
-/*Enum for IARM Events*/
-typedef enum _RemoteDebugger_EventId_t {
-        IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
-        IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
-        IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT
-} IARM_Bus_RemoteDebugger_EventId_t;
-#endif
+# Checks for libraries.
+PKG_CHECK_MODULES([CJSON],[libcjson >= 1.7.0])
 
-/*Event Handler Function*/
-#if !defined(GTEST_ENABLE)
-void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
-void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
-void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
-#endif
-#ifdef IARMBUS_SUPPORT
-int RRD_IARM_subscribe(void);
-int RRD_IARM_unsubscribe(void);
-void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
-#if defined(PWRMGR_PLUGIN)
-void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
-    const PowerController_PowerState_t newState, void* userdata);
-#else
-void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
-#endif
-#endif
-void RRD_data_buff_deAlloc(data_buf *sbuf);
-void RRDMsgDeliver(int msgqid, data_buf *sbuf);
-int RRD_subscribe(void);
-int RRD_unsubscribe(void);
+# Checks for header files.
+AC_CHECK_HEADERS([stdio.h string.h unistd.h stdlib.h])
 
-#ifdef __cplusplus
-}
-#endif
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_SIZE_T
 
-#endif
+AC_CONFIG_FILES([Makefile
+                 src/Makefile])
+AC_ARG_ENABLE([L2support],
+        AS_HELP_STRING([--enable-L2support],[enable L2support (default is no)]),
+        [
+          case "${enableval}" in
+           yes) L2_SUPPORT_ENABLE=true
+                L2_SUPPORT_FLAG="-DUSE_L2_SUPPORT"
+                m4_if(m4_sysval,[0],[SUBDIRS_L2_SUPPORT="src"])  ;;
+           no) L2_SUPPORT_ENABLE=false AC_MSG_ERROR([L2_SUPPORT is disabled]) ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-L2support]) ;;
+           esac
+           ],
+         [echo "L2support is disabled"])
+# IARMBus Support
+AC_ARG_ENABLE([iarmbusSupport],
+[  --enable-iarmbusSupport    Turn on iarmbus support],
+[case "${enableval}" in
+  yes) iarmbusSupport=true ;;
+  no)  iarmbusSupport=false ;;
+  *) AC_MSG_ERROR([bad value ${enableval} for --enable-iarmbusSupport]) ;;
+esac],[iarmbusSupport=false])
+AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
+
+AC_SUBST(GTEST_ENABLE_FLAG)
+AC_OUTPUT
