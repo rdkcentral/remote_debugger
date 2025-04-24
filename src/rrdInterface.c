@@ -76,7 +76,7 @@ int RRD_subscribe()
 
 #ifdef IARMBUS_SUPPORT
 #ifdef USE_L2_SUPPORT
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT_MOCK;
+   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
    subscriptions[2].filter = NULL;
    subscriptions[2].duration = 0;
    subscriptions[2].handler  = _rdmDownloadEventHandler;
@@ -259,7 +259,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     (void)(handle);
     (void)(subscription);
 #ifdef USE_L2_SUPPORT
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT_MOCK);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
 #else
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
 #endif
