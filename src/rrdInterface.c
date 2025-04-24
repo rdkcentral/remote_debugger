@@ -261,7 +261,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     (void)(handle);
     (void)(subscription);
 #ifdef USE_L2_SUPPORT
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT_MOCK);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
 #else
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
 #endif
