@@ -191,6 +191,7 @@ static void processIssueType(data_buf *rbuf)
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
 	    //CID-336989: Resource leak
+	    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Freeing IssueNode... \n", __FUNCTION__, __LINE__);
 	    free(pIssueNode);
         }
         else
@@ -298,7 +299,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     if (isStaticIssue)
     {
         // Issue in Static Profile JSON
-	// CID 336981: Use after free (USE_AFTER_FREE)
+	// CID 336980: Use after free (USE_AFTER_FREE)
 	if ( pIssueNode->Node && pIssueNode->subNode )
         {
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
@@ -315,7 +316,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
     }
 
-    freeParsedJson(jsonParsed);
+    if (jsonParsed) {
+        freeParsedJson(jsonParsed);
+	jsonParsed = NULL;
+    }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
