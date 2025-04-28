@@ -154,7 +154,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
             newState != POWER_STATE_STANDBY_DEEP_SLEEP))
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, currentState, newState);
-#ifdef ENABLE_WEBCFG_FEATURE
+//#ifdef ENABLE_WEBCFG_FEATURE
         rbusError_t rc = RBUS_ERROR_BUS_ERROR;
         rbusValue_t value;
 	    rbusValue_Init(&value);
@@ -166,7 +166,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
             return;
         }
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
-#else
+//#else
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
         sbuf = (data_buf *)malloc(sizeof(data_buf));
         if (!sbuf)
@@ -185,7 +185,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         }
         strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
         RRDMsgDeliver(msqid, sbuf);
-#endif
+//#endif
     }
     else
     {
@@ -223,7 +223,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Event ID found for IARM_BUS_RDK_REMOTE_DEBUGGER_DEEPSLEEP_AWAKE %d \n", __FUNCTION__, __LINE__, eventId);
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
-#ifdef ENABLE_WEBCFG_FEATURE
+//#ifdef ENABLE_WEBCFG_FEATURE
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
 	    rbusValue_Init(&value);
@@ -235,7 +235,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             return;
             }
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
-#else
+//#else
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
             sbuf = (data_buf *)malloc(sizeof(data_buf));
             if (!sbuf)
@@ -254,7 +254,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             }
             strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
             RRDMsgDeliver(msqid, sbuf);
-#endif
+//#endif
         }
         else
         {
