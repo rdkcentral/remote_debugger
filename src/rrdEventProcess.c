@@ -371,11 +371,9 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
         isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
         if (isDynamicIssue)
         {
-             if ( pIssueNode->Node && pIssueNode->subNode ) {
-                // Issue Data in Dynamic Profile JSON
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
-                free(dynJSONPath);
-	     }
+            // Issue Data in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+            free(dynJSONPath);
             // Get the command for received Issue Type of the Issue Category
             dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
@@ -495,12 +493,10 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
         if (isDynamicIssue)
         {
-	     if ( pIssueNode->Node && pIssueNode->subNode ) {
-                // Issue Data in Dynamic Profile JSON
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
-                free(dynJSONPath);
-                checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
-             }
+            // Issue Data in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+            free(dynJSONPath);
+            checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
         }
         else
         {
