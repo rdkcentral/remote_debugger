@@ -171,7 +171,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         sbuf = (data_buf *)malloc(sizeof(data_buf));
         if (!sbuf)
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__, eventId);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__);
             return;
         }
 
@@ -179,7 +179,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         sbuf->mdata = (char *)malloc(msgLen);
         if (!sbuf->mdata)
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__, eventId);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId \n", __FUNCTION__, __LINE__);
             RRD_data_buff_deAlloc(sbuf);
             return;
         }
