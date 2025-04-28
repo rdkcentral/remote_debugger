@@ -207,10 +207,10 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
-#if !defined(ENABLE_WEBCFG_FEATURE)
+//#if !defined(ENABLE_WEBCFG_FEATURE)
     data_buf *sbuf = NULL;
     int msgLen = strlen(DEEP_SLEEP_STR) + 1;
-#endif
+//#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
     if (strcmp(owner, IARM_BUS_PWRMGR_NAME) == 0)
