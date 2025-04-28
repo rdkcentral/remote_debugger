@@ -512,8 +512,8 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 if (buff->appendMode)
                 {
                     execstatus = executeCommands(appendprofiledata);
-                    //free(issuestructNode->Node); // free main node
-                    //free(issuestructNode->subNode); // free sub node
+                    free(issuestructNode->Node); // free main node
+                    free(issuestructNode->subNode); // free sub node
                 }
                 else
                 {

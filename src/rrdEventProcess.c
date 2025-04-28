@@ -371,9 +371,11 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
         isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
         if (isDynamicIssue)
         {
-            // Issue Data in Dynamic Profile JSON
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
-            free(dynJSONPath);
+             if ( pIssueNode->Node && pIssueNode->subNode ) {
+                // Issue Data in Dynamic Profile JSON
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+                free(dynJSONPath);
+	     }
             // Get the command for received Issue Type of the Issue Category
             dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
@@ -410,11 +412,13 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
     isStaticIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
     if (isStaticIssue)
     {
-        // Issue in Static Profile JSON
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
+	 if ( pIssueNode->Node && pIssueNode->subNode ) {
+           // Issue in Static Profile JSON
+           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
         // Get the command for received Issue Type of the Issue Category
-        staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+           staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
+           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+	 }
     }
     else
     {
@@ -491,10 +495,12 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
         if (isDynamicIssue)
         {
-            // Issue Data in Dynamic Profile JSON
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
-            free(dynJSONPath);
-            checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
+	     if ( pIssueNode->Node && pIssueNode->subNode ) {
+                // Issue Data in Dynamic Profile JSON
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+                free(dynJSONPath);
+                checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
+             }
         }
         else
         {
