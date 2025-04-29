@@ -19,6 +19,7 @@
  */
 
 #include "rrdInterface.h"
+
 #include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
 #if !defined(GTEST_ENABLE)
