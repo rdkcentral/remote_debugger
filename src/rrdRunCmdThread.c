@@ -178,6 +178,10 @@ cacheData* findPresentInCache(char *pkgData)
     while(rrdCachecnode != NULL)
     {    
 	/*Check if pkgData is present in Cache*/
+	if((rrdCachecnode->mdata))
+	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print cache->mdata,pkgData  %s & %s \n",__FUNCTION__,__LINE__,cache->mdata,pkgData);
+	else 
+	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print rrdCachecnode->mdata  is null \n",__FUNCTION__,__LINE__);
 	if((rrdCachecnode->mdata) && (strcmp(rrdCachecnode->mdata, pkgData) == 0))
         {
 	    cache = rrdCachecnode;
