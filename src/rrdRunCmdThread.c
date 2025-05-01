@@ -136,6 +136,12 @@ void append_item(char *pkgData, char *issueTypeData)
 	rrdCachecnode->prev = tmp;
     }
     cacheDataNode = tmp;
+    if(cacheDataNode)
+    {
+	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: cacheDataNode is not NULL \n", __FUNCTION__, __LINE__);
+    }
+    else
+	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: cacheDataNode is  NULL \n", __FUNCTION__, __LINE__);    
     pthread_mutex_unlock(&rrdCacheMut);
 }
 
@@ -155,6 +161,20 @@ cacheData* findPresentInCache(char *pkgData)
     i = pthread_mutex_lock(&rrdCacheMut);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RRD Mutex Lock...%d\n",__FUNCTION__,__LINE__,i);
     rrdCachecnode = cacheDataNode;
+
+    if(cacheDataNode != NULL)
+    {
+	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: cacheDataNode is not NULL \n", __FUNCTION__, __LINE__);
+    }
+    else
+	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: cacheDataNode is  NULL \n", __FUNCTION__, __LINE__); 
+
+    if(rrdCachecnode != NULL)
+    {
+	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: rrdCachecnode is not NULL \n", __FUNCTION__, __LINE__);
+    }
+    else
+	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: rrdCachecnode is  NULL \n", __FUNCTION__, __LINE__);  
     while(rrdCachecnode != NULL)
     {    
 	/*Check if pkgData is present in Cache*/
