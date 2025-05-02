@@ -56,6 +56,7 @@ static void* getPwrCtrlInterface(void *arg)
             usleep(RETRYSLEEP); //retry after RETRYSLEEP milli seconds.
         }
     }
+
     ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
     if (ret != 0)
     {
