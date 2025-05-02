@@ -56,7 +56,6 @@ static void* getPwrCtrlInterface(void *arg)
             usleep(RETRYSLEEP); //retry after RETRYSLEEP milli seconds.
         }
     }
-
     ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
     if (ret != 0)
     {
@@ -68,6 +67,7 @@ static void* getPwrCtrlInterface(void *arg)
     pthread_exit(NULL);
 }
 #endif
+
 /*
  * @function RRD_IARM_subscribe
  * @brief Initializes and connects to IARMBus, and registers event handlers for receiving IARM events
@@ -82,6 +82,7 @@ int RRD_IARM_subscribe()
 #if defined(PWRMGR_PLUGIN)
     pthread_t pwrConnectThreadID;
 #endif
+
     ret = IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME);
     if (ret != IARM_RESULT_SUCCESS)
     {
@@ -126,6 +127,7 @@ int RRD_IARM_subscribe()
 #endif
     return ret;
 }
+
 
 #if defined(PWRMGR_PLUGIN)
 /*
