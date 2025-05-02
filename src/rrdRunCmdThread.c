@@ -135,7 +135,7 @@ void append_item(char *pkgData, char *issueTypeData)
         tmp->next = rrdCachecnode;
 	rrdCachecnode->prev = tmp;
     }
-    cacheDataNode = tmp;  
+    cacheDataNode = tmp;
     pthread_mutex_unlock(&rrdCacheMut);
 }
 
@@ -155,7 +155,6 @@ cacheData* findPresentInCache(char *pkgData)
     i = pthread_mutex_lock(&rrdCacheMut);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RRD Mutex Lock...%d\n",__FUNCTION__,__LINE__,i);
     rrdCachecnode = cacheDataNode;
-  
     while(rrdCachecnode != NULL)
     {    
 	/*Check if pkgData is present in Cache*/
