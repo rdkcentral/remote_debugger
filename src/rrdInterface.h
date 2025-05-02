@@ -66,7 +66,7 @@ int RRD_IARM_unsubscribe(void);
 void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 #if defined(PWRMGR_PLUGIN)
 void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
-const PowerController_PowerState_t newState, void* userdata);
+    const PowerController_PowerState_t newState, void* userdata);
 #else
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
 #endif
