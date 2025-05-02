@@ -267,7 +267,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
 }
-
+#endif
 /*
  * @function  _rdmManagerEventHandler
  * @brief Receives the RDM Manager event and sends the value as a message in the message-queue
