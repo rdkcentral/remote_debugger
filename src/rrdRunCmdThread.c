@@ -135,13 +135,7 @@ void append_item(char *pkgData, char *issueTypeData)
         tmp->next = rrdCachecnode;
 	rrdCachecnode->prev = tmp;
     }
-    cacheDataNode = tmp;
-    if(cacheDataNode)
-    {
-	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: cacheDataNode is not NULL \n", __FUNCTION__, __LINE__);
-    }
-    else
-	RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: cacheDataNode is  NULL \n", __FUNCTION__, __LINE__);    
+    cacheDataNode = tmp;  
     pthread_mutex_unlock(&rrdCacheMut);
 }
 
@@ -165,10 +159,6 @@ cacheData* findPresentInCache(char *pkgData)
     while(rrdCachecnode != NULL)
     {    
 	/*Check if pkgData is present in Cache*/
-	if(rrdCachecnode->mdata)
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print rrdcachenode->mdata,pkgData  %s & %s \n",__FUNCTION__,__LINE__,rrdCachecnode->mdata,pkgData);
-	else 
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print rrdCachecnode->mdata  is null \n",__FUNCTION__,__LINE__);
 	if((rrdCachecnode->mdata) && (strcmp(rrdCachecnode->mdata, pkgData) == 0))
         {
 	    cache = rrdCachecnode;
