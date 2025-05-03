@@ -490,7 +490,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     ctime = time (NULL);
     ltime = localtime (&ctime);
     dlen=snprintf(outdir,BUF_LEN_256,"%s%s-DebugReport-",RRD_OUTPUT_DIR,issuestructNode->Node);
-    if (strcmp(issuestructNode->Node, "deepsleep") == 0) 
+    if (strcmp(issuestructNode->Node, DEEP_SLEEP_STR) == 0) 
     {
         isDeepSleepAwakeEventValid = true;    
     }
