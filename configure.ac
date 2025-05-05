@@ -61,7 +61,18 @@ AC_TYPE_SIZE_T
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
-
+AC_ARG_ENABLE([L2support],
+        AS_HELP_STRING([--enable-L2support],[enable L2support (default is no)]),
+        [
+          case "${enableval}" in
+           yes) L2_SUPPORT_ENABLE=true
+                L2_SUPPORT_FLAG="-DUSE_L2_SUPPORT"
+                m4_if(m4_sysval,[0],[SUBDIRS_L2_SUPPORT="src"])  ;;
+           no) L2_SUPPORT_ENABLE=false AC_MSG_ERROR([L2_SUPPORT is disabled]) ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-L2support]) ;;
+           esac
+           ],
+         [echo "L2support is disabled"])
 # IARMBus Support
 AC_ARG_ENABLE([iarmbusSupport],
 [  --enable-iarmbusSupport    Turn on iarmbus support],

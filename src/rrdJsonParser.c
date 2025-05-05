@@ -90,6 +90,8 @@ char * readJsonFile(char *jsonfile)
     if(ch_count < 1)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s is Empty!!! \n",__FUNCTION__,__LINE__,jsonfile);
+	// CID 278332: Resource leak (RESOURCE_LEAK)
+	fclose(fp);
         return NULL;
     }
     fseek(fp, 0, SEEK_SET);
