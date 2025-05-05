@@ -53,7 +53,7 @@ extern "C"
 #define RRD_DEVICE_PROP_FILE "UTJson/device.properties"
 #endif
 #define LOG_REMDEBUG "LOG.RDK.REMOTEDEBUGGER"
-#define DEEP_SLEEP_STR "Test"
+#define DEEP_SLEEP_STR "DEEPSLEEP"
 #define RDM_MGR_PKG_INST "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage"
 #define RRD_MEDIA_APPS "/media/apps/"
 #define RDM_PKG_PREFIX "RDK-RRD-"
