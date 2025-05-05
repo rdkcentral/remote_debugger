@@ -219,7 +219,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                 {
 #ifdef IARMBUS_SUPPORT
                     if (isDeepSleepAwakeEvent)
-                        strncpy(msgDataString, paramString, msgDataStringSize);
+                        strncpy(msgDataString, paramString, (msgDataStringSize - strlen(RDM_PKG_SUFFIX)));
                     else
                         snprintf(msgDataString, msgDataStringSize, "%s%s", RDM_PKG_PREFIX, pissueStructNode->Node);
 #else
