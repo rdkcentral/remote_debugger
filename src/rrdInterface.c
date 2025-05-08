@@ -326,7 +326,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         return;
     }
 
-    int len = strlen(rbusValue_GetString(value, NULL));
+    int len = strlen(rbusValue_GetString(value, NULL))+1;
     dataMsg = (char *) calloc(1, len);
     if(!dataMsg)
     {
@@ -334,8 +334,10 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         return;
     }
     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: before copy debug print : = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
-    strncpy(dataMsg, rbusValue_GetString(value, NULL), len);
-    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: rbus valu string debug print : %s \n", __FUNCTION__, __LINE__, dataMsg);
+    strncpy(dataMsg, rbusValue_GetString(value, NULL), len-1);
+    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: rbus value string debug print  before null termination: %s \n", __FUNCTION__, __LINE__, dataMsg);
+    dataMsg[len-1]='\0';
+    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: rbus value string debug print after null termination: %s \n", __FUNCTION__, __LINE__, dataMsg);
     if (dataMsg[0] == '\0' || len <= 0  )
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
