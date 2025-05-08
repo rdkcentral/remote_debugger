@@ -497,6 +497,8 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+	buff->mdata =NULL;
+	buff->jsonPath =NULL;
         return;
     }
     else
@@ -547,8 +549,16 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Success...\n",__FUNCTION__,__LINE__);
                 }
             }
-            free(buff->mdata); // free rfc data
-            free(buff->jsonPath); // free rrd path info
+	    if(buff->mdata)
+	    {
+	        free(buff->mdata); // free rfc data
+	        buff->mdata =NULL;
+	    }
+	    if(buff->jsonPath)
+	    {
+                free(buff->jsonPath); // free rrd path info
+	        buff->jsonPath =NULL;
+	    }
 	}
 	else
 	{
