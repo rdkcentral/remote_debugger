@@ -547,18 +547,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Success...\n",__FUNCTION__,__LINE__);
                 }
             }
-	 if(buff->mdata&&buff->jsonPath)	
-	 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print : buff->mdata: %s, buff->jsonPath: %s... \n",__FUNCTION__,__LINE__,buff->mdata,buff->jsonPath);	
-	    if(buff->mdata)
-	    {
-	        free(buff->mdata); // free rfc data
-	        buff->mdata =NULL;
-	    }
-	    if(buff->jsonPath)
-	    {
-                free(buff->jsonPath); // free rrd path info
-	        buff->jsonPath =NULL;
-	    }
+	    free(buff->mdata); // free rfc data
+            free(buff->jsonPath); // free rrd path info
+	 
 	}
 	else
 	{
