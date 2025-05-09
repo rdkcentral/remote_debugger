@@ -101,7 +101,6 @@ void processIssueTypeEvent(data_buf *rbuf)
 		    {
                         free(cmdBuff);
 			cmdBuff = NULL;
-			RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed cmdbuff after use \n", __FUNCTION__, __LINE__);
 		    }
                 }
                 else
@@ -112,7 +111,6 @@ void processIssueTypeEvent(data_buf *rbuf)
 		{
                     free(cmdMap[index]);
 		    cmdMap[index] = NULL;
-		    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed cmdMap[index]  after use \n", __FUNCTION__, __LINE__);
 		}
 		
             }
@@ -120,9 +118,7 @@ void processIssueTypeEvent(data_buf *rbuf)
 	    {
                 free(cmdMap);
 		cmdMap = NULL;
-		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed cmdMap after use \n", __FUNCTION__, __LINE__);
 	    }
-	    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed all allocated dynamic memory after use \n", __FUNCTION__, __LINE__);
         }
     }
     
