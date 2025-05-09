@@ -333,11 +333,8 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed for %s \n", __FUNCTION__, __LINE__, rbusValue_ToString(value, NULL, 0));
         return;
     }
-    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Copying  rbus value [%s]  to dataMsg \n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
     strncpy(dataMsg, rbusValue_GetString(value, NULL), len-1);
-    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Successfully copied rbus value to dataMsg, revieved value : [%s] \n", __FUNCTION__, __LINE__, dataMsg);
     dataMsg[len-1]='\0';
-    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Null terminated dataMsg : %s \n", __FUNCTION__, __LINE__, dataMsg);
     if (dataMsg[0] == '\0' || len <= 0  )
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
