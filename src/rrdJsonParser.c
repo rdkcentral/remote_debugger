@@ -547,9 +547,8 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Success...\n",__FUNCTION__,__LINE__);
                 }
             }
-	    free(buff->mdata); // free rfc data
+            free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
-	 
 	}
 	else
 	{
