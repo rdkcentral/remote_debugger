@@ -120,7 +120,7 @@ void processIssueTypeEvent(data_buf *rbuf)
 	    {
                 free(cmdMap);
 		cmdMap = NULL;
-		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed cmdMap[index]  after use \n", __FUNCTION__, __LINE__);
+		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed cmdMap after use \n", __FUNCTION__, __LINE__);
 	    }
 	    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Sussessfully freed all allocated dynamic memory after use \n", __FUNCTION__, __LINE__);
         }
