@@ -144,17 +144,14 @@ int RRD_IARM_subscribe()
 void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
     const PowerController_PowerState_t newState, void* userdata)
 {
-#if !defined(ENABLE_WEBCFG_FEATURE)
     data_buf *sbuf = NULL;
     int msgLen = strlen(DEEP_SLEEP_STR) + 1;
-#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. currentState =%d, newState = %d\n", __FUNCTION__, __LINE__, currentState, newState);
 
     if ((currentState == POWER_STATE_STANDBY_DEEP_SLEEP &&
             newState != POWER_STATE_STANDBY_DEEP_SLEEP))
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, currentState, newState);
-#ifdef ENABLE_WEBCFG_FEATURE
         rbusError_t rc = RBUS_ERROR_BUS_ERROR;
         rbusValue_t value;
 	    rbusValue_Init(&value);
@@ -166,12 +163,11 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
             return;
         }
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
-#else
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
         sbuf = (data_buf *)malloc(sizeof(data_buf));
         if (!sbuf)
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__, eventId);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId  \n", __FUNCTION__, __LINE__);
             return;
         }
 
@@ -179,13 +175,12 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         sbuf->mdata = (char *)malloc(msgLen);
         if (!sbuf->mdata)
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId %d \n", __FUNCTION__, __LINE__, eventId);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for EventId  \n", __FUNCTION__, __LINE__);
             RRD_data_buff_deAlloc(sbuf);
             return;
         }
         strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
         RRDMsgDeliver(msqid, sbuf);
-#endif
     }
     else
     {
@@ -207,10 +202,8 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
-#if !defined(ENABLE_WEBCFG_FEATURE)
     data_buf *sbuf = NULL;
     int msgLen = strlen(DEEP_SLEEP_STR) + 1;
-#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
     if (strcmp(owner, IARM_BUS_PWRMGR_NAME) == 0)
@@ -223,7 +216,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Event ID found for IARM_BUS_RDK_REMOTE_DEBUGGER_DEEPSLEEP_AWAKE %d \n", __FUNCTION__, __LINE__, eventId);
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
-#ifdef ENABLE_WEBCFG_FEATURE
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
 	    rbusValue_Init(&value);
@@ -235,7 +227,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             return;
             }
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
-#else
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
             sbuf = (data_buf *)malloc(sizeof(data_buf));
             if (!sbuf)
@@ -254,7 +245,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             }
             strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
             RRDMsgDeliver(msqid, sbuf);
-#endif
+	    RRD_data_buff_deAlloc(sbuf);
         }
         else
         {
@@ -268,7 +259,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
 }
 #endif
-
 /*
  * @function  _rdmManagerEventHandler
  * @brief Receives the RDM Manager event and sends the value as a message in the message-queue
