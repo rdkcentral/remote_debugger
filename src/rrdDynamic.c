@@ -233,6 +233,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 	            rbusValue_Init(&value);
                     rbusValue_SetString(value,paramString);
                     rc = rbus_set(rrdRbusHandle,RDM_MGR_PKG_INST, value, NULL);
+		    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print : issue type_value deepsleep : = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
 		    //tr181status = setParam("rrd", RDM_MGR_PKG_INST, paramString);
                     if (rc == RBUS_ERROR_SUCCESS)
                     {
