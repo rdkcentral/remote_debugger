@@ -249,9 +249,9 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                         }
                         else
                         {
-			    append_item(strdup(msgDataString), strdup((char *)rbuf->mdata));
+                            append_item(strdup(msgDataString), strdup((char *)rbuf->mdata));
                             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, (char *)rbuf->mdata, strlen((char *)rbuf->mdata));
-                        }			    
+                        }     			    
                     }
                     else
                     {
