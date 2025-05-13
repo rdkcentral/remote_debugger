@@ -132,7 +132,7 @@ typedef struct deviceProperties {
 }devicePropertiesData;
 
 int decodeWebCfgData(char *pString);
-void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype);
+void pushIssueTypesToMsgQueue( const char *issueTypeList, message_type_et sndtype);
 void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event_et  deepSleepEvent);
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent);
 bool lookupRrdProfileList(const char *profile);
