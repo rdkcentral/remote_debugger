@@ -380,7 +380,7 @@ bool executeCommands(issueData *cmdinfo)
 
 	    removeQuotes(cmdData->command);
 	    
-	    FILE *systemdfp = v_secure_popen("r", "systemd-run -r --unit=%s --service-type=oneshot /bin/sh -c %s", remoteDebuggerServiceStr, cmdData->command);
+	    FILE *systemdfp = v_secure_popen("r", "systemd-run -r --unit=%s %s", remoteDebuggerServiceStr, cmdData->command);
             if(systemdfp == NULL)
             {
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service failed!!!\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
