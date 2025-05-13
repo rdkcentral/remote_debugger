@@ -130,7 +130,7 @@ int RRD_IARM_subscribe()
 }
 
 
-//#if defined(PWRMGR_PLUGIN)
+#if defined(PWRMGR_PLUGIN)
 /*
  * @function  _pwrManagerEventHandler
  * @brief Receives the power manager event and sends the value as a message in the message-queue
@@ -188,7 +188,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
 }
-//#else
+#else
 /*
  * @function  _pwrManagerEventHandler
  * @brief Receives the power manager event and sends the value as a message in the message-queue
@@ -199,7 +199,6 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
  *        size_t len - Size of the event data.
  * Output: void
 */
-/*
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
@@ -260,7 +259,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit.. \n", __FUNCTION__, __LINE__);
 }
 #endif
-*/
 /*
  * @function  _rdmManagerEventHandler
  * @brief Receives the RDM Manager event and sends the value as a message in the message-queue
