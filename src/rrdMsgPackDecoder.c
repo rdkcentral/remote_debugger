@@ -544,7 +544,7 @@ void PrepareDataToPush(remotedebuggerparam_t *param)
 {
     int issueTypeListLen = param->length;
     char *commandList = param->commandList;
-    char *issueTypeList = NULL;
+    const char *issueTypeList = NULL;
     
     issueTypeList = (char *)malloc(issueTypeListLen * sizeof(char) + 1);
     if (issueTypeList == NULL)
