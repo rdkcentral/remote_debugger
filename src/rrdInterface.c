@@ -350,7 +350,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
-    char *inString = NULL;
+    const char *inString = NULL;
 
     (void)(handle);
     (void)(subscription);
