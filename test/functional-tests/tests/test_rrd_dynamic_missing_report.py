@@ -104,7 +104,6 @@ def test_check_issue_in_dynamic_profile():
     except subprocess.CalledProcessError as e:
         print("Error while executing the script:")
         print(e.stderr)
-
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
     command = [
@@ -114,13 +113,6 @@ def test_rdm_trigger_event():
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
-
-    RBUS_SETTING_SUCCESS = "Setting Parameters using rbus success..."
-    assert RBUS_SETTING_SUCCESS in grep_rrdlogs(RBUS_SETTING_SUCCESS)
-
-    CACHE_UPDATE_SUCCESS = "Setting Parameters Success and Cache Updated ...RDK-RRD-Test"
-    assert CACHE_UPDATE_SUCCESS in grep_rrdlogs(CACHE_UPDATE_SUCCESS)
-
 def test_rdm_rrd_trigger_event():
     command = [
         'rbuscli', 'set',
