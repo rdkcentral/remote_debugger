@@ -245,7 +245,6 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             }
             strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
             RRDMsgDeliver(msqid, sbuf);
-	    RRD_data_buff_deAlloc(sbuf);
         }
         else
         {
