@@ -311,7 +311,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
-    const char *dataMsg = NULL;
+    char *dataMsg = NULL;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 
     (void)(handle);
@@ -327,7 +327,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     }
     dataMsg = rbusValue_GetString(value, NULL);
     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]:  debug print dataMsg :  %s \n", __FUNCTION__, __LINE__, dataMsg);
-    //int len = strlen(rbusValue_GetString(value, NULL))+1;
+    int len = strlen(rbusValue_GetString(value, NULL));
     //dataMsg = (char *) calloc(1, len);
     if(!dataMsg)
     {
