@@ -311,7 +311,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
-    char *dataMsg = NULL;
+    const char *dataMsg = NULL;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 
     (void)(handle);
@@ -325,16 +325,17 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: event->data value is NULL \n", __FUNCTION__, __LINE__);
         return;
     }
-
-    int len = strlen(rbusValue_GetString(value, NULL))+1;
-    dataMsg = (char *) calloc(1, len);
+    dataMsg = rbusValue_GetString(value, NULL);
+    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]:  debug print dataMsg :  %s \n", __FUNCTION__, __LINE__, dataMsg);
+    //int len = strlen(rbusValue_GetString(value, NULL))+1;
+    //dataMsg = (char *) calloc(1, len);
     if(!dataMsg)
     {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed for %s \n", __FUNCTION__, __LINE__, rbusValue_ToString(value, NULL, 0));
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: dataMsg being NULL %s \n", __FUNCTION__, __LINE__, rbusValue_ToString(value, NULL, 0));
         return;
     }
-    strncpy(dataMsg, rbusValue_GetString(value, NULL), len-1);
-    dataMsg[len-1]='\0';
+    //strncpy(dataMsg, rbusValue_GetString(value, NULL), len-1);
+    //dataMsg[len-1]='\0';
     if (dataMsg[0] == '\0' || len <= 0  )
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
