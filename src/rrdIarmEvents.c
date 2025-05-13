@@ -198,7 +198,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
  *        void *data - Event data.
  *        size_t len - Size of the event data.
  * Output: void
-*/
+ */
 void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     IARM_Bus_PWRMgr_EventData_t *eventData = NULL;
