@@ -311,7 +311,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
-    char *dataMsg = NULL;
+    const char *dataMsg = NULL;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 
     (void)(handle);
@@ -374,7 +374,7 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
 }
 #endif
-void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
+void pushIssueTypesToMsgQueue( const char *issueTypeList, message_type_et sndtype)
 {
     data_buf *sbuf = NULL;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
