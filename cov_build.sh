@@ -46,7 +46,7 @@ fi
 
 cd rfc
 autoreconf -i
-./configure --enable-rfctool=yes --enable-tr181set=yes
+./configure --enable-rfctool=yes --enable-tr181set=yes 
 cd rfcapi
 make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks"
 make install
@@ -78,6 +78,6 @@ cp libIARM.h /usr/local/include
 cd $WORKDIR
 autoreconf -i
 autoupdate
-./configure --prefix=${INSTALL_DIR} --enable-iarmbusSupport=yes
-make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
+./configure --prefix=${INSTALL_DIR} --enable-iarmbusSupport=yes --enable-l2support=yes --enable-wifi=yes
+make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT -DL2_SUPPORT -DUSE_WIFI_PROFILE" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
 make install
