@@ -233,7 +233,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 	            rbusValue_Init(&value);
                     rbusValue_SetString(value,paramString);
                     rc = rbus_set(rrdRbusHandle,RDM_MGR_PKG_INST, value, NULL);
-		    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Debug print : issue type_value deepsleep : = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
 		    //tr181status = setParam("rrd", RDM_MGR_PKG_INST, paramString);
                     if (rc == RBUS_ERROR_SUCCESS)
                     {
@@ -241,7 +240,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 			/* Append Package string in Cache */
                         if (rbuf->appendMode)
                         {
-                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Debug print: Entering if (rbuf->appendMode) condition ...\n", __FUNCTION__, __LINE__);
                             appendData = (char *)malloc(strlen(APPEND_SUFFIX) + strlen(rbuf->mdata) + 1);
                             strcpy(appendData,rbuf->mdata);
                             strcat(appendData,APPEND_SUFFIX);
@@ -251,7 +249,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                         }
                         else
                         {
-                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Debug print: Entering if (rbuf->appendMode) else condition ...\n", __FUNCTION__, __LINE__);
 			    append_item(strdup(msgDataString), strdup((char *)rbuf->mdata));
                             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, (char *)rbuf->mdata, strlen((char *)rbuf->mdata));
                         }			    
