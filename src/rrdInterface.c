@@ -157,7 +157,6 @@ void RRDMsgDeliver(int msgqid, data_buf *sbuf)
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%u MbufSize=%d !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen);
         exit(1);
     }
-    RRD_data_buff_deAlloc(sbuf);
 }
 
 /*Function:  RRD_data_buff_init
