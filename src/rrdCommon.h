@@ -92,7 +92,7 @@ typedef enum {
 /*Structure for Message Queue and JSon Parser*/
 typedef struct mbuffer {
      message_type_et     mtype;
-     char                *mdata;
+     const char                *mdata;
      char                *jsonPath;
      bool                inDynamic;
      bool                appendMode;
