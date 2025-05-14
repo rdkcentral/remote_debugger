@@ -333,7 +333,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Returning dataMsg being NULL\n", __FUNCTION__, __LINE__);
         return;
     }
-    if (dataMsg[0] == '\0' || len <= 0  )
+    if (dataMsg[0] == '\0' || len <= 0 || strcmp(dataMsg, " ")  == 0 )
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
     }
