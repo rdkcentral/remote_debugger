@@ -307,6 +307,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Static JSON... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
     isStaticIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: isStaticIssue value : %d\n", __FUNCTION__, __LINE__, isStaticIssue);
     if (isStaticIssue)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
