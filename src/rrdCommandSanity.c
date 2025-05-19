@@ -30,6 +30,7 @@
 int updateBackgroundCmd(char * str)
 {
     int i = 0;
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Updated Background Command: %s \n",__FUNCTION__,__LINE__);
 
     if(str == NULL)
     {
