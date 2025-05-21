@@ -40,6 +40,40 @@ rbusHandle_t    rrdRbusHandle;
  *Output: 0 for success and non 0 for failure
  */
 
+
+typedef struct ShadowNode {
+    char *msg;
+    struct ShadowNode *next;
+} ShadowNode;
+
+ShadowNode *shadow_head = NULL;
+ShadowNode *shadow_tail = NULL;
+
+// Add an entry to the shadow list
+void add_to_shadow_list(const char *message) {
+    ShadowNode *node = (ShadowNode *)malloc(sizeof(ShadowNode));
+    if (!node) return;
+    node->msg = strdup(message); // duplicate the string
+    node->next = NULL;
+    if (!shadow_head) {
+        shadow_head = shadow_tail = node;
+    } else {
+        shadow_tail->next = node;
+        shadow_tail = node;
+    }
+}
+
+// Print all entries in the shadow list
+void print_shadow_list(void) {
+    ShadowNode *curr = shadow_head;
+    printf("Shadow Queue Entries:\n");
+    while (curr) {
+        printf(" - %s\n", curr->msg);
+        curr = curr->next;
+    }
+}
+
+
 int RRD_subscribe()
 {
     int ret = 0;
@@ -382,6 +416,9 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
             sbuf->appendMode = true;
         }	
         RRDMsgDeliver(msqid, sbuf);
+	add_to_shadow_list(issueTypeList);
+        // Print shadow list (optional: remove if you only want to print on demand)
+        print_shadow_list();
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
     }
 }
