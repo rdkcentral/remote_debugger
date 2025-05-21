@@ -76,7 +76,6 @@ cp libIBus.h /usr/local/include
 cp libIARM.h /usr/local/include
 
 cd $WORKDIR
-git checkout feature/l2test
 autoreconf -i
 autoupdate
 ./configure --prefix=${INSTALL_DIR} --enable-iarmbusSupport=yes --enable-L2support=yes
