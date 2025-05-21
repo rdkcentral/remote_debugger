@@ -57,7 +57,9 @@ void *RRDEventThreadFunc(void *arg)
             processIssueTypeEvent(rbuf);
 	    if(rbuf)
 	    {
-	        free(rbuf->mdata);
+	        if(rbuf->mdata)
+		free(rbuf->mdata);
+		if(rbuf)
                 free(rbuf);
 	    }
             break;
