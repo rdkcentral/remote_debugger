@@ -55,8 +55,6 @@ void *RRDEventThreadFunc(void *arg)
         {
         case EVENT_MSG:
             processIssueTypeEvent(rbuf);
-	    if(rbuf)
-	    {
 	        if(rbuf->mdata)
 		free(rbuf->mdata);
 		if(rbuf)
