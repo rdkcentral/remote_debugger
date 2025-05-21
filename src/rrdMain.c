@@ -55,10 +55,6 @@ void *RRDEventThreadFunc(void *arg)
         {
         case EVENT_MSG:
             processIssueTypeEvent(rbuf);
-	        if(rbuf->mdata)
-		free(rbuf->mdata);
-		if(rbuf)
-                free(rbuf);
             break;
         case EVENT_WEBCFG_MSG:
             processWebCfgTypeEvent(rbuf);
