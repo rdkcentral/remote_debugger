@@ -18,12 +18,6 @@
 # limitations under the License.
 ####################################################################################
 
-WORKDIR=`pwd`
-cd WORKDIR
-cd tr69hostif
-sh cov_build.sh
-sh run_l2.sh
-
 RESULT_DIR="/tmp/l2_test_report"
 STATIC_PROFILE_DIR="/etc/rrd"
 OUTPUT_DIR="/tmp/rrd"
