@@ -69,8 +69,7 @@ cp /usr/iarmmgrs/hal/include/pwrMgr.h /usr/local/include/
 # Build and install stubs from tr69hostif
 
 cd tr69hostif
-sh cov_build.sh
-sh run_l2.sh
+cp ./hostif/parodusClient/waldb/data-model/data-model-generic.xml /etc
 cd ./src/unittest/stubs
 g++ -fPIC -shared -o libIARMBus.so iarm_stubs.cpp  -I/usr/tr69hostif/src/hostif/parodusClient/pal -I/usr/tr69hostif/src/unittest/stubs -I/usr/tr69hostif/src/hostif/parodusClient/waldb -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/tr69hostif/src/hostif/include -I/usr/tr69hostif/src/hostif/profiles/DeviceInfo -I/usr/tr69hostif/src/hostif/parodusClient/pal -fpermissive
 cp libIARMBus.so /usr/local/lib
