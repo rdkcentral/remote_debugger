@@ -29,7 +29,7 @@ devicePropertiesData devPropData;
 
 /*
  * @function RRDEventThreadFunc
- * @brief Infinite thread created from the main function to read messages received from the TR181 parameter 
+ * @brief Infinite thread created from the main function to read messages received from the TR181 parameter
  *              and perform command execution in a continuous loop.
  * @param void *arg - Argument pointer (not used).
  * @return void* - Returns the argument pointer.
@@ -75,7 +75,7 @@ void *RRDEventThreadFunc(void *arg)
         break;
 #endif
     }
-    
+
     return arg;
 }
 
@@ -93,13 +93,13 @@ bool isRRDEnabled(void)
     RFC_ParamData_t param;
     WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
     if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
-	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:getRFCParameter() name=%s,type=%d,value=%s\n", __FUNCTION__, __LINE__, param.name, param.type, param.value);
-	    if (strcasecmp("false", param.value) == 0) {
-		    ret = false;
-	    }
-    } 
+            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:getRFCParameter() name=%s,type=%d,value=%s\n", __FUNCTION__, __LINE__, param.name, param.type, param.value);
+            if (strcasecmp("false", param.value) == 0) {
+                    ret = false;
+            }
+    }
     else {
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
     }
 #else
     char RRDValue[64]={'\0'};
@@ -130,11 +130,29 @@ bool isRRDEnabled(void)
  *        char *argv[] - Argument vector (only for non-GTEST builds).
  * @return int - Returns 0 on success.
  */
+
 #if GTEST_ENABLE
 int shadowMain(void *arg)
 #else
-int main(int argc, char *argv[])
+#ifdef USE_L2_SUPPORT
+int shadowMain1(void *arg)
+{
+     pthread_t RRDTR69ThreadID;
+
+    if ((msqid = msgget(key, IPC_CREAT | 0666 )) < 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]:Message Queue ID Creation failed, msqid=%d!!!\n",__FUNCTION__,__LINE__,msqid);
+        exit(1);
+    }
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:SUCCESS: Message Queue ID Creation Done, msqid=%d...\n",__FUNCTION__,__LINE__,msqid);
+//pthread_create (&RRDTR69ThreadID, NULL, RRDEventThreadFunc, NULL);
+ //   pthread_join(RRDTR69ThreadID, NULL);
+
+}
 #endif
+#endif
+#ifndef USE_L2_SUPPORT
+int main(int argc, char *argv[])
 {
     pthread_t RRDTR69ThreadID;
 
@@ -152,7 +170,7 @@ int main(int argc, char *argv[])
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:RFC is disabled, stopping remote-debugger\n", __FUNCTION__, __LINE__);
         exit(0);
     }
-    
+
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Starting RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
     if ((msqid = msgget(key, IPC_CREAT | 0666 )) < 0)
     {
@@ -174,3 +192,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+#endif
