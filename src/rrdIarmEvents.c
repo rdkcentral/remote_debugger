@@ -18,7 +18,7 @@
  */
 
 #include "rrdInterface.h"
-#include "rrdRunCmdThread.h" 
+#include "rrdRunCmdThread.h"
 #if defined(PWRMGR_PLUGIN)
 #include "power_controller.h"
 #include <pthread.h>
@@ -28,17 +28,17 @@ extern int msqid;
 extern rbusHandle_t rrdRbusHandle;
 
 #if defined(PWRMGR_PLUGIN)
-#define RETRYSLEEP (300 * 1000)//Retry sleep time 
+#define RETRYSLEEP (300 * 1000)//Retry sleep time
 
 static uint8_t isPwrCtlInterface = 0;
-
+#ifndef USE_L2_SUPPORT
 static void* getPwrCtrlInterface(void *arg)
 {
     int ret;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Entry  \r\n \n", __FUNCTION__, __LINE__);
 
     /*TODO: remove this sleep after fix METROL-1045*/
-    sleep(5);//added sleep wait for the WPEframework active. 
+    sleep(5);//added sleep wait for the WPEframework active.
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: start PowerController_Init().. \n", __FUNCTION__, __LINE__);
     PowerController_Init();
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
@@ -56,7 +56,7 @@ static void* getPwrCtrlInterface(void *arg)
             usleep(RETRYSLEEP); //retry after RETRYSLEEP milli seconds.
         }
     }
-    
+
     ret = PowerController_RegisterPowerModeChangedCallback(_pwrManagerEventHandler, NULL);
     if (ret != 0)
     {
@@ -68,6 +68,7 @@ static void* getPwrCtrlInterface(void *arg)
     pthread_exit(NULL);
 }
 #endif
+#endif
 
 /*
  * @function RRD_IARM_subscribe
@@ -76,7 +77,7 @@ static void* getPwrCtrlInterface(void *arg)
  * @param None.
  * @return int - Returns 0 for success, and non-0 for failure.
  */
-
+#ifndef USE_L2_SUPPORT
 int RRD_IARM_subscribe()
 {
     int ret = 0;
@@ -111,7 +112,7 @@ int RRD_IARM_subscribe()
     // Thunder client library register for Deep Sleep Event Handler
     if(pthread_create (&pwrConnectThreadID, NULL, getPwrCtrlInterface, NULL)  == 0)
     {
-        if(pthread_detach(pwrConnectThreadID) != 0) 
+        if(pthread_detach(pwrConnectThreadID) != 0)
         {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: getPwrCtrlInterface Thread detach Failed\r\n ", __FUNCTION__, __LINE__);
         }
@@ -128,7 +129,7 @@ int RRD_IARM_subscribe()
 #endif
     return ret;
 }
-
+#endif
 
 #if defined(PWRMGR_PLUGIN)
 /*
@@ -154,14 +155,17 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, currentState, newState);
         rbusError_t rc = RBUS_ERROR_BUS_ERROR;
         rbusValue_t value;
-	    rbusValue_Init(&value);
+            rbusValue_Init(&value);
         rbusValue_SetString(value,"root");
+#ifndef USE_L2_SUPPORT
         rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
+
         if (rc != RBUS_ERROR_SUCCESS)
         {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_set failed for [%s] with error [%d]\n\n", __FUNCTION__, __LINE__,RRD_WEBCFG_FORCE_SYNC ,rc);
             return;
         }
+#endif
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
         sbuf = (data_buf *)malloc(sizeof(data_buf));
@@ -218,7 +222,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, eventData->data.state.curState, eventData->data.state.newState);
             rbusError_t rc = RBUS_ERROR_BUS_ERROR;
             rbusValue_t value;
-	    rbusValue_Init(&value);
+            rbusValue_Init(&value);
             rbusValue_SetString(value,"root");
             rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
             if (rc != RBUS_ERROR_SUCCESS)
@@ -246,7 +250,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
             RRDMsgDeliver(msqid, sbuf);
 #ifdef USECOV
-	    RRD_data_buff_deAlloc(sbuf);
+            RRD_data_buff_deAlloc(sbuf);
 #endif
         }
         else
@@ -337,12 +341,12 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
                     snprintf(sendbuf->jsonPath, strlen(eventData->rdm_pkg_info.pkg_inst_path) + rrdjsonlen + 1, "%s%s", eventData->rdm_pkg_info.pkg_inst_path, RRD_JSON_FILE);
                     sendbuf->inDynamic = true;
-	            if (checkAppendRequest(sendbuf->mdata))
+                    if (checkAppendRequest(sendbuf->mdata))
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
                         sendbuf->inDynamic = false;
                         sendbuf->appendMode = true;
-                    }		    
+                    }
 
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
@@ -378,6 +382,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
  * @param None.
  * @return int - Returns 0 for success, and non-zero for failure.
  */
+#ifndef USE_L2_SUPPORT
 int RRD_IARM_unsubscribe()
 {
     int ret = 0;
@@ -435,3 +440,4 @@ int RRD_IARM_unsubscribe()
 #endif
     return ret;
 }
+#endif
