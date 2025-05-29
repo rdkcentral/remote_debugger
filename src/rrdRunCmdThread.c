@@ -380,7 +380,7 @@ bool executeCommands(issueData *cmdinfo)
 
 	    removeQuotes(cmdData->command);
 	    
-	    FILE *systemdfp = v_secure_popen("r", "systemd-run -r --unit=%s --service-type=oneshot /bin/sh -c %s", remoteDebuggerServiceStr, cmdData->command);
+	    FILE *systemdfp = v_secure_popen("r", "systemd-run -r --unit=%s --service-type=oneshot -p RemainAfterExit=yes /bin/sh -c %s", remoteDebuggerServiceStr, cmdData->command);
             if(systemdfp == NULL)
             {
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service failed!!!\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
@@ -417,7 +417,6 @@ bool executeCommands(issueData *cmdinfo)
             /*Stop or Reset runtime service for issue*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping remote_debugger_%s service...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
 	    v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
-	    v_secure_system("systemctl reset-failed %s", remoteDebuggerServiceStr);
             free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
             free(cmdData->command); // free updated command info received from RRDEventThreadFunc
             free(cmdData);
