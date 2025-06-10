@@ -1,5 +1,5 @@
 /*
- * If not stated otherwise in this file or this component's LICENSE file the
+ * If not stated otherwise in this file or this component's Licenses.txt file the
  * following copyright and licenses apply:
  *
  * Copyright 2018 RDK Management
@@ -28,11 +28,26 @@ extern "C"
 #include "cJSON.h"
 #include "rrdCommon.h"
 
+/*----------------------------------------------------------------------------*/
+/*                                   Macros                                   */
+/*----------------------------------------------------------------------------*/
 #define DEFAULT_DIR "RRD_LOCATION"
-
+/*----------------------------------------------------------------------------*/
+/*                               Data Structures                              */
+/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/*                            File Scoped Variables                           */
+/*----------------------------------------------------------------------------*/
+/* none */
+/*----------------------------------------------------------------------------*/
+/*                             Function Prototypes                            */
+/*----------------------------------------------------------------------------*/
 int updateBackgroundCmd(char * str);
 char *replaceRRDLocation(char* commandStr, char* dirLocation);
 int isCommandsValid(char *issuecmd,cJSON *sanitylist);
+/*----------------------------------------------------------------------------*/
+/*                             External Functions                             */
+/*----------------------------------------------------------------------------*/
 
 #ifdef __cplusplus
 }
