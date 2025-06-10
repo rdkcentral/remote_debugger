@@ -1,5 +1,5 @@
 ##########################################################################
-# If not stated otherwise in this file or this component's LICENSE
+# If not stated otherwise in this file or this component's Licenses.txt
 # file the following copyright and licenses apply:
 #
 # Copyright 2018 RDK Management
@@ -22,12 +22,14 @@ bin_PROGRAMS = remotedebugger
 remotedebuggerincludedir = $(includedir)/rrd
 remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h
 
-remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdDynamic.c rrdExecuteScript.c rrdMsgPackDecoder.c rrdInterface.c
+remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdExecuteScript.c rrdDeepSleep.c rrdMsgPackDecoder.c rrdInterface.c
 remotedebugger_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/ $(CJSON_CFLAGS)
-AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper"
+AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus"
+
 if IARMBUS_ENABLE
 remotedebugger_SOURCES += rrdIarmEvents.c
 remotedebugger_CFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs/rdmmgr -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal -DIARMBUS_SUPPORT
-AM_LDFLAGS += "-lIARMBus -lrfcapi -ltr181api"
+AM_LDFLAGS += "-lIARMBus"
+AM_LDFLAGS += "-ltr181api"
 endif
 remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -fno-common
