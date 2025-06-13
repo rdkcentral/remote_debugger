@@ -335,6 +335,9 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     {
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
     }
+#ifdef USECOV
+    free(dataMsg);
+#endif
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
