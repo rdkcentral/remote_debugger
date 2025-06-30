@@ -3804,6 +3804,28 @@ TEST(shadowMainTest, MaintTest) {
 }
 #endif
 
+TEST(ProcessIssueTypeInStaticProfileappendTest, ReturnsNullIfIssueNotFoundInJson) {
+    data_buf buf = {nullptr};
+    issueNodeData node = {"Node", "SubNode"};
+    // Simulate valid JSON returned
+    cJSON *validJson = readAndParseJSON("UTJson/validJson.json");
+    issueData* result = processIssueTypeInStaticProfileappend(&buf, &node);
+    ASSERT_EQ(result, nullptr);
+}
+TEST(ProcessIssueTypeInStaticProfileappendTest, ReturnsIssueDataIfIssueFound) {
+    data_buf buf = {nullptr};
+    issueNodeData node = {"Node", "SubNode"};
+    cJSON *validJson = readAndParseJSON("UTJson/validJson.json");
+    issueData dummyData = {"RFCValue", "Command", 123};
+    // Set up your mocks/stubs to return dummyData
+
+    issueData* result = processIssueTypeInStaticProfileappend(&buf, &node);
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result->rfcvalue, "RFCValue");
+    EXPECT_STREQ(result->command, "Command");
+    EXPECT_EQ(result->timeout, 123);
+}
+
 /* ================== Gtest Main ======================== */
 GTEST_API_ main(int argc, char *argv[])
 {
