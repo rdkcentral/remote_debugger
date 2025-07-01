@@ -114,19 +114,19 @@ def test_rdm_trigger_event():
 def test_rdm_download_event():
     command = [
         'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus',
+        'Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus',
         'bool', 'true'
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
 
-    RDM_DOWNLOAD_EVENT = "Received event for RDM_DOWNLOAD_EVENT Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus"
+    RDM_DOWNLOAD_EVENT = "Received event for RDM_DOWNLOAD_EVENT Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus"
     assert RDM_DOWNLOAD_EVENT in grep_rrdlogs(RDM_DOWNLOAD_EVENT)
 
     PACKAGE_FOUND = "Package found in Cache...Test.TestRun7"
     assert PACKAGE_FOUND in grep_rrdlogs(PACKAGE_FOUND)
 
-    MESSAGE_SUCCESS = "SUCCESS: Message sending Done, ID=0 MSG=Test.TestRun7 Size=13 Type=1 AppendMode=0!"
+    MESSAGE_SUCCESS = "SUCCESS: Message sending Done, ID=36 MSG=Test.TestRun7 Size=13 Type=1 AppendMode=0!"
     assert MESSAGE_SUCCESS in grep_rrdlogs(MESSAGE_SUCCESS)
 
     ISSUE_TYPE_LIST = "IssueType List [Test.TestRun7]..."
