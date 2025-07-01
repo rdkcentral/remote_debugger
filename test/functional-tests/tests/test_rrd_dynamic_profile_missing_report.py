@@ -45,12 +45,13 @@ def reset_issuetype_rfc():
     assert result.returncode == 0
 
 def test_remote_debugger_trigger_event():
+    MISSING_STRING1 = "Test.TestRun5"
     reset_issuetype_rfc()
     sleep(10)
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', MISSING_STRING
+        'string', MISSING_STRING1
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
@@ -95,7 +96,7 @@ def test_check_issue_in_dynamic_profile():
     assert RDM_PACKAGE in grep_rrdlogs(RDM_PACKAGE)
 
     script_path="./test/functional-tests/tests/create_json.sh"
-# Run the shell script
+    # Run the shell script
     try:
         result = subprocess.run(['bash', script_path], check=True, text=True, capture_output=True)
         print("Script output:")
@@ -103,10 +104,7 @@ def test_check_issue_in_dynamic_profile():
     except subprocess.CalledProcessError as e:
         print("Error while executing the script:")
         print(e.stderr)
-    remove_logfile()
-    remove_outdir_contents(OUTPUT_DIR)
-    kill_rrd()
-    
+
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
     command = [
@@ -116,3 +114,68 @@ def test_rdm_trigger_event():
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
+
+    RBUS_SETTING_SUCCESS = "Setting Parameters using rbus success..."
+    assert RBUS_SETTING_SUCCESS in grep_rrdlogs(RBUS_SETTING_SUCCESS)
+
+    CACHE_UPDATE_SUCCESS = "Setting Parameters Success and Cache Updated ...RDK-RRD-Test"
+    assert CACHE_UPDATE_SUCCESS in grep_rrdlogs(CACHE_UPDATE_SUCCESS)
+
+def test_rdm_rrd_trigger_event():
+    command = [
+        'rbuscli', 'set',
+        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus',
+        'bool', 'true'
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0
+
+def test_rdm_rrd_dwnld_status():
+    PACKAGE_FOUND = "Package found in Cache...Test.TestRun5"
+    assert PACKAGE_FOUND in grep_rrdlogs(PACKAGE_FOUND)
+
+    PACKAGE_DETAIL = "Package Details jsonPath: /tmp/RDK-RRD-Test"
+    assert PACKAGE_DETAIL in grep_rrdlogs(PACKAGE_DETAIL)
+
+    COPY_MSG = "Copying Message Received to the queue.."
+    assert COPY_MSG in grep_rrdlogs(COPY_MSG)
+
+    SUCCESS_MSG_SEND = "Message sending Done, ID=0 MSG=Test.TestRun5 Size=13 Type=1 AppendMode=0!"
+    assert SUCCESS_MSG_SEND in grep_rrdlogs(SUCCESS_MSG_SEND)
+
+    SUCCESS_MSG_RECEIVE = "Message Reception Done for ID=0 MSG=Test.TestRun5 TYPE=1..."
+    assert SUCCESS_MSG_RECEIVE in grep_rrdlogs(SUCCESS_MSG_RECEIVE)
+
+    ISSUE_CMD_INFO = "Getting Issue command Information for : Test.TestRun5"
+    assert ISSUE_CMD_INFO in grep_rrdlogs(ISSUE_CMD_INFO)
+
+    CHECK_IN_DYNAMIC = "Checking if Issue marked inDynamic..."
+    assert CHECK_IN_DYNAMIC in grep_rrdlogs(CHECK_IN_DYNAMIC)
+
+    ISSUE_MARKED_DYNAMIC = "Issue Marked as inDynamic..."
+    assert ISSUE_MARKED_DYNAMIC in grep_rrdlogs(ISSUE_MARKED_DYNAMIC)
+
+    START_JSON_READ = "Start Reading JSON File... /tmp/RDK-RRD-Test/etc/rrd/remote_debugger.json"
+    assert START_JSON_READ in grep_rrdlogs(START_JSON_READ)
+
+    JSON_READ_SUCCESS = "Reading json file Success, Parsing the Content..."
+    assert JSON_READ_SUCCESS in grep_rrdlogs(JSON_READ_SUCCESS)
+
+    JSON_PARSE_SUCCESS = "Json File parse Success... /tmp/RDK-RRD-Test/etc/rrd/remote_debugger.json"
+    assert JSON_PARSE_SUCCESS in grep_rrdlogs(JSON_PARSE_SUCCESS)
+
+    READ_ISSUE_CATEGORY = "Reading Issue Category:Test..."
+    assert READ_ISSUE_CATEGORY in grep_rrdlogs(READ_ISSUE_CATEGORY)
+
+    RUN_DEBUG_CMD = "Run Debug Commands for Test:TestRun5"
+    assert RUN_DEBUG_CMD in grep_rrdlogs(RUN_DEBUG_CMD)
+
+    EXEC_RUNTIME_SERVICE = "Executing Commands in Runtime Service..."
+    assert EXEC_RUNTIME_SERVICE in grep_rrdlogs(EXEC_RUNTIME_SERVICE)
+
+    START_REMOTE_DEBUGGER = "Starting remote_debugger_Test.TestRun5 service success..."
+    assert START_REMOTE_DEBUGGER in grep_rrdlogs(START_REMOTE_DEBUGGER)
+
+    remove_logfile()
+    remove_outdir_contents(OUTPUT_DIR)
+    kill_rrd()
