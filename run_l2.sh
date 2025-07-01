@@ -30,7 +30,9 @@ mkdir -p "$LIB_DIR"
 mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
-/usr/local/bin/tr69hostif -c /etc/mgrlist.conf -d /etc/debug.ini -p 10999 -s 11999 &
+cd /usr/tr69hostif
+sh run_l2.sh
+cd -
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
 
