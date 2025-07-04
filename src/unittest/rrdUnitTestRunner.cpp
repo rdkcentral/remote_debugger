@@ -91,8 +91,16 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     cmd.command = strdup("echo hello");
     cmd.rfcvalue = strdup("dummy");
     cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
     // Mock dependencies like mkdir, fopen, etc., as needed
     bool result = executeCommands(&cmd);
+    EXPECT_CALL(secureApi, v_secure_popen(_, _, _, _))
+            .WillOnce(Return(fp));
+    EXPECT_CALL(secureApi, v_secure_pclose(_, _, _, _))
+            .WillOnce(Return(fp));
+    EXPECT_CALL(secureApi, v_secure_system(_, _, _, _))
+            .WillOnce(Return(0));
     EXPECT_TRUE(result);
     //free(cmd.command);
     //free(cmd.rfcvalue);
