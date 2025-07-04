@@ -94,8 +94,8 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     // Mock dependencies like mkdir, fopen, etc., as needed
     bool result = executeCommands(&cmd);
     EXPECT_TRUE(result);
-    free(cmd.command);
-    free(cmd.rfcvalue);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
 }
 extern bool checkAppendRequest(char *issueRequest);
 /*
