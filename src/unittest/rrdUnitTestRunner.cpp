@@ -795,6 +795,8 @@ protected:
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
         EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbus_get(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     }
 
     void TearDown() override
@@ -819,6 +821,9 @@ TEST_F(RBusApiTest, TestRBusApi)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
 
     result = RBusApiWrapper::rbus_set(handle, "objectName", value, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbus_get(handle, "objectName", value, nullptr);
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
 
     result = RBusApiWrapper::rbus_close(handle);
