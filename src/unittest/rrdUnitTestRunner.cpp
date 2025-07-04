@@ -95,11 +95,11 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
     // Mock dependencies like mkdir, fopen, etc., as needed
     bool result = executeCommands(&cmd);
-    EXPECT_CALL(secureApi, v_secure_popen(_, _, _, _))
+    EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
             .WillOnce(Return(fp));
-    EXPECT_CALL(secureApi, v_secure_pclose(_, _, _, _))
+    EXPECT_CALL(secureApi, v_secure_pclose(_))
             .WillOnce(Return(fp));
-    EXPECT_CALL(secureApi, v_secure_system(_, _, _, _))
+    EXPECT_CALL(secureApi, v_secure_system(_, _))
             .WillOnce(Return(0));
     EXPECT_TRUE(result);
     //free(cmd.command);
