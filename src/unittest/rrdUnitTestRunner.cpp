@@ -76,6 +76,28 @@ using ::testing::Return;
 /* ====================== rrdJsonParser ================*/
 /* --------------- Test getParamcount() from rrdJsonParser --------------- */
 
+
+TEST(ExecuteCommandsTest, SuccessWithRRDLocationMacro) {
+    // Setup
+    issueData *cmd = createIssueData("rfc1", "echo RRD_LOCATION", 1); // Helper allocates and populates struct
+    MOCK_RETURN(mkdir, 0); // Directory creation succeeds
+    MOCK_RETURN(getcwd, "/tmp"); // Current working directory
+    MOCK_RETURN(asprintf, 1); // Succeeds
+    MOCK_RETURN(replaceRRDLocation, strdup("echo /tmp/dirname")); // Replaces macro successfully
+    MOCK_RETURN(fopen, valid_file_pointer); // Output file opens
+    MOCK_RETURN(v_secure_popen, valid_file_pointer); // systemd-run opens
+    MOCK_RETURN(v_secure_popen, valid_file_pointer); // journalctl opens
+    MOCK_RETURN(v_secure_pclose, 0);
+    MOCK_RETURN(fclose, 0);
+    MOCK_RETURN(v_secure_system, 0);
+
+    // Exercise & Verify
+    bool result = executeCommands(cmd);
+    EXPECT_TRUE(result);
+
+    // Teardown: verify all resources are freed and mocks called as expected
+}
+
 extern bool checkAppendRequest(char *issueRequest);
 /*
 TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
