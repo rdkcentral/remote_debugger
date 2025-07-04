@@ -264,6 +264,7 @@ public:
     virtual rbusError_t rbusValue_Init(rbusValue_t *value) = 0;
     virtual rbusError_t rbusValue_SetString(rbusValue_t value, char const *str) = 0;
     virtual rbusError_t rbus_set(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
+    virtual rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
 };
 
 class RBusApiWrapper
@@ -280,6 +281,7 @@ public:
     static rbusError_t rbusValue_Init(rbusValue_t *value);
     static rbusError_t rbusValue_SetString(rbusValue_t value, char const *str);
     static rbusError_t rbus_set(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
+    static rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
 };
 
 extern rbusError_t (*rbus_open)(rbusHandle_t *, char const *);
@@ -287,6 +289,7 @@ extern rbusError_t (*rbus_close)(rbusHandle_t);
 extern rbusError_t (*rbusValue_Init)(rbusValue_t *);
 extern rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *);
 extern rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
+extern rbusError_t (*rbus_get)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
 
 class MockRBusApi : public RBusApiInterface
 {
@@ -295,7 +298,8 @@ public:
     MOCK_METHOD1(rbus_close, rbusError_t(rbusHandle_t));
     MOCK_METHOD1(rbusValue_Init, rbusError_t(rbusValue_t *));
     MOCK_METHOD2(rbusValue_SetString, rbusError_t(rbusValue_t, char const *));
-    MOCK_METHOD4(rbus_set, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
+    MOCK_METHOD4(rbus_set, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));  
+    MOCK_METHOD4(rbus_get, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
 };
 
 /* ------------------- WebConfig Impl ------------ */
