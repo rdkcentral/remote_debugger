@@ -90,7 +90,6 @@ protected:
     }
 };
 
-// 1. Happy path: command and timeout present
 TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
     const char* jsonstr = R"({
         "categoryA": {
