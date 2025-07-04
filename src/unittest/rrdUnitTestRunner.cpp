@@ -76,6 +76,42 @@ using ::testing::Return;
 /* ====================== rrdJsonParser ================*/
 /* --------------- Test getParamcount() from rrdJsonParser --------------- */
 
+extern bool checkAppendRequest(char *issueRequest);
+
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseWhenSuffixMissing) {
+    char input[64] = "issue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "issue");  // Should remain unchanged
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseForShortString) {
+    char input[64] = "";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "");  // Should remain unchanged
+}
+
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseIfSuffixAtStartOnly) {
+    char input[64] = "_appendissue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "_appendissue");
+}
 
 class GetIssueCommandInfoTest : public ::testing::Test {
 protected:
