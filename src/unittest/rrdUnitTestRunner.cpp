@@ -1745,7 +1745,7 @@ TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNotNullAndIssueString
     EXPECT_EQ(node, nullptr);
 }
 
-TEST(areecacheDataCacheNodeTest, HandlesNodeNull)
+TEST(FreecacheDataCacheNodeTest, HandlesNodeNull)
 {
     cacheData *node = NULL;
     freecacheDataCacheNode(&node);
