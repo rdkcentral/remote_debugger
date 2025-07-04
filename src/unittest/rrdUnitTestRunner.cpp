@@ -96,9 +96,9 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     // Mock dependencies like mkdir, fopen, etc., as needed
     bool result = executeCommands(&cmd);
     EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
-            .WillOnce(Return(fp));
+            .WillOnce(Return(&fp));
     EXPECT_CALL(secureApi, v_secure_pclose(_))
-            .WillOnce(Return(fp));
+            .WillOnce(Return(&fp));
     EXPECT_CALL(secureApi, v_secure_system(_, _))
             .WillOnce(Return(0));
     EXPECT_TRUE(result);
