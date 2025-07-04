@@ -19,7 +19,7 @@
 bin_PROGRAMS = remotedebugger_gtest
 
 # Define the include directories
-COMMON_CPPFLAGS = -I../ -I../../ -I./mocks -I/usr/include/cjson -I/usr/include/nettle -I/usr/local/include/ -I/usr/include/msgpack -DGTEST_ENABLE
+COMMON_CPPFLAGS = -I../ -I../../ -I./mocks -I/usr/include/cjson -I/usr/include/nettle  -I/usr/include/msgpack -DGTEST_ENABLE
 
 # Define the libraries to link against
 COMMON_LDADD = -lgtest -lgtest_main -lgmock_main -lgmock -lcjson -lmsgpackc -lgcov
