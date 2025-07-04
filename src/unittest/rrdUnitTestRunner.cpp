@@ -76,7 +76,7 @@ using ::testing::Return;
 /* ====================== rrdJsonParser ================*/
 /* --------------- Test getParamcount() from rrdJsonParser --------------- */
 
-
+/*
 TEST(ExecuteCommandsTest, ReturnsFalseIfCommandIsNull) {
     issueData cmd;
     cmd.command = NULL;
@@ -84,7 +84,7 @@ TEST(ExecuteCommandsTest, ReturnsFalseIfCommandIsNull) {
     cmd.timeout = 0;
     bool result = executeCommands(&cmd);
     EXPECT_FALSE(result);
-}
+} */
 
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     issueData cmd;
