@@ -24,9 +24,7 @@
 #include <sys/stat.h>
 #include "rrdRunCmdThread.h"
 #include "rrdCommandSanity.h"
-#if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
-#endif
 
 pthread_mutex_t rrdCacheMut;
 static cacheData *cacheDataNode = NULL;
@@ -416,9 +414,7 @@ bool executeCommands(issueData *cmdinfo)
 
             /*Stop or Reset runtime service for issue*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping remote_debugger_%s service...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
-	    #if !defined(GTEST_ENABLE)
             v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
-            #endif
             free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
             free(cmdData->command); // free updated command info received from RRDEventThreadFunc
             free(cmdData);
