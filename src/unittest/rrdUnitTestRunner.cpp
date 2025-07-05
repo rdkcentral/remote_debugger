@@ -75,6 +75,177 @@ using ::testing::Return;
 
 /* ====================== rrdJsonParser ================*/
 /* --------------- Test getParamcount() from rrdJsonParser --------------- */
+
+/*
+TEST(ExecuteCommandsTest, ReturnsFalseIfCommandIsNull) {
+    issueData cmd;
+    cmd.command = NULL;
+    cmd.rfcvalue = "dummy"; // If needed by your code, or set to NULL if not
+    cmd.timeout = 0;
+    bool result = executeCommands(&cmd);
+    EXPECT_FALSE(result);
+} */
+
+TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
+    issueData cmd;
+    cmd.command = strdup("echo hello");
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+    // Mock dependencies like mkdir, fopen, etc., as needed
+    bool result = executeCommands(&cmd);
+    //EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
+    //        .WillOnce(Return(fp));
+    //EXPECT_CALL(secureApi, v_secure_pclose(_))
+    //        .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
+    EXPECT_TRUE(result);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
+}
+
+TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllfail) {
+    issueData cmd;
+    cmd.command = NULL;
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+    // Mock dependencies like mkdir, fopen, etc., as needed
+    bool result = executeCommands(&cmd);
+    //EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
+    //        .WillOnce(Return(fp));
+    //EXPECT_CALL(secureApi, v_secure_pclose(_))
+    //        .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
+    EXPECT_FALSE(result);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
+}
+extern bool checkAppendRequest(char *issueRequest);
+/*
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+} */
+
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_apnd";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+}
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_apnd";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseWhenSuffixMissing) {
+    char input[64] = "issue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "issue");  // Should remain unchanged
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseForShortString) {
+    char input[64] = "";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "");  // Should remain unchanged
+}
+/*
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+} */
+
+TEST(CheckAppendRequestTest, ReturnsFalseIfSuffixAtStartOnly) {
+    char input[64] = "_appendissue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "_appendissue");
+}
+
+class GetIssueCommandInfoTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Cleanup if needed
+    }
+    void FreeIssueData(issueData* d) {
+        if (!d) return;
+        if (d->command) free(d->command);
+        if (d->rfcvalue) free(d->rfcvalue);
+        free(d);
+    }
+};
+
+TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
+    const char* jsonstr = R"({
+        "categoryA": {
+            "type1": [ 42, "kill" ]
+        },
+        "Sanity": {
+            "Check": {
+                "Commands": [ "kill", "ls" ]
+            }
+        }
+    })";
+    cJSON* root = cJSON_Parse(jsonstr);
+    ASSERT_NE(root, nullptr);
+
+    issueNodeData node;
+    node.Node = (char*)"categoryA";
+    node.subNode = (char*)"type1";
+
+    char buf[] = "rfcvalue123";
+    issueData* result = getIssueCommandInfo(&node, root, buf);
+    ASSERT_NE(result, nullptr);
+    
+}
+
+TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
+    const char* jsonstr = R"({
+        "categoryB": {
+            "typeX": [ "echo only" ]
+        },
+        "Sanity": {
+            "Check": {
+                "Commands": [ "kill" ]
+            }
+        }
+    })";
+    cJSON* root = cJSON_Parse(jsonstr);
+    ASSERT_NE(root, nullptr);
+
+    issueNodeData node;
+    node.Node = (char*)"categoryB";
+    node.subNode = (char*)"typeX";
+
+    char buf[] = "rfctest";
+    issueData* result = getIssueCommandInfo(&node, root, buf);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->timeout, DEFAULT_TIMEOUT);
+    ASSERT_NE(result->command, nullptr);
+    EXPECT_TRUE(strstr(result->command, "echo only") != nullptr);
+    ASSERT_NE(result->rfcvalue, nullptr);
+    EXPECT_STREQ(result->rfcvalue, "rfctest");
+
+    FreeIssueData(result);
+    cJSON_Delete(root);
+}
+
+
+
 TEST(GetParamCountTest, GetParamCount)
 {
     char str[] = "abc.def.ghi";
@@ -721,6 +892,8 @@ protected:
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
         EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbus_get(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     }
 
     void TearDown() override
@@ -745,6 +918,9 @@ TEST_F(RBusApiTest, TestRBusApi)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
 
     result = RBusApiWrapper::rbus_set(handle, "objectName", value, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbus_get(handle, "objectName", value, nullptr);
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
 
     result = RBusApiWrapper::rbus_close(handle);
