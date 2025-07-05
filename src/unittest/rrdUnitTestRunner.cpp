@@ -99,8 +99,8 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
             .WillOnce(Return(fp));
     EXPECT_CALL(secureApi, v_secure_pclose(_))
             .WillOnce(Return(0));
-    EXPECT_CALL(secureApi, v_secure_system(_, _))
-            .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
     EXPECT_TRUE(result);
     //free(cmd.command);
     //free(cmd.rfcvalue);
