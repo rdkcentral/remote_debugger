@@ -417,9 +417,9 @@ bool executeCommands(issueData *cmdinfo)
             /*Stop or Reset runtime service for issue*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping remote_debugger_%s service...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
             //v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
-            free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
-            free(cmdData->command); // free updated command info received from RRDEventThreadFunc
-            free(cmdData);
+            //free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
+            //free(cmdData->command); // free updated command info received from RRDEventThreadFunc
+            //free(cmdData);
             return true;
         }
     }
