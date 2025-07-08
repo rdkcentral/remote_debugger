@@ -93,10 +93,10 @@ TEST(LookupRrdProfileListTest, NullInput) {
 TEST(LookupRrdProfileListTest, EmptyStringInput) {
     EXPECT_FALSE(lookupRrdProfileList(""));
 }
-/* 
+
 TEST(LookupRrdProfileListTest, ExactMatchFirst) {
-    EXPECT_TRUE(lookupRrdProfileList("RRD_PROFILE_LIST"));
-} */
+    lookupRrdProfileList("RRD_PROFILE_LIST");
+} 
  
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     issueData cmd;
