@@ -368,3 +368,4 @@ public:
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
 uint32_t PowerController_Connect();
+uint32_t PowerController_UnRegisterRebootBeginCallback(PowerController_RebootBeginCb callback);
