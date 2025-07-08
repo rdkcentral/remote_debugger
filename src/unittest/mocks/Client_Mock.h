@@ -367,3 +367,4 @@ public:
     MOCK_METHOD(void, PushBlobRequest, (execData * execDataLan), ());
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
+uint32_t PowerController_Connect();
