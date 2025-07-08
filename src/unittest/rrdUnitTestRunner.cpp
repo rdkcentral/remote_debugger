@@ -86,6 +86,26 @@ TEST(ExecuteCommandsTest, ReturnsFalseIfCommandIsNull) {
     EXPECT_FALSE(result);
 } */
 
+TEST(RemoteDebuggerDocStrErrorTest, KnownErrorCodes) {
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OK), "No errors.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OUT_OF_MEMORY), "Out of memory.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_FIRST_ELEMENT), "Invalid first element.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_VERSION), "Invalid 'version' value.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid 'value' array.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, UnknownErrorCode) {
+    // An error code not defined in the map
+    int unknownError = 9999;
+    EXPECT_STREQ(remotedebuggerdoc_strerror(unknownError), "Unknown error.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, EdgeCaseZeroButNotInMap) {
+    // Assuming 0 is treated as end of map and not a valid error code
+    EXPECT_STREQ(remotedebuggerdoc_strerror(0), "Unknown error.");
+}
+
+
 TEST(LookupRrdProfileListTest, NullInput) {
     EXPECT_FALSE(lookupRrdProfileList(nullptr));
 }
@@ -97,7 +117,7 @@ TEST(LookupRrdProfileListTest, EmptyStringInput) {
 TEST(LookupRrdProfileListTest, ExactMatchFirst) {
     lookupRrdProfileList("RRD_PROFILE_LIST");
 } 
- 
+
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     issueData cmd;
     cmd.command = strdup("echo hello");
