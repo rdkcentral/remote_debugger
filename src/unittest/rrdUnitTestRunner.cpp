@@ -86,6 +86,18 @@ TEST(ExecuteCommandsTest, ReturnsFalseIfCommandIsNull) {
     EXPECT_FALSE(result);
 } */
 
+TEST(LookupRrdProfileListTest, NullInput) {
+    EXPECT_FALSE(lookupRrdProfileList(nullptr));
+}
+ 
+TEST(LookupRrdProfileListTest, EmptyStringInput) {
+    EXPECT_FALSE(lookupRrdProfileList(""));
+}
+ 
+TEST(LookupRrdProfileListTest, ExactMatchFirst) {
+    EXPECT_TRUE(lookupRrdProfileList("RRD_PROFILE_LIST"));
+}
+ 
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     issueData cmd;
     cmd.command = strdup("echo hello");
