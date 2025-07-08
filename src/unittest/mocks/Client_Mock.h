@@ -367,5 +367,7 @@ public:
     MOCK_METHOD(void, PushBlobRequest, (execData * execDataLan), ());
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
+typedef void (*PowerController_PowerModeChangedCb)(const PowerController_PowerState_t currentState, const PowerController_PowerState_t newState, void* userdata);
+typedef void (*PowerController_RebootBeginCb)(const char* rebootReasonCustom, const char* rebootReasonOther, const char* rebootRequestor, void* userdata);
 uint32_t PowerController_Connect();
 uint32_t PowerController_UnRegisterRebootBeginCallback(PowerController_RebootBeginCb callback);
