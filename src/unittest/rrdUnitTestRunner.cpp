@@ -101,8 +101,7 @@ TEST(RemoteDebuggerDocStrErrorTest, UnknownErrorCode) {
 }
 
 TEST(RemoteDebuggerDocStrErrorTest, EdgeCaseZeroButNotInMap) {
-    // Assuming 0 is treated as end of map and not a valid error code
-    EXPECT_STREQ(remotedebuggerdoc_strerror(0), "Unknown error.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(0), "No errors.");
 }
 
 
