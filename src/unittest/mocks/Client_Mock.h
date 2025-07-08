@@ -367,6 +367,16 @@ public:
     MOCK_METHOD(void, PushBlobRequest, (execData * execDataLan), ());
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
+#define POWER_CONTROLLER_ERROR_NONE 0
+typedef enum PowerController_PowerState {
+    POWER_STATE_UNKNOWN = 0 /* UNKNOWN */,
+    POWER_STATE_OFF = 1 /* OFF */,
+    POWER_STATE_STANDBY = 2 /* STANDBY */,
+    POWER_STATE_ON = 3 /* ON */,
+    POWER_STATE_STANDBY_LIGHT_SLEEP = 4 /* LIGHT_SLEEP */,
+    POWER_STATE_STANDBY_DEEP_SLEEP = 5 /* DEEP_SLEEP */
+} PowerController_PowerState_t;
+
 typedef void (*PowerController_PowerModeChangedCb)(const PowerController_PowerState_t currentState, const PowerController_PowerState_t newState, void* userdata);
 typedef void (*PowerController_RebootBeginCb)(const char* rebootReasonCustom, const char* rebootReasonOther, const char* rebootRequestor, void* userdata);
 uint32_t PowerController_Connect();
