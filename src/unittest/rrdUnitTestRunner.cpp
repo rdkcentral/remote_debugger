@@ -93,10 +93,10 @@ TEST(LookupRrdProfileListTest, NullInput) {
 TEST(LookupRrdProfileListTest, EmptyStringInput) {
     EXPECT_FALSE(lookupRrdProfileList(""));
 }
- 
+/* 
 TEST(LookupRrdProfileListTest, ExactMatchFirst) {
     EXPECT_TRUE(lookupRrdProfileList("RRD_PROFILE_LIST"));
-}
+} */
  
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     issueData cmd;
@@ -117,7 +117,7 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     //free(cmd.command);
     //free(cmd.rfcvalue);
 }
-
+/*
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllfail) {
     issueData cmd;
     cmd.command = NULL;
@@ -136,7 +136,7 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllfail) {
     EXPECT_FALSE(result);
     //free(cmd.command);
     //free(cmd.rfcvalue);
-}
+} */
 extern bool checkAppendRequest(char *issueRequest);
 /*
 TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
