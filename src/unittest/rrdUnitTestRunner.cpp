@@ -797,7 +797,7 @@ TEST_F(WebConfigTest, TestRegisterSubDocMock)
     ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(&mock_webconfig));
 }
 
-#ifdef IARMBUS_SUPPORT
+//#ifdef IARMBUS_SUPPORT
 /* ====================== rrdDeepSleep ===================*/
 /* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
 devicePropertiesData devPropData;
@@ -1253,7 +1253,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInD
 
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
-#endif
+//#endif
 
 /* ========================== rrdExecuteScript ======================= */
 /* --------------- Test normalizeIssueName() from rrdExecuteScript --------------- */
