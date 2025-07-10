@@ -1004,6 +1004,90 @@ TEST_F(WebConfigTest, TestRegisterSubDocMock)
     ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(&mock_webconfig));
 }
 
+/* --------------- Test RRDCheckIssueInDynamicProfile() from rrdDeepSleep --------------- */
+class RRDCheckIssueInDynamicProfileTest : public ::testing::Test
+{
+protected:
+    issueNodeData issuestructNode;
+    data_buf buff;
+};
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsFalse)
+{
+    issueNodeData issuestructNode;
+    data_buf buff;
+    issuestructNode.Node = NULL;
+    buff.mdata = NULL;
+    buff.jsonPath = NULL;
+    buff.inDynamic = false;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathDoesNotExist)
+{
+    issueNodeData issuestructNode;
+    data_buf buff;
+    issuestructNode.Node = NULL;
+    buff.mdata = NULL;
+    buff.jsonPath = NULL;
+    buff.inDynamic = true;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndParseJSONReturnsNull)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = NULL;
+    data_buf buff;
+    buff.inDynamic = true;
+    buff.jsonPath = strdup("UTJson/emptyJson.json");
+    buff.mdata = NULL;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndParseNonNull_FindIssueFalse)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = NULL;
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = true;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndParseNonNull_FindIssueTrue)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("key");
+    issuestructNode.subNode = NULL;
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = true;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "{\n\t\"key\":\t\"value\"\n}");
+
+    free(result);
+    free(issuestructNode.Node);
+    free(buff.jsonPath);
+}
+
+
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdDeepSleep ===================*/
 /* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
@@ -1027,7 +1111,7 @@ protected:
 
 TEST_F(RRDGetDeepSleepdynJSONPathLenTest, TestRRDGetDeepSleepdynJSONPathLen)
 {
-    testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
+    //testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
     devPropData = testDevPropData;
     EXPECT_EQ(RRDGetDeepSleepdynJSONPathLen(), strlen(RRD_MEDIA_APPS) + strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(deviceProfileMap[RRD_DEFAULT_PLTFMS]) + strlen(RRD_JSON_FILE) + 1);
 
