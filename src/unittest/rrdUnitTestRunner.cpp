@@ -1468,7 +1468,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
     buff.inDynamic = false;
     RRDRdmManagerDownloadRequest(issuestructNode, buff.jsonPath, &buff, false);
 
-    EXPECT_EQ(issuestructNode, nullptr);
+    EXPECT_EQ(issuestructNode, NULL);
 }
 
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsFailure)
