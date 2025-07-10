@@ -1109,6 +1109,179 @@ protected:
     }
 };
 
+/* --------------- Test RRDRdmManagerDownloadRequest() from rrdDeepSleep --------------- */
+class RRDRdmManagerDownloadRequestTest : public ::testing::Test
+{
+protected:
+    devicePropertiesData originalDevPropData;
+    devicePropertiesData testDevPropData;
+
+    void SetUp() override
+    {
+        originalDevPropData = devPropData;
+    }
+
+    void TearDown() override
+    {
+        devPropData = originalDevPropData;
+        SetParamWrapper::clearImpl();
+    }
+};
+
+TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
+{
+    issueNodeData *issuestructNode = NULL;
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = NULL;
+    buff.inDynamic = false;
+    RRDRdmManagerDownloadRequest(issuestructNode, buff.jsonPath, &buff, false);
+
+    EXPECT_EQ(issuestructNode, nullptr);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsFailure)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
+    devPropData = testDevPropData;
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccess)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Success));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
+    devPropData = testDevPropData;
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Success));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess_X1)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    testDevPropData.deviceType = RRD_REG_X1_PLTFMS;
+    devPropData = testDevPropData;
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Success));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess_PLATCO)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    testDevPropData.deviceType = RRD_PLATCO_PLTFMS;
+    devPropData = testDevPropData;
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Success));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess_DEF)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
+    devPropData = testDevPropData;
+
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
 TEST_F(RRDGetDeepSleepdynJSONPathLenTest, TestRRDGetDeepSleepdynJSONPathLen)
 {
     //testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
