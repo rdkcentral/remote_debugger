@@ -1088,26 +1088,6 @@ TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndPars
 }
 
 
-#ifdef IARMBUS_SUPPORT
-/* ====================== rrdDeepSleep ===================*/
-/* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
-devicePropertiesData devPropData;
-class RRDGetDeepSleepdynJSONPathLenTest : public ::testing::Test
-{
-protected:
-    devicePropertiesData originalDevPropData;
-    devicePropertiesData testDevPropData;
-
-    void SetUp() override
-    {
-        originalDevPropData = devPropData;
-    }
-
-    void TearDown() override
-    {
-        devPropData = originalDevPropData;
-    }
-};
 
 /* --------------- Test RRDRdmManagerDownloadRequest() from rrdDeepSleep --------------- */
 class RRDRdmManagerDownloadRequestTest : public ::testing::Test
@@ -1281,6 +1261,27 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     free(buff.jsonPath);
     free(buff.mdata);
 }
+
+#ifdef IARMBUS_SUPPORT
+/* ====================== rrdDeepSleep ===================*/
+/* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
+devicePropertiesData devPropData;
+class RRDGetDeepSleepdynJSONPathLenTest : public ::testing::Test
+{
+protected:
+    devicePropertiesData originalDevPropData;
+    devicePropertiesData testDevPropData;
+
+    void SetUp() override
+    {
+        originalDevPropData = devPropData;
+    }
+
+    void TearDown() override
+    {
+        devPropData = originalDevPropData;
+    }
+};
 
 TEST_F(RRDGetDeepSleepdynJSONPathLenTest, TestRRDGetDeepSleepdynJSONPathLen)
 {
