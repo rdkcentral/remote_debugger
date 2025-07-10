@@ -1094,7 +1094,6 @@ class RRDRdmManagerDownloadRequestTest : public ::testing::Test
 {
 protected:
     devicePropertiesData originalDevPropData;
-    devicePropertiesData testDevPropData;
 
     void SetUp() override
     {
@@ -1147,9 +1146,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-
     MockSetParam mock_set_param;
     SetParamWrapper::setImpl(&mock_set_param);
     EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
@@ -1187,9 +1183,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = strdup("ValidIssueTypeData");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-
     MockSetParam mock_set_param;
     SetParamWrapper::setImpl(&mock_set_param);
     EXPECT_CALL(mock_set_param, setParam(_, _, _))
@@ -1209,9 +1202,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = strdup("ValidIssueTypeData");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_REG_X1_PLTFMS;
-    devPropData = testDevPropData;
-
     MockSetParam mock_set_param;
     SetParamWrapper::setImpl(&mock_set_param);
     EXPECT_CALL(mock_set_param, setParam(_, _, _))
@@ -1231,9 +1221,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = strdup("ValidIssueTypeData");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_PLATCO_PLTFMS;
-    devPropData = testDevPropData;
-
     MockSetParam mock_set_param;
     SetParamWrapper::setImpl(&mock_set_param);
     EXPECT_CALL(mock_set_param, setParam(_, _, _))
@@ -1253,9 +1240,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = strdup("ValidIssueTypeData");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
-    devPropData = testDevPropData;
-
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
 
     free(buff.jsonPath);
