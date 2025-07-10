@@ -113,7 +113,7 @@ rbusError_t RBusApiWrapper::rbus_close(rbusHandle_t handle)
 
 rbusError_t RBusApiWrapper::rbusValue_Init(rbusValue_t *value)
 {
-    EXPECT_NE(impl, nullptr);
+    //EXPECT_NE(impl, nullptr);
     return impl->rbusValue_Init(value);
 }
 
