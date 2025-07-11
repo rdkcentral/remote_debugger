@@ -1158,7 +1158,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     free(buff.jsonPath);
 }
-#ifdef IARMBUS_SUPPORT
+
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
@@ -1168,9 +1168,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    //MockSetParam mock_set_param;
-    //SetParamWrapper::setImpl(&mock_set_param);
-    //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
@@ -1191,11 +1188,6 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     buff.mdata = strdup("ValidIssueTypeData");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-
-    //MockSetParam mock_set_param;
-    //SetParamWrapper::setImpl(&mock_set_param);
-    //EXPECT_CALL(mock_set_param, setParam(_, _, _))
-    //    .WillOnce(Return(tr181Success));
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
