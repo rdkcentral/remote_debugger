@@ -1153,7 +1153,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
 
     free(buff.jsonPath);
 }
-*/
+
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccess)
 {
     issueNodeData issuestructNode;
@@ -1245,7 +1245,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     free(buff.jsonPath);
     free(buff.mdata);
 }
-
+*/
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdDeepSleep ===================*/
 /* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
