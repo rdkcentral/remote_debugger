@@ -159,7 +159,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
  * @param bool isDeepSleepAwakeEvent - Flag to indicate if this is a deep sleep awake event.
  * @return void
  */
-#if !defined(GTEST_ENABLE)
+
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent)
 {
     char *paramString = NULL;
@@ -282,7 +282,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
 }
-#endif
 /*
  * @function RRDCheckIssueInDynamicProfile
  * @brief Checks for a specific issue in the dynamic JSON profile associated with the given
