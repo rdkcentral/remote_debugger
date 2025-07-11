@@ -1147,9 +1147,9 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     //MockSetParam mock_set_param;
     //SetParamWrapper::setImpl(&mock_set_param);
     //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
-    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
-            .WillOnce(Return(RBUS_ERROR_SUCCESS));
-        EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+    //EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+          //  .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
     
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
