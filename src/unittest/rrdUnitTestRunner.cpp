@@ -1153,7 +1153,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
     
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
-            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+            .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
     free(buff.jsonPath);
