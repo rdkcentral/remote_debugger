@@ -247,6 +247,7 @@ extern "C"
         return;
     }
 }
+/*
 uint32_t PowerController_RegisterPowerModeChangedCallback(PowerController_PowerModeChangedCb callback, void* userdata)
 {
     return POWER_CONTROLLER_ERROR_NONE;
@@ -256,3 +257,4 @@ uint32_t PowerController_Connect()
     return POWER_CONTROLLER_ERROR_NONE;
 }
 
+*/
