@@ -1158,7 +1158,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     free(buff.jsonPath);
 }
-/*
+
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
@@ -1168,9 +1168,15 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    //MockSetParam mock_set_param;
+    //SetParamWrapper::setImpl(&mock_set_param);
+    //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
 
     free(buff.jsonPath);
@@ -1186,16 +1192,24 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
 
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
+    //MockSetParam mock_set_param;
+    //SetParamWrapper::setImpl(&mock_set_param);
+    //EXPECT_CALL(mock_set_param, setParam(_, _, _))
+    //    .WillOnce(Return(tr181Success));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
     free(buff.jsonPath);
     free(buff.mdata);
 }
-
+/*
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess)
 {
     issueNodeData issuestructNode;
