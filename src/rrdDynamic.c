@@ -230,11 +230,8 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for... %s\n", __FUNCTION__, __LINE__, paramString);
                     rbusError_t rc = RBUS_ERROR_BUS_ERROR;
                     rbusValue_t value;
-		    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for... %s\n", __FUNCTION__, __LINE__, paramString);
 	            rbusValue_Init(&value);
-		    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for... %s\n", __FUNCTION__, __LINE__, paramString);
                     rbusValue_SetString(value,paramString);
-		    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Request RDM Manager Download for... %s\n", __FUNCTION__, __LINE__, paramString);
                     rc = rbus_set(rrdRbusHandle,RDM_MGR_PKG_INST, value, NULL);
 		    //tr181status = setParam("rrd", RDM_MGR_PKG_INST, paramString);
                     if (rc == RBUS_ERROR_SUCCESS)
