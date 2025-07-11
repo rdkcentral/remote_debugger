@@ -1178,7 +1178,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
 
     free(buff.jsonPath);
 }
-#endif
+
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccess)
 {
     issueNodeData issuestructNode;
