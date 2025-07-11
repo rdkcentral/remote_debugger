@@ -1104,7 +1104,7 @@ protected:
     {
         originalDevPropData = devPropData;
         string test_name = getCurrentTestName();
-        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure" || test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsSuccess" || test_name == "DeepSleepAwakeEventIsTrue_SetParamReturnsFailure")
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure" || test_name == "DeepSleepAwakeEventIsTrue_SetParamReturnsFailure")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
         }
