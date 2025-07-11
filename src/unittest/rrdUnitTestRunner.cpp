@@ -1119,6 +1119,7 @@ protected:
         {
             RBusApiWrapper::clearImpl();
         }
+    }
 };
 
 TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
