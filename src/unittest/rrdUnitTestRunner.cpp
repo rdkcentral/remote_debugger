@@ -1118,7 +1118,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
 
     EXPECT_EQ(issuestructNode, nullptr);
 }
-/*
+
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
@@ -1131,12 +1131,12 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     MockSetParam mock_set_param;
     SetParamWrapper::setImpl(&mock_set_param);
-    //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
     free(buff.jsonPath);
 }
-
+/*
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
