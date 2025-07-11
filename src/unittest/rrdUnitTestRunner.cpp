@@ -1094,17 +1094,31 @@ class RRDRdmManagerDownloadRequestTest : public ::testing::Test
 {
 protected:
     devicePropertiesData originalDevPropData;
-
+    MockRBusApi mock_rbus_api;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
     void SetUp() override
     {
         originalDevPropData = devPropData;
+        string test_name = getCurrentTestName();
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
+        {
+            RBusApiWrapper::setImpl(&mock_rbus_api);
+        }
     }
 
     void TearDown() override
     {
         devPropData = originalDevPropData;
         SetParamWrapper::clearImpl();
-    }
+        string test_name = getCurrentTestName();
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
+        {
+            RBusApiWrapper::clearImpl();
+        }
 };
 
 TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
