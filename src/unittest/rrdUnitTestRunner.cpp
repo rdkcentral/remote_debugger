@@ -1274,6 +1274,86 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     free(buff.mdata);
 }
 */
+
+/* --------------- Test RRDProcessDeepSleepAwakeEvents() from rrdDeepSleep --------------- */
+class RRDProcessDeepSleepAwakeEventsTest : public ::testing::Test
+{
+protected:
+    devicePropertiesData originalDevPropData;
+
+    void SetUp() override
+    {
+        originalDevPropData = devPropData;
+    }
+
+    void TearDown() override
+    {
+        devPropData = originalDevPropData;
+        SetParamWrapper::clearImpl();
+    }
+};
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDataNull)
+{
+    data_buf buff;
+    buff.mdata = nullptr;
+    RRDProcessDeepSleepAwakeEvents(&buff);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsInvalidDefault)
+{
+    data_buf rbuf;
+    rbuf.mdata = "Sample data";
+    rbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
+
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamSuccess)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Success));
+
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamFail)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Failure));
+
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicFalse)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
+    rbuf.inDynamic = false;
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicTrue)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = NULL;
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdDeepSleep ===================*/
 /* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
