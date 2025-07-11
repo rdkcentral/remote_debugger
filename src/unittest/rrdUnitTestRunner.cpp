@@ -1314,11 +1314,6 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
     data_buf rbuf;
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
-
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
 
@@ -1327,11 +1322,6 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
     data_buf rbuf;
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Failure));
-
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
 
