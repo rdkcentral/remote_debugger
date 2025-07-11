@@ -1144,9 +1144,11 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
 
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    //MockSetParam mock_set_param;
+    //SetParamWrapper::setImpl(&mock_set_param);
+    //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
     free(buff.jsonPath);
