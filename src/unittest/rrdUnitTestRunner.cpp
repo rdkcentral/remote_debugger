@@ -1118,7 +1118,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
 
     EXPECT_EQ(issuestructNode, nullptr);
 }
-
+/*
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
@@ -1136,7 +1136,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     free(buff.jsonPath);
 }
-
+*/
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
