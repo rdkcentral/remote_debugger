@@ -1158,7 +1158,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     free(buff.jsonPath);
 }
-
+#ifdef IARMBUS_SUPPORT
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
 {
     issueNodeData issuestructNode;
@@ -1181,7 +1181,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
 
     free(buff.jsonPath);
 }
-
+#endif
 TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccess)
 {
     issueNodeData issuestructNode;
