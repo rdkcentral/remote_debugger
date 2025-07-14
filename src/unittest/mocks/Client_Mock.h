@@ -368,6 +368,11 @@ public:
     MOCK_METHOD(void, PushBlobRequest, (execData * execDataLan), ());
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
+
+int RRD_IARM_subscribe(void);
+int RRD_IARM_unsubscribe(void);
+void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
+
 /*
 #define POWER_CONTROLLER_ERROR_NONE 0
 typedef enum PowerController_PowerState {
