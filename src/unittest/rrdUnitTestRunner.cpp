@@ -2930,7 +2930,7 @@ protected:
 
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
-    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
     char data[] = "mdata";
     _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
@@ -2950,7 +2950,7 @@ TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
 
 TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidEventId)
 {
-    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
     char data[] = "Test data";
     _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
