@@ -20,8 +20,11 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#define IARM_BUS_RDK_REMOTE_DEBUGGER_NAME "rrd"
-#define IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE "Device"
+typedef enum _RemoteDebugger_EventId_t {
+        IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
+        IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
+        IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT
+} IARM_Bus_RemoteDebugger_EventId_t;
 //#ifdef IARMBUS_SUPPORT
 /* ----------------- RDMMgr ---------- */
 #define IARM_BUS_RDMMGR_NAME "RDMMgr"
