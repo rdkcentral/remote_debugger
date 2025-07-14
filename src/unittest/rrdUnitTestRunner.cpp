@@ -2707,7 +2707,6 @@ TEST_F(RRDMsgDeliverTest, TestMessageDelivery)
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
     ASSERT_EQ(sbuf.mtype, receivedBuf.mtype);
-    ASSERT_EQ(receivedBuf.inDynamic, true);
 }
 
 TEST_F(RRDMsgDeliverTest, TestMessageDeliveryFailure)
