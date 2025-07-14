@@ -53,9 +53,9 @@
 #include "rrdInterface.c"
 
 //rrdIarm
-#ifdef IARMBUS_SUPPORT
+//#ifdef IARMBUS_SUPPORT
 #include "rrdIarmEvents.c"
-#endif
+//#endif
 
 // rrdMsgPackDecoder
 #include "rrdMsgPackDecoder.h"
