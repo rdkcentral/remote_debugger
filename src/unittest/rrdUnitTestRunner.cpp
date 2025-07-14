@@ -439,6 +439,17 @@ protected:
     }
 };
 
+TEST_F(FindIssueInParsedJSONTest, checkIssueNodeInfo_)
+{
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    data_buf buff;
+    issueData cmd;
+    cmd.command = strdup("echo hello");
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    checkIssueNodeInfo(&issue, json, &buff, true, &cmd);
+}
 TEST_F(FindIssueInParsedJSONTest, HandlesNormalInput)
 {
     issue.Node = strdup("MainNode");
