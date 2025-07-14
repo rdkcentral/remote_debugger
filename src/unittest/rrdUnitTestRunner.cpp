@@ -2665,6 +2665,63 @@ TEST(processIssueTypeTest, dynamicPath)
     processIssueType(&rbuf);
 }
 
+
+/* --------------- Test RRDMsgDeliver() from rrdIarm --------------- */
+extern int msqid;
+extern key_t key;
+
+class RRDMsgDeliverTest : public ::testing::Test
+{
+protected:
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        msqid_cpy = msqid;
+        key_cpy = key;
+        msqid = msgget(key, IPC_CREAT | 0666);
+
+        ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+    }
+
+    void TearDown() override
+    {
+        int ret = msgctl(msqid, IPC_RMID, nullptr);
+        ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+        msqid = msqid_cpy;
+        key = key_cpy;
+    }
+};
+
+TEST_F(RRDMsgDeliverTest, TestMessageDelivery)
+{
+    data_buf sbuf;
+    sbuf.mtype = IARM_EVENT_MSG;
+    sbuf.mdata = "mdata";
+    sbuf.inDynamic = true;
+    sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
+    RRDMsgDeliver(msqid, &sbuf);
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), DEFAULT, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+    ASSERT_EQ(sbuf.mtype, receivedBuf.mtype);
+    ASSERT_EQ(receivedBuf.inDynamic, true);
+}
+
+TEST_F(RRDMsgDeliverTest, TestMessageDeliveryFailure)
+{
+    data_buf sbuf;
+    sbuf.mtype = IARM_EVENT_MSG;
+    sbuf.mdata = "mdata";
+    sbuf.inDynamic = true;
+    sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
+
+    EXPECT_EXIT(RRDMsgDeliver(-1, &sbuf), ::testing::ExitedWithCode(1), ".*");
+}
+
+
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdIarm ================*/
 /* --------------- Test getBlobVersion() from rrdIarm --------------- */
