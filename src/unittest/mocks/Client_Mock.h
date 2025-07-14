@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #define IARM_BUS_RDK_REMOTE_DEBUGGER_NAME "rrd"
+#define IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE "Device"
 //#ifdef IARMBUS_SUPPORT
 /* ----------------- RDMMgr ---------- */
 #define IARM_BUS_RDMMGR_NAME "RDMMgr"
