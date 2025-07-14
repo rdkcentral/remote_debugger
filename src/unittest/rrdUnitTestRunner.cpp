@@ -2782,7 +2782,7 @@ namespace
 TEST(RRDDataBuffInitTest, InitializeDataBuff)
 {
     data_buf sbuf;
-    message_type_et sndtype = IARM_EVENT_MSG;
+    message_type_et sndtype = EVENT_MSG;
     deepsleep_event_et deepSleepEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
     RRD_data_buff_init(&sbuf, sndtype, deepSleepEvent);
 
