@@ -240,7 +240,7 @@ typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *me
 
 /* =============== Implementations ============== */
 /* ---------- IARM Impl -----------*/
-#ifdef IARMBUS_SUPPORT
+
 class ClientIARMMock
 {
 public:
@@ -253,7 +253,7 @@ public:
 };
 
 void setMock(ClientIARMMock *mock);
-#endif
+
 /* ------------------- RBUS Impl--------------- */
 class RBusApiInterface
 {
