@@ -2890,8 +2890,71 @@ TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailu
     EXPECT_EQ(result, IARM_RESULT_FAILURE);
 }
 
-/* --------------- Test _rdmManagerEventHandler() from rrdIarm --------------- */
+/* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
+class RemoteDebuggerEventHandlerTest : public ::testing::Test
+{
+protected:
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
 
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
+{
+    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "mdata";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidEventId)
+{
+    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
+    char data[] = "Test data";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+}
 
 
 
