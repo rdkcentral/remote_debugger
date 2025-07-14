@@ -2748,9 +2748,9 @@ protected:
 TEST_F(PushIssueTypesToMsgQueueTest, TestPushIssueTypesToMsgQueueSuccess)
 {
     char issueTypeList[] = "mdata";
-    pushIssueTypesToMsgQueue(issueTypeList, IARM_EVENT_MSG);
+    pushIssueTypesToMsgQueue(issueTypeList, EVENT_MSG);
     data_buf receivedBuf;
-    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
