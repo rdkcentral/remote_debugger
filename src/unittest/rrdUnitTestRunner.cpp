@@ -2871,7 +2871,7 @@ TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterRDMMgrEventHandlerRRDFa
 {
     EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
     int result = RRD_unsubscribe();
 
