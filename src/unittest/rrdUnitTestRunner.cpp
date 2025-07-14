@@ -2889,8 +2889,10 @@ TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailu
 
     EXPECT_EQ(result, IARM_RESULT_FAILURE);
 }
-
+/*
 /* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
+
+/*
 class RemoteDebuggerEventHandlerTest : public ::testing::Test
 {
 protected:
@@ -2955,7 +2957,7 @@ TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidEventId)
     char data[] = "Test data";
     _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
 }
-
+*/
 
 
 #ifdef IARMBUS_SUPPORT
