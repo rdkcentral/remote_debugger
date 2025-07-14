@@ -20,8 +20,8 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#define IARM_BUS_RDK_REMOTE_DEBUGGER_NAME rrd
-#ifdef IARMBUS_SUPPORT
+#define IARM_BUS_RDK_REMOTE_DEBUGGER_NAME "rrd"
+//#ifdef IARMBUS_SUPPORT
 /* ----------------- RDMMgr ---------- */
 #define IARM_BUS_RDMMGR_NAME "RDMMgr"
 #define RDM_PKG_NAME_MAX_SIZE 128
@@ -119,7 +119,7 @@ typedef struct _PWRMgr_EventData_t
         int32_t reset_sequence_progress;
     } data;
 } IARM_Bus_PWRMgr_EventData_t;
-#endif
+//#endif
 
 /* ---------------- WebConf ------------*/
 #define SUBDOC_NAME_SZ 64
