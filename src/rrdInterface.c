@@ -399,7 +399,7 @@ int RRD_unsubscribe()
     int ret = 0;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-#if defined(GTEST_ENABLE)
+#if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
     ret = RRD_IARM_unsubscribe();
     if (ret != 0)
     {
