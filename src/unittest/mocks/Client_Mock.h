@@ -235,6 +235,24 @@ struct _rbusObject
 };
 typedef struct _rbusObject *rbusObject_t;
 
+typedef enum
+{
+    RBUS_EVENT_OBJECT_CREATED,   /**< Notification that an object instance was created in table. */
+    RBUS_EVENT_OBJECT_DELETED,   /**< Notification that an object instance was deleted in table. */
+    RBUS_EVENT_VALUE_CHANGED,    /**< Notification that a property value was changed. */
+    RBUS_EVENT_GENERAL,          /**< Provider defined event.*/
+    RBUS_EVENT_INITIAL_VALUE,    /**< Notification of initial value immediately after subscription*/
+    RBUS_EVENT_INTERVAL,         /**< For event with interval*/
+    RBUS_EVENT_DURATION_COMPLETE /**< For event with duration timeout*/
+} rbusEventType_t;
+
+typedef struct
+{
+    char const*     name;       /**< Fully qualified event name */
+    rbusEventType_t type;       /**< The type of event */
+    rbusObject_t    data;       /**< The data for the event */
+}   rbusEvent_t;
+
 struct _rbusValue
 {
 };
