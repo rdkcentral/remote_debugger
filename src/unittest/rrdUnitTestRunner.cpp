@@ -2755,6 +2755,61 @@ TEST_F(PushIssueTypesToMsgQueueTest, TestPushIssueTypesToMsgQueueSuccess)
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
 
+/* ====================== rrdIarm ================*/
+/* --------------- Test getBlobVersion() from rrdIarm --------------- */
+extern uint32_t gWebCfgBloBVersion;
+namespace
+{
+    TEST(SetBlobVersionTest, SetsGlobalVariable)
+    {
+        char subdoc[] = "test_subdoc";
+        uint32_t version = 5;
+        int result = setBlobVersion(subdoc, version);
+
+        EXPECT_EQ(result, 0);
+        EXPECT_EQ(gWebCfgBloBVersion, version);
+    }
+    TEST(GetBlobVersionTest, ReturnsGlobalVariable)
+    {
+        char subdoc[] = "test_subdoc";
+        uint32_t result = getBlobVersion(subdoc);
+
+        EXPECT_EQ(result, gWebCfgBloBVersion);
+    }
+}
+
+/* --------------- Test RRD_data_buff_init() from rrdIarm --------------- */
+TEST(RRDDataBuffInitTest, InitializeDataBuff)
+{
+    data_buf sbuf;
+    message_type_et sndtype = IARM_EVENT_MSG;
+    deepsleep_event_et deepSleepEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    RRD_data_buff_init(&sbuf, sndtype, deepSleepEvent);
+
+    EXPECT_EQ(sbuf.mtype, sndtype);
+    EXPECT_EQ(sbuf.mdata, nullptr);
+    EXPECT_EQ(sbuf.jsonPath, nullptr);
+    EXPECT_FALSE(sbuf.inDynamic);
+    EXPECT_EQ(sbuf.dsEvent, deepSleepEvent);
+}
+
+/* --------------- Test RRD_data_buff_deAlloc() from rrdIarm --------------- */
+TEST(RRDDataBuffDeAllocTest, DeallocateDataBuff)
+{
+    data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
+    sbuf->mdata = (char *)malloc(10 * sizeof(char));
+    sbuf->jsonPath = (char *)malloc(10 * sizeof(char));
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+TEST(RRDDataBuffDeAllocTest, NullPointer)
+{
+    data_buf *sbuf = nullptr;
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdIarm ================*/
 /* --------------- Test getBlobVersion() from rrdIarm --------------- */
