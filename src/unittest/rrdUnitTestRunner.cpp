@@ -2697,7 +2697,7 @@ protected:
 TEST_F(RRDMsgDeliverTest, TestMessageDelivery)
 {
     data_buf sbuf;
-    sbuf.mtype = IARM_EVENT_MSG;
+    sbuf.mtype = EVENT_MSG;
     sbuf.mdata = "mdata";
     sbuf.inDynamic = true;
     sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
@@ -2713,7 +2713,7 @@ TEST_F(RRDMsgDeliverTest, TestMessageDelivery)
 TEST_F(RRDMsgDeliverTest, TestMessageDeliveryFailure)
 {
     data_buf sbuf;
-    sbuf.mtype = IARM_EVENT_MSG;
+    sbuf.mtype = EVENT_MSG;
     sbuf.mdata = "mdata";
     sbuf.inDynamic = true;
     sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
