@@ -234,48 +234,40 @@ struct _rbusObject
 {
 };
 typedef struct _rbusObject *rbusObject_t;
-
+/*
 typedef enum
 {
-    RBUS_EVENT_OBJECT_CREATED,   /**< Notification that an object instance was created in table. */
-    RBUS_EVENT_OBJECT_DELETED,   /**< Notification that an object instance was deleted in table. */
-    RBUS_EVENT_VALUE_CHANGED,    /**< Notification that a property value was changed. */
-    RBUS_EVENT_GENERAL,          /**< Provider defined event.*/
-    RBUS_EVENT_INITIAL_VALUE,    /**< Notification of initial value immediately after subscription*/
-    RBUS_EVENT_INTERVAL,         /**< For event with interval*/
-    RBUS_EVENT_DURATION_COMPLETE /**< For event with duration timeout*/
+    RBUS_EVENT_OBJECT_CREATED,   
+    RBUS_EVENT_OBJECT_DELETED,   
+    RBUS_EVENT_VALUE_CHANGED,    
+    RBUS_EVENT_GENERAL,          
+    RBUS_EVENT_INITIAL_VALUE,    
+    RBUS_EVENT_INTERVAL,         
+    RBUS_EVENT_DURATION_COMPLETE 
 } rbusEventType_t;
 
 typedef struct
 {
-    char const*     name;       /**< Fully qualified event name */
-    rbusEventType_t type;       /**< The type of event */
-    rbusObject_t    data;       /**< The data for the event */
+    char const*     name;       
+    rbusEventType_t type;       
+    rbusObject_t    data;       
 }   rbusEvent_t;
 
 typedef struct _rbusEventSubscription
 {
-    char const*         eventName;  /** Fully qualified event name */
-    rbusFilter_t        filter;     /** Optional filter that the client would like 
-                                        the sender to apply before sending the event
-                                      */
-    uint32_t             interval;   /**< Total interval period after which
-                                         the event needs to be fired. Should
-                                         be in multiples of minInterval
-                                      */
-    uint32_t            duration;   /** Optional maximum duration in seconds until which
-                                        the subscription should be in effect. Beyond this 
-                                        duration, the event would be unsubscribed automatically. 
-                                        Pass "0" for indefinite event subscription which requires 
-                                        the rbusEvent_Unsubscribe API to be called explicitly.
-                                      */
-    void*               handler;    /** fixme rbusEventHandler_t internal*/
-    void*               userData;   /** The userData set when subscribing to the event. */
-    rbusHandle_t        handle;     /** Private use only: The rbus handle associated with this subscription */
-    rbusSubscribeAsyncRespHandler_t asyncHandler;/** Private use only: The async handler being used for any background subscription retries */
+    char const*         eventName;  
+    rbusFilter_t        filter;     
+    uint32_t             interval;   
+    uint32_t            duration;   
+    void*               handler;    
+    void*               userData;   
+    rbusHandle_t        handle;     
+    rbusSubscribeAsyncRespHandler_t asyncHandler;
     bool                publishOnSubscribe;
 } rbusEventSubscription_t;
+
 typedef struct _rbusEventSubscription rbusEventSubscription_t;
+*/
 
 
 struct _rbusValue
