@@ -2810,6 +2810,86 @@ TEST(RRDDataBuffDeAllocTest, NullPointer)
     ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
 }
 
+/* --------------- Test RRD_unsubscribe() from rrdIarm --------------- */
+
+class RRDUnsubscribeTest : public ::testing::Test
+{
+protected:
+    ClientIARMMock mock;
+
+    void SetUp() override
+    {
+        setMock(&mock);
+    }
+
+    void TearDown() override
+    {
+        setMock(nullptr);
+    }
+};
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_Success)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    IARM_Result_t result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_DisconnectFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    IARM_Result_t result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_TermFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    IARM_Result_t result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterEventHandlerFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(::testing::_, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    IARM_Result_t result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterRDMMgrEventHandlerRRDFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    IARM_Result_t result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    IARM_Result_t result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdIarm ================*/
 /* --------------- Test getBlobVersion() from rrdIarm --------------- */
