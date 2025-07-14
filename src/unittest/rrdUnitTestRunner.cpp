@@ -2720,6 +2720,40 @@ TEST_F(RRDMsgDeliverTest, TestMessageDeliveryFailure)
     EXPECT_EXIT(RRDMsgDeliver(-1, &sbuf), ::testing::ExitedWithCode(1), ".*");
 }
 
+/* --------------- Test pushIssueTypesToMsgQueue() from rrdIarm --------------- */
+class PushIssueTypesToMsgQueueTest : public ::testing::Test
+{
+protected:
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        msqid_cpy = msqid;
+        key_cpy = key;
+        msqid = msgget(key, IPC_CREAT | 0666);
+
+        ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+    }
+
+    void TearDown() override
+    {
+        int ret = msgctl(msqid, IPC_RMID, nullptr);
+        ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+        msqid = msqid_cpy;
+        key = key_cpy;
+    }
+};
+
+TEST_F(PushIssueTypesToMsgQueueTest, TestPushIssueTypesToMsgQueueSuccess)
+{
+    char issueTypeList[] = "mdata";
+    pushIssueTypesToMsgQueue(issueTypeList, IARM_EVENT_MSG);
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
 
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdIarm ================*/
