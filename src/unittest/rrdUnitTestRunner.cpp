@@ -2935,7 +2935,7 @@ TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
     char data[] = "mdata";
     _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
     data_buf receivedBuf;
-    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
