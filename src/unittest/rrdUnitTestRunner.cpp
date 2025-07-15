@@ -4654,7 +4654,7 @@ protected:
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
         {
             RBusApiWrapper::clearImpl();
         }
