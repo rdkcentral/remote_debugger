@@ -4646,7 +4646,7 @@ protected:
     void SetUp() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name = "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
         }
