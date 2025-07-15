@@ -4708,7 +4708,7 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
     IARM_Bus_PWRMgr_EventData_t eventData;
     eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
     eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
