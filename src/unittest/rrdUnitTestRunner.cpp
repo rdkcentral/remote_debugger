@@ -4639,7 +4639,7 @@ TEST_F(RRDSubscribeTest, TestRRD_Subscribe_AllSuccess)
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
-    int result = RRD_subscribe();
+    int result = RRD_IARM_subscribe();
 
     //EXPECT_EQ(result, IARM_RESULT_SUCCESS);
 }
