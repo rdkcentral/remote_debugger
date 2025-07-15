@@ -4634,8 +4634,8 @@ TEST_F(RRDSubscribeTest, TestRRD_Subscribe_AllSuccess)
 {
     EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_Connect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
     EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
