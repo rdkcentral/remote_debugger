@@ -4647,7 +4647,7 @@ protected:
     {
         //RBusApiWrapper::setImpl(&mock_rbus_api);
         string test_name = getCurrentTestName();
-        if (test_name != "TestInvalidOwnerName" || test_name != TestCurrentStateNotDeepSleep)
+        if (test_name != "TestInvalidOwnerName" || test_name != "TestCurrentStateNotDeepSleep")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
         } 
@@ -4656,7 +4656,7 @@ protected:
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        if (test_name != "TestInvalidOwnerName" || test_name != TestCurrentStateNotDeepSleep)
+        if (test_name != "TestInvalidOwnerName" || test_name != "TestCurrentStateNotDeepSleep")
         RBusApiWrapper::clearImpl();
         /*
         
