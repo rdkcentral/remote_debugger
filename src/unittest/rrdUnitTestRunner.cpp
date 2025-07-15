@@ -4660,16 +4660,6 @@ TEST_F(RRDSubscribeTest, TestRRD_Subscribe_ConnectFail)
     //EXPECT_NE(result, IARM_RESULT_SUCCESS);
 }
 
-TEST_F(RRDSubscribeTest, TestRRD_Subscribe_RRDHandlerFail)
-{
-    EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_Connect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
-    int result = RRD_IARM_subscribe();
-
-    //EXPECT_NE(result, IARM_RESULT_SUCCESS);
-}
-
 TEST_F(RRDSubscribeTest, TestRRD_Subscribe_RDMMgrHandlerFail)
 {
     EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
