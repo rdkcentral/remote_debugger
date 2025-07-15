@@ -4655,10 +4655,11 @@ protected:
     }
     void TearDown() override
     {
+        string test_name = getCurrentTestName();
         if (test_name != "TestInvalidOwnerName")
         RBusApiWrapper::clearImpl();
         /*
-        string test_name = getCurrentTestName();
+        
         if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::clearImpl();
