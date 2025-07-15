@@ -2766,328 +2766,6 @@ TEST_F(PushIssueTypesToMsgQueueTest, TestPushIssueTypesToMsgQueueSuccess)
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
 
-/* ====================== rrdIarm ================*/
-/* --------------- Test getBlobVersion() from rrdIarm --------------- */
-extern uint32_t gWebCfgBloBVersion;
-namespace
-{
-    TEST(SetBlobVersionTest, SetsGlobalVariable)
-    {
-        char subdoc[] = "test_subdoc";
-        uint32_t version = 5;
-        int result = setBlobVersion(subdoc, version);
-
-        EXPECT_EQ(result, 0);
-        EXPECT_EQ(gWebCfgBloBVersion, version);
-    }
-    TEST(GetBlobVersionTest, ReturnsGlobalVariable)
-    {
-        char subdoc[] = "test_subdoc";
-        uint32_t result = getBlobVersion(subdoc);
-
-        EXPECT_EQ(result, gWebCfgBloBVersion);
-    }
-}
-
-/* --------------- Test RRD_data_buff_init() from rrdIarm --------------- */
-TEST(RRDDataBuffInitTest, InitializeDataBuff)
-{
-    data_buf sbuf;
-    message_type_et sndtype = EVENT_MSG;
-    deepsleep_event_et deepSleepEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
-    RRD_data_buff_init(&sbuf, sndtype, deepSleepEvent);
-
-    EXPECT_EQ(sbuf.mtype, sndtype);
-    EXPECT_EQ(sbuf.mdata, nullptr);
-    EXPECT_EQ(sbuf.jsonPath, nullptr);
-    EXPECT_FALSE(sbuf.inDynamic);
-    EXPECT_EQ(sbuf.dsEvent, deepSleepEvent);
-}
-
-/* --------------- Test RRD_data_buff_deAlloc() from rrdIarm --------------- */
-TEST(RRDDataBuffDeAllocTest, DeallocateDataBuff)
-{
-    data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
-    sbuf->mdata = (char *)malloc(10 * sizeof(char));
-    sbuf->jsonPath = (char *)malloc(10 * sizeof(char));
-
-    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
-}
-
-TEST(RRDDataBuffDeAllocTest, NullPointer)
-{
-    data_buf *sbuf = nullptr;
-
-    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
-}
-
-/* --------------- Test RRD_unsubscribe() from rrdIarm --------------- */
-
-class RRDUnsubscribeTest : public ::testing::Test
-{
-protected:
-    ClientIARMMock mock;
-
-    void SetUp() override
-    {
-        setMock(&mock);
-    }
-
-    void TearDown() override
-    {
-        setMock(nullptr);
-    }
-};
-
-TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_Success)
-{
-    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    int result = RRD_unsubscribe();
-
-    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
-}
-
-TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_DisconnectFailure)
-{
-    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
-    int result = RRD_unsubscribe();
-
-    EXPECT_EQ(result, IARM_RESULT_FAILURE);
-}
-
-TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_TermFailure)
-{
-    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
-    int result = RRD_unsubscribe();
-
-    EXPECT_EQ(result, IARM_RESULT_FAILURE);
-}
-
-TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterEventHandlerFailure)
-{
-    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(::testing::_, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
-    int result = RRD_unsubscribe();
-
-    EXPECT_EQ(result, IARM_RESULT_FAILURE);
-}
-
-TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterRDMMgrEventHandlerRRDFailure)
-{
-    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
-    int result = RRD_unsubscribe();
-
-    EXPECT_EQ(result, IARM_RESULT_FAILURE);
-}
-
-TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailure)
-{
-    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
-    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
-    int result = RRD_unsubscribe();
-
-    EXPECT_EQ(result, IARM_RESULT_FAILURE);
-}
-
-/* --------------- Test webconfigFrameworkInit() from rrdIarm --------------- */
-class WebConfigIntegrationTest : public ::testing::Test
-{
-protected:
-    ClientWebConfigMock mock_webconfig;
-
-    void SetUp() override
-    {
-        setWebConfigMock(&mock_webconfig);
-    }
-
-    void TearDown() override
-    {
-        setWebConfigMock(nullptr);
-    }
-};
-
-TEST_F(WebConfigIntegrationTest, TestWebconfigFrameworkInit)
-{
-    EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
-    webconfigFrameworkInit();
-}
-
-/* --------------- Test _pwrManagerEventHandler() from rrdIarm --------------- */
-class PwrMgrEventHandlerTest : public ::testing::Test
-{
-protected:
-    MockRBusApi mock_rbus_api;
-    string getCurrentTestName()
-    {
-        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
-        return test_info->name();
-    }
-    void SetUp() override
-    {
-        string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
-        {
-            RBusApiWrapper::setImpl(&mock_rbus_api);
-        }
-    }
-    void TearDown() override
-    {
-        string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
-        {
-            RBusApiWrapper::clearImpl();
-        }
-    }
-};
-
-TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
-{
-    const char *owner = "InvalidOwner";
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    char data[] = "Test data";
-    _pwrManagerEventHandler(owner, eventId, data, sizeof(data));
-}
-
-TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
-{
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
-}
-/*
-TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
-{
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
-    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
-            .WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
-            .WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
-            .WillOnce(Return(RBUS_ERROR_SUCCESS));
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
-}
-
-TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail)
-{
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-
-    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
-}
-*/
-TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess)
-{
-    const char *owner = IARM_BUS_PWRMGR_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    IARM_Bus_PWRMgr_EventData_t eventData;
-    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
-    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
-
-    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
-    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
-}
-
-/*
-/* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
-
-/*
-class RemoteDebuggerEventHandlerTest : public ::testing::Test
-{
-protected:
-    string getCurrentTestName()
-    {
-        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
-        return test_info->name();
-    }
-    int msqid_cpy;
-    key_t key_cpy;
-    void SetUp() override
-    {
-        string test_name = getCurrentTestName();
-        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
-        {
-            msqid_cpy = msqid;
-            key_cpy = key;
-            msqid = msgget(key, IPC_CREAT | 0666);
-
-            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
-        }
-    }
-
-    void TearDown() override
-    {
-        string test_name = getCurrentTestName();
-        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
-        {
-            int ret = msgctl(msqid, IPC_RMID, nullptr);
-            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
-
-            msqid = msqid_cpy;
-            key = key_cpy;
-        }
-    }
-};
-
-TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
-{
-    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    char data[] = "mdata";
-    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
-    data_buf receivedBuf;
-    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
-
-    ASSERT_NE(ret, -1) << "Error receiving message from queue";
-}
-
-TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
-{
-    const char *owner = "InvalidOwner";
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    char data[] = "Test data";
-    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
-}
-
-TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidEventId)
-{
-    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
-    char data[] = "Test data";
-    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
-}
-*/
-
-
 #ifdef IARMBUS_SUPPORT
 /* ====================== rrdIarm ================*/
 /* --------------- Test getBlobVersion() from rrdIarm --------------- */
@@ -4796,3 +4474,326 @@ GTEST_API_ main(int argc, char *argv[])
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
+/* ====================== rrdIarm ================*/
+/* --------------- Test getBlobVersion() from rrdIarm --------------- */
+extern uint32_t gWebCfgBloBVersion;
+namespace
+{
+    TEST(SetBlobVersionTest, SetsGlobalVariable)
+    {
+        char subdoc[] = "test_subdoc";
+        uint32_t version = 5;
+        int result = setBlobVersion(subdoc, version);
+
+        EXPECT_EQ(result, 0);
+        EXPECT_EQ(gWebCfgBloBVersion, version);
+    }
+    TEST(GetBlobVersionTest, ReturnsGlobalVariable)
+    {
+        char subdoc[] = "test_subdoc";
+        uint32_t result = getBlobVersion(subdoc);
+
+        EXPECT_EQ(result, gWebCfgBloBVersion);
+    }
+}
+
+/* --------------- Test RRD_data_buff_init() from rrdIarm --------------- */
+TEST(RRDDataBuffInitTest, InitializeDataBuff)
+{
+    data_buf sbuf;
+    message_type_et sndtype = EVENT_MSG;
+    deepsleep_event_et deepSleepEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    RRD_data_buff_init(&sbuf, sndtype, deepSleepEvent);
+
+    EXPECT_EQ(sbuf.mtype, sndtype);
+    EXPECT_EQ(sbuf.mdata, nullptr);
+    EXPECT_EQ(sbuf.jsonPath, nullptr);
+    EXPECT_FALSE(sbuf.inDynamic);
+    EXPECT_EQ(sbuf.dsEvent, deepSleepEvent);
+}
+
+/* --------------- Test RRD_data_buff_deAlloc() from rrdIarm --------------- */
+TEST(RRDDataBuffDeAllocTest, DeallocateDataBuff)
+{
+    data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
+    sbuf->mdata = (char *)malloc(10 * sizeof(char));
+    sbuf->jsonPath = (char *)malloc(10 * sizeof(char));
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+TEST(RRDDataBuffDeAllocTest, NullPointer)
+{
+    data_buf *sbuf = nullptr;
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+/* --------------- Test RRD_unsubscribe() from rrdIarm --------------- */
+
+class RRDUnsubscribeTest : public ::testing::Test
+{
+protected:
+    ClientIARMMock mock;
+
+    void SetUp() override
+    {
+        setMock(&mock);
+    }
+
+    void TearDown() override
+    {
+        setMock(nullptr);
+    }
+};
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_Success)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_DisconnectFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_TermFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterEventHandlerFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(::testing::_, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterRDMMgrEventHandlerRRDFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+/* --------------- Test webconfigFrameworkInit() from rrdIarm --------------- */
+class WebConfigIntegrationTest : public ::testing::Test
+{
+protected:
+    ClientWebConfigMock mock_webconfig;
+
+    void SetUp() override
+    {
+        setWebConfigMock(&mock_webconfig);
+    }
+
+    void TearDown() override
+    {
+        setWebConfigMock(nullptr);
+    }
+};
+
+TEST_F(WebConfigIntegrationTest, TestWebconfigFrameworkInit)
+{
+    EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
+    webconfigFrameworkInit();
+}
+
+/* --------------- Test _pwrManagerEventHandler() from rrdIarm --------------- */
+class PwrMgrEventHandlerTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        {
+            RBusApiWrapper::setImpl(&mock_rbus_api);
+        }
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        {
+            RBusApiWrapper::clearImpl();
+        }
+    }
+};
+
+TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _pwrManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+/*
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+
+    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+
+    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+*/
+
+
+/*
+/* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
+
+/*
+class RemoteDebuggerEventHandlerTest : public ::testing::Test
+{
+protected:
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
+
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
+{
+    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "mdata";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidEventId)
+{
+    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
+    char data[] = "Test data";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+}
+*/
