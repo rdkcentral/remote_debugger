@@ -4649,6 +4649,7 @@ protected:
         string test_name = getCurrentTestName();
         if (test_name != "TestInvalidOwnerName" || test_name != "TestCurrentStateNotDeepSleep")
         {
+            RBusApiWrapper::clearImpl();
             RBusApiWrapper::setImpl(&mock_rbus_api);
         } 
         ::testing::Mock::AllowLeak(&mock_rbus_api);
