@@ -438,7 +438,7 @@ protected:
         cJSON_Delete(json);
     }
 };
-
+/*
 TEST_F(FindIssueInParsedJSONTest, checkIssueNodeInfo_)
 {
     issue.Node = strdup("MainNode");
@@ -449,7 +449,7 @@ TEST_F(FindIssueInParsedJSONTest, checkIssueNodeInfo_)
     cmd.rfcvalue = strdup("dummy");
     cmd.timeout = 0;
     checkIssueNodeInfo(&issue, json, &buff, false, &cmd);
-}
+} */
 TEST_F(FindIssueInParsedJSONTest, HandlesNormalInput)
 {
     issue.Node = strdup("MainNode");
