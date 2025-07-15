@@ -4645,16 +4645,17 @@ protected:
     }
     void SetUp() override
     {
-        RBusApiWrapper::setImpl(&mock_rbus_api);
-        ::testing::Mock::AllowLeak(&mock_rbus_api);
-        /*string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        //RBusApiWrapper::setImpl(&mock_rbus_api);
+        string test_name = getCurrentTestName();
+        if (test_name != "TestInvalidOwnerName")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
-        } */
+        } 
+        ::testing::Mock::AllowLeak(&mock_rbus_api);
     }
     void TearDown() override
     {
+        if (test_name != "TestInvalidOwnerName")
         RBusApiWrapper::clearImpl();
         /*
         string test_name = getCurrentTestName();
