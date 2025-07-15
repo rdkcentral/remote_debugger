@@ -4637,7 +4637,7 @@ TEST_F(WebConfigIntegrationTest, TestWebconfigFrameworkInit)
 class PwrMgrEventHandlerTest : public ::testing::Test
 {
 protected:
-    MockRBusApi mock_rbus_api;
+    
     string getCurrentTestName()
     {
         const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
@@ -4646,7 +4646,7 @@ protected:
     void SetUp() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
         }
@@ -4654,7 +4654,7 @@ protected:
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::clearImpl();
         }
@@ -4686,6 +4686,7 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSu
     IARM_Bus_PWRMgr_EventData_t eventData;
     eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
     eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    MockRBusApi mock_rbus_api;
 
     //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
