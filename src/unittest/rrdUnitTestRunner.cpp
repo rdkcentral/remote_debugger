@@ -4646,6 +4646,7 @@ protected:
     void SetUp() override
     {
         RBusApiWrapper::setImpl(&mock_rbus_api);
+        ::testing::Mock::AllowLeak(&mock_rbus_api);
         /*string test_name = getCurrentTestName();
         if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
