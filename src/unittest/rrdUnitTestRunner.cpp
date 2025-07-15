@@ -4646,18 +4646,18 @@ protected:
     void SetUp() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        /*if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
-        }
+        } */
     }
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        /* if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::clearImpl();
-        }
+        } */
     }
 };
 
