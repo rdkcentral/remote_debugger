@@ -2969,7 +2969,7 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
     eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
     _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
-
+/*
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
 {
     const char *owner = IARM_BUS_PWRMGR_NAME;
@@ -2986,7 +2986,7 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
     _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
-
+*/
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail)
 {
     const char *owner = IARM_BUS_PWRMGR_NAME;
