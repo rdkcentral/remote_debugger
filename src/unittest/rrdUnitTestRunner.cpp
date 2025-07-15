@@ -2924,6 +2924,92 @@ TEST_F(WebConfigIntegrationTest, TestWebconfigFrameworkInit)
     webconfigFrameworkInit();
 }
 
+/* --------------- Test _pwrManagerEventHandler() from rrdIarm --------------- */
+class PwrMgrEventHandlerTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        {
+            RBusApiWrapper::setImpl(&mock_rbus_api);
+        }
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        {
+            RBusApiWrapper::clearImpl();
+        }
+    }
+};
+
+TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _pwrManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+
+    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+
+    EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
 
 /*
 /* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
