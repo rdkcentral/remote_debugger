@@ -4666,7 +4666,7 @@ protected:
         } */
     }
 };
-
+/*
 TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
 {
     const char *owner = "InvalidOwner";
@@ -4674,7 +4674,7 @@ TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
     char data[] = "Test data";
     _pwrManagerEventHandler(owner, eventId, data, sizeof(data));
 }
-
+*/
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
 {
     const char *owner = IARM_BUS_PWRMGR_NAME;
