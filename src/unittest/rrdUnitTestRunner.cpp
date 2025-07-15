@@ -2937,7 +2937,7 @@ protected:
     void SetUp() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::setImpl(&mock_rbus_api);
         }
@@ -2945,7 +2945,7 @@ protected:
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess")
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::clearImpl();
         }
