@@ -2900,6 +2900,31 @@ TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailu
 
     EXPECT_EQ(result, IARM_RESULT_FAILURE);
 }
+
+/* --------------- Test webconfigFrameworkInit() from rrdIarm --------------- */
+class WebConfigIntegrationTest : public ::testing::Test
+{
+protected:
+    ClientWebConfigMock mock_webconfig;
+
+    void SetUp() override
+    {
+        setWebConfigMock(&mock_webconfig);
+    }
+
+    void TearDown() override
+    {
+        setWebConfigMock(nullptr);
+    }
+};
+
+TEST_F(WebConfigIntegrationTest, TestWebconfigFrameworkInit)
+{
+    EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
+    webconfigFrameworkInit();
+}
+
+
 /*
 /* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
 
