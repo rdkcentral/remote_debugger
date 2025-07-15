@@ -4701,7 +4701,6 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSu
     _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
 
-/*
 TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
 {
     const char *owner = IARM_BUS_PWRMGR_NAME;
@@ -4733,9 +4732,6 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFa
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
-
-
-*/
 
 
 /*
