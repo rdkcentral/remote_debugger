@@ -4807,6 +4807,129 @@ TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFa
     _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
 
+/* --------------- Test _rdmManagerEventHandler() from rrdIarm --------------- */
+class RDMMgrEventHandlerTest : public ::testing::Test
+{
+protected:
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestFoundInCacheDownloadIsCompleteAndDEEPSLEEPIssue" || test_name == "TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEPIssue")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
+
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestFoundInCacheDownloadIsCompleteDEEPSLEEPIssue" || test_name == "TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEPIssue")
+        {
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RDMMgrEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _rdmManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestInvalidEventId)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
+    char data[] = "Test data";
+    _rdmManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestNotFoundInCache)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "Test package", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadNotComplete)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("IssueString");
+    node->next = NULL;
+    cacheDataNode = node;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "PkgData", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    eventData.rdm_pkg_info.pkg_inst_status = RDM_PKG_INSTALL_ERROR;
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndDEEPSLEEPIssue)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("DEEPSLEEP");
+    node->next = NULL;
+    cacheDataNode = node;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "PkgData", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    eventData.rdm_pkg_info.pkg_inst_status = RDM_PKG_INSTALL_COMPLETE;
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEPIssue)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("NotDeepSleepIssue");
+    node->next = NULL;
+    cacheDataNode = node;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "PkgData", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    eventData.rdm_pkg_info.pkg_inst_status = RDM_PKG_INSTALL_COMPLETE;
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestInvalidOwnerName1)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _rdmDownloadEventHandler(owner, eventId, data, sizeof(data));
+}
+
 
 /*
 /* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
