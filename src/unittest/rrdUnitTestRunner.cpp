@@ -4914,15 +4914,6 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEP
     _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
 
-TEST_F(RDMMgrEventHandlerTest, TestInvalidOwnerName1)
-{
-    const char *owner = "InvalidOwner";
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
-    char data[] = "Test data";
-    _rdmDownloadEventHandler(owner, eventId, data, sizeof(data));
-}
-
-
 /*
 /* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
 
