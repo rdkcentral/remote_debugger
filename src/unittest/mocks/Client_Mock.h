@@ -233,6 +233,7 @@ typedef struct _rbusHandle *rbusHandle_t;
 struct _rbusObject
 {
 };
+/*
 typedef struct _rbusObject *rbusObject_t;
 typedef enum
 {
@@ -273,6 +274,7 @@ struct _rbusValue
 typedef struct _rbusValue *rbusValue_t;
 
 typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *methodName, rbusError_t error, rbusObject_t params);
+*/
 
 /* =============== Implementations ============== */
 /* ---------- IARM Impl -----------*/
