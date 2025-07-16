@@ -235,39 +235,6 @@ struct _rbusObject
 };
 
 typedef struct _rbusObject *rbusObject_t;
-typedef enum
-{
-    RBUS_EVENT_OBJECT_CREATED,   
-    RBUS_EVENT_OBJECT_DELETED,   
-    RBUS_EVENT_VALUE_CHANGED,    
-    RBUS_EVENT_GENERAL,          
-    RBUS_EVENT_INITIAL_VALUE,    
-    RBUS_EVENT_INTERVAL,         
-    RBUS_EVENT_DURATION_COMPLETE 
-} rbusEventType_t;
-
-typedef struct
-{
-    char const*     name;       
-    rbusEventType_t type;       
-    rbusObject_t    data;       
-}   rbusEvent_t;
-
-typedef struct _rbusEventSubscription
-{
-    char const*         eventName;    
-    uint32_t             interval;   
-    uint32_t            duration;   
-    void*               handler;    
-    void*               userData;   
-    rbusHandle_t        handle;     
-    rbusSubscribeAsyncRespHandler_t asyncHandler;
-    bool                publishOnSubscribe;
-} rbusEventSubscription_t;
-
-typedef struct _rbusEventSubscription rbusEventSubscription_t;
-
-
 struct _rbusValue
 {
 };
