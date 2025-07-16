@@ -234,7 +234,6 @@ struct _rbusObject
 {
 };
 typedef struct _rbusObject *rbusObject_t;
-/*
 typedef enum
 {
     RBUS_EVENT_OBJECT_CREATED,   
@@ -255,8 +254,7 @@ typedef struct
 
 typedef struct _rbusEventSubscription
 {
-    char const*         eventName;  
-    rbusFilter_t        filter;     
+    char const*         eventName;    
     uint32_t             interval;   
     uint32_t            duration;   
     void*               handler;    
@@ -267,7 +265,6 @@ typedef struct _rbusEventSubscription
 } rbusEventSubscription_t;
 
 typedef struct _rbusEventSubscription rbusEventSubscription_t;
-*/
 
 
 struct _rbusValue
