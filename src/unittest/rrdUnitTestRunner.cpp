@@ -869,7 +869,7 @@ TEST_F(SetParamByRFC, TestSetParam)
     EXPECT_EQ(result, tr181Failure);
 }
 
-#ifdef IARMBUS_SUPPORT
+//#ifdef IARMBUS_SUPPORT
 /* ----------------IARM --------------- */
 class IARMBusTest : public ::testing::Test
 {
@@ -913,7 +913,7 @@ TEST_F(IARMBusTest, TestIARM_Bus_UnRegisterEventHandler)
     IARM_Result_t result = IARM_Bus_UnRegisterEventHandler("owner", IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS);
     EXPECT_EQ(result, IARM_RESULT_SUCCESS);
 }
-#endif
+//#endif
 
 /* ------------- RBUS ------------- */
 class RBusApiTest : public ::testing::Test
