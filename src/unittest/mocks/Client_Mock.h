@@ -259,6 +259,11 @@ typedef struct
     rbusObject_t    data;       /**< The data for the event */
 } rbusEvent_t;
 typedef struct _rbusFilter* rbusFilter_t;
+typedef void (*rbusSubscribeAsyncRespHandler_t)(
+    rbusHandle_t handle, 
+    rbusEventSubscription_t* subscription,
+    rbusError_t error);
+
 typedef struct _rbusEventSubscription
 {
     char const*         eventName;  /** Fully qualified event name */
@@ -282,10 +287,6 @@ typedef struct _rbusEventSubscription
     bool                publishOnSubscribe;
 } rbusEventSubscription_t;
 
-typedef void (*rbusSubscribeAsyncRespHandler_t)(
-    rbusHandle_t handle, 
-    rbusEventSubscription_t* subscription,
-    rbusError_t error);
 typedef struct _rbusEventSubscription rbusEventSubscription_t;
 
 /* =============== Implementations ============== */
