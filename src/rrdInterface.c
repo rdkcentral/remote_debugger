@@ -301,6 +301,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     free(pkg_name);
     free(pkg_inst_path);
 }
+#endif
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *dataMsg = NULL;
@@ -338,7 +339,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
-
+#if !defined(GTEST_ENABLE)
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *inString = NULL;
