@@ -20,6 +20,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+
 typedef enum _RemoteDebugger_EventId_t {
         IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
         IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
@@ -239,9 +240,38 @@ struct _rbusValue
 {
 };
 typedef struct _rbusValue *rbusValue_t;
-
 typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *methodName, rbusError_t error, rbusObject_t params);
+typedef struct
+{
+    char const*     name;       /**< Fully qualified event name */
+    rbusEventType_t type;       /**< The type of event */
+    rbusObject_t    data;       /**< The data for the event */
+} rbusEvent_t;
+typedef struct _rbusFilter* rbusFilter_t;
+typedef struct _rbusEventSubscription
+{
+    char const*         eventName;  /** Fully qualified event name */
+    rbusFilter_t        filter;     /** Optional filter that the client would like 
+                                        the sender to apply before sending the event
+                                      */
+    uint32_t             interval;   /**< Total interval period after which
+                                         the event needs to be fired. Should
+                                         be in multiples of minInterval
+                                      */
+    uint32_t            duration;   /** Optional maximum duration in seconds until which
+                                        the subscription should be in effect. Beyond this 
+                                        duration, the event would be unsubscribed automatically. 
+                                        Pass "0" for indefinite event subscription which requires 
+                                        the rbusEvent_Unsubscribe API to be called explicitly.
+                                      */
+    void*               handler;    /** fixme rbusEventHandler_t internal*/
+    void*               userData;   /** The userData set when subscribing to the event. */
+    rbusHandle_t        handle;     /** Private use only: The rbus handle associated with this subscription */
+    rbusSubscribeAsyncRespHandler_t asyncHandler;/** Private use only: The async handler being used for any background subscription retries */
+    bool                publishOnSubscribe;
+} rbusEventSubscription_t;
 
+typedef struct _rbusEventSubscription rbusEventSubscription_t;
 
 /* =============== Implementations ============== */
 /* ---------- IARM Impl -----------*/
