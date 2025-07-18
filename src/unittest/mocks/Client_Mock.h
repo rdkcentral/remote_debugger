@@ -241,6 +241,17 @@ struct _rbusValue
 };
 typedef struct _rbusValue *rbusValue_t;
 typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *methodName, rbusError_t error, rbusObject_t params);
+typedef enum
+{
+    RBUS_EVENT_OBJECT_CREATED,   /**< Notification that an object instance was created in table. */
+    RBUS_EVENT_OBJECT_DELETED,   /**< Notification that an object instance was deleted in table. */
+    RBUS_EVENT_VALUE_CHANGED,    /**< Notification that a property value was changed. */
+    RBUS_EVENT_GENERAL,          /**< Provider defined event.*/
+    RBUS_EVENT_INITIAL_VALUE,    /**< Notification of initial value immediately after subscription*/
+    RBUS_EVENT_INTERVAL,         /**< For event with interval*/
+    RBUS_EVENT_DURATION_COMPLETE /**< For event with duration timeout*/
+} rbusEventType_t;
+
 typedef struct
 {
     char const*     name;       /**< Fully qualified event name */
@@ -271,6 +282,10 @@ typedef struct _rbusEventSubscription
     bool                publishOnSubscribe;
 } rbusEventSubscription_t;
 
+typedef void (*rbusSubscribeAsyncRespHandler_t)(
+    rbusHandle_t handle, 
+    rbusEventSubscription_t* subscription,
+    rbusError_t error);
 typedef struct _rbusEventSubscription rbusEventSubscription_t;
 
 /* =============== Implementations ============== */
