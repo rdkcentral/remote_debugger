@@ -259,10 +259,7 @@ typedef struct
     rbusObject_t    data;       /**< The data for the event */
 } rbusEvent_t;
 typedef struct _rbusFilter* rbusFilter_t;
-typedef void (*rbusSubscribeAsyncRespHandler_t)(
-    rbusHandle_t handle, 
-    rbusEventSubscription_t* subscription,
-    rbusError_t error);
+
 
 typedef struct _rbusEventSubscription
 {
@@ -288,6 +285,11 @@ typedef struct _rbusEventSubscription
 } rbusEventSubscription_t;
 
 typedef struct _rbusEventSubscription rbusEventSubscription_t;
+
+typedef void (*rbusSubscribeAsyncRespHandler_t)(
+    rbusHandle_t handle, 
+    rbusEventSubscription_t* subscription,
+    rbusError_t error);
 
 /* =============== Implementations ============== */
 /* ---------- IARM Impl -----------*/
