@@ -4958,14 +4958,8 @@ protected:
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
     
-    rbusEventSubscription_t subscriptions[1];
-    subscriptions[0].eventName = RRD_SET_ISSUE_EVENT;
-    subscriptions[0].filter = NULL;
-    subscriptions[0].duration = 0;
-    subscriptions[0].handler  = _remoteDebuggerEventHandler;
-    subscriptions[0].userData = NULL
-    char data[] = "mdata";
-    _remoteDebuggerEventHandler(handle, event, subscription);
+    rbusEvent_t event{};  
+    _remoteDebuggerEventHandler(nullptr, &event, nullptr);
     data_buf receivedBuf;
     int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
 
