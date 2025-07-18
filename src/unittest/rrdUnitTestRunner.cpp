@@ -4917,7 +4917,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEP
 /*
 /* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
 
-/*
+
 class RemoteDebuggerEventHandlerTest : public ::testing::Test
 {
 protected:
@@ -4957,16 +4957,21 @@ protected:
 
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
-    const char *owner = RDK_REMOTE_DEBUGGER_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    
+    rbusEventSubscription_t subscriptions[1];
+    subscriptions[0].eventName = RRD_SET_ISSUE_EVENT;
+    subscriptions[0].filter = NULL;
+    subscriptions[0].duration = 0;
+    subscriptions[0].handler  = _remoteDebuggerEventHandler;
+    subscriptions[0].userData = NULL
     char data[] = "mdata";
-    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+    _remoteDebuggerEventHandler(handle, event, subscription);
     data_buf receivedBuf;
     int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
-
+/*
 TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
 {
     const char *owner = "InvalidOwner";
