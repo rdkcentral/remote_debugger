@@ -4972,8 +4972,8 @@ TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
             .WillOnce(Return("Test"));
     EXPECT_CALL(mock_rbus_api, rbusValue_GetString(_, _))
             .WillOnce(Return("Test"));
-    //_remoteDebuggerEventHandler(nullptr, &event, nullptr);
-    _remoteDebuggerEventHandler(handle, &event, subscription);
+    _remoteDebuggerEventHandler(nullptr, &event, nullptr);
+    //_remoteDebuggerEventHandler(handle, &event, subscription);
     data_buf receivedBuf;
     int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
 
