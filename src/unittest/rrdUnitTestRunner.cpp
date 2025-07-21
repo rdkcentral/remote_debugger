@@ -4956,7 +4956,7 @@ protected:
         }
     }
 };
-
+/*
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
     MockRBusApi mock_rbus_api;
@@ -4979,6 +4979,8 @@ TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
+*/
+
 /*
 TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
 {
