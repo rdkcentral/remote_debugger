@@ -319,6 +319,7 @@ public:
     virtual rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
     virtual rbusValue_t rbusObject_GetValue(rbusObject_t object, char const* name) = 0;
     virtual char const* rbusValue_GetString(rbusValue_t value, int* len) = 0;
+    virtual char* rbusValue_ToString(rbusValue_t v, char* buf, size_t buflen) = 0;
 };
 
 class RBusApiWrapper
@@ -338,6 +339,7 @@ public:
     static rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
     static rbusValue_t rbusObject_GetValue(rbusObject_t object, char const* name);
     static char const* rbusValue_GetString(rbusValue_t value, int* len);
+    static char* rbusValue_ToString(rbusValue_t v, char* buf, size_t buflen);
 };
 
 extern rbusError_t (*rbus_open)(rbusHandle_t *, char const *);
@@ -348,6 +350,7 @@ extern rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMeth
 extern rbusError_t (*rbus_get)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
 extern rbusValue_t (*rbusObject_GetValue)(rbusObject_t , char const *);
 extern char const* (*rbusValue_GetString)(rbusValue_t, int);
+extern char* (*rbusValue_ToString)(rbusValue_t, char*, size_t);
 
 class MockRBusApi : public RBusApiInterface
 {
@@ -360,6 +363,7 @@ public:
     MOCK_METHOD4(rbus_get, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
     MOCK_METHOD2(rbusObject_GetValue, rbusValue_t(rbusObject_t , char const *));
     MOCK_METHOD2(rbusValue_GetString, char const*(rbusValue_t, int));
+    MOCK_METHOD3(rbusValue_ToString,char*(rbusValue_t, char*, size_t));
 };
 
 /* ------------------- WebConfig Impl ------------ */
