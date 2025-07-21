@@ -4958,7 +4958,9 @@ protected:
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
     
-    rbusEvent_t event{};  
+    rbusEvent_t event{};
+    EXPECT_CALL(mock_rbus_api, rbus_get(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     _remoteDebuggerEventHandler(nullptr, &event, nullptr);
     data_buf receivedBuf;
     int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
