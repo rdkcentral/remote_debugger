@@ -4962,11 +4962,10 @@ TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
     MockRBusApi mock_rbus_api;
     rbusEvent_t event{};
     event.data = reinterpret_cast<rbusObject_t>(0x1234);
-    rbusValue_t value1;
+    rbusValue_t value1 = reinterpret_cast<rbusValue_t>(0x5678);
     rbusEventSubscription_t* subscription;
     rbusHandle_t handle;
     //rbusValue_Init(&value1);
-    
     EXPECT_CALL(mock_rbus_api, rbusObject_GetValue(_, _))
             .WillOnce(Return(value1));
     EXPECT_CALL(mock_rbus_api, rbusValue_GetString(_, _))
