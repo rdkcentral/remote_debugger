@@ -349,7 +349,7 @@ extern rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *);
 extern rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
 extern rbusError_t (*rbus_get)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
 extern rbusValue_t (*rbusObject_GetValue)(rbusObject_t , char const *);
-extern char const* (*rbusValue_GetString)(rbusValue_t, int);
+extern char const* (*rbusValue_GetString)(rbusValue_t, int*);
 extern char* (*rbusValue_ToString)(rbusValue_t, char*, size_t);
 
 class MockRBusApi : public RBusApiInterface
@@ -362,7 +362,7 @@ public:
     MOCK_METHOD4(rbus_set, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));  
     MOCK_METHOD4(rbus_get, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
     MOCK_METHOD2(rbusObject_GetValue, rbusValue_t(rbusObject_t , char const *));
-    MOCK_METHOD2(rbusValue_GetString, char const*(rbusValue_t, int));
+    MOCK_METHOD2(rbusValue_GetString, char const*(rbusValue_t, int*));
     MOCK_METHOD3(rbusValue_ToString,char*(rbusValue_t, char*, size_t));
 };
 
