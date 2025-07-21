@@ -136,7 +136,7 @@ rbusError_t RBusApiWrapper::rbus_get(rbusHandle_t handle, char const *objectName
 rbusValue_t RBusApiWrapper::rbusObject_GetValue(rbusObject_t object, char const* name)
 {
     EXPECT_NE(impl, nullptr);
-    return impl->rbusObject_GetValue(rbusObject_t object, char const* name);
+    return impl->rbusObject_GetValue(object, name);
 }
 const char* rbusError_ToString(rbusError_t e)
 {
