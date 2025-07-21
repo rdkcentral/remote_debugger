@@ -4957,7 +4957,7 @@ protected:
 
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
-    
+    MockRBusApi mock_rbus_api
     rbusEvent_t event{};
     EXPECT_CALL(mock_rbus_api, rbus_get(_, _, _, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
