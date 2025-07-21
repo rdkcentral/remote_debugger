@@ -169,6 +169,9 @@ rbusError_t (*rbusValue_Init)(rbusValue_t *) = &RBusApiWrapper::rbusValue_Init;
 rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *) = &RBusApiWrapper::rbusValue_SetString;
 rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t) = &RBusApiWrapper::rbus_set;
 char const* (*rbusValue_GetString)(rbusValue_t, int*) = &RBusApiWrapper::rbusValue_GetString;
+char* (*rbusValue_ToString)(rbusValue_t, char*, size_t);
+rbusValue_t (*rbusObject_GetValue)(rbusObject_t, char const*);
+
 
 /* -------- RFC ---------------*/
 SetParamInterface *SetParamWrapper::impl = nullptr;
