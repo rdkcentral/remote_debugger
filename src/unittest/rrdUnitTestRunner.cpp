@@ -4928,11 +4928,13 @@ protected:
     }
     int msqid_cpy;
     key_t key_cpy;
+    MockRBusApi mock_rbus_api;
     void SetUp() override
     {
         string test_name = getCurrentTestName();
         if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
         {
+            RBusApiWrapper::setImpl(&mock_rbus_api);
             msqid_cpy = msqid;
             key_cpy = key;
             msqid = msgget(key, IPC_CREAT | 0666);
