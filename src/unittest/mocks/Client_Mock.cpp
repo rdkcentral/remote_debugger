@@ -138,6 +138,11 @@ rbusValue_t RBusApiWrapper::rbusObject_GetValue(rbusObject_t object, char const*
     EXPECT_NE(impl, nullptr);
     return impl->rbusObject_GetValue(object, name);
 }
+char const* RBusApiWrapper::rbusValue_GetString(rbusValue_t value, int* len)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusValue_GetString(value,len);
+}
 const char* rbusError_ToString(rbusError_t e)
 {
     #define rbusError_String(E, S) case E: s = S; break;
