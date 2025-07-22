@@ -309,7 +309,6 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 
     (void)(handle);
     (void)(subscription);
-    #if !defined(GTEST_ENABLE)
     rbusValue_t value = rbusObject_GetValue(event->data, "value");
 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
@@ -336,7 +335,6 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     {
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
     }
-    #endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 #if !defined(GTEST_ENABLE)
