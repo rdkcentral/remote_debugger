@@ -406,6 +406,7 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
 #else
     jsonParsed = readAndParseJSON(rbuf->jsonPath);
 #endif
+#if !defined(GTEST_ENABLE)
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
@@ -430,6 +431,7 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
     freeParsedJson(jsonParsed);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    #endif
     return staticdata;
 }
 
