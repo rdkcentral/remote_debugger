@@ -4980,7 +4980,7 @@ TEST(ProcessIssueTypeInStaticProfileappend, ReturnsIssueDataForValidNode)
     free(rbuf.mdata);
 }
 
-TEST(ProcessIssueTypeInStaticProfileappend, ReturnsIssueDataForValidNode)
+TEST(ProcessIssueTypeInStaticProfileappend1, ReturnsIssueDataForValidNode)
 {
     data_buf rbuf;
     issueNodeData node;
