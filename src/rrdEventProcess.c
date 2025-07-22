@@ -405,6 +405,7 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
     jsonParsed = readAndParseJSON(RRD_JSON_FILE);
 #else
     jsonParsed = readAndParseJSON(rbuf->jsonPath);
+#endif
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
