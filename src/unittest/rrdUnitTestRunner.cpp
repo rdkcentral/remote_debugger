@@ -4990,8 +4990,8 @@ TEST(ProcessIssueTypeInStaticProfileappend1, ReturnsIssueDataForValidNode)
     memset(&node, 0, sizeof(node));
     rbuf.mdata = strdup("testData");
     // Set these values according to a valid entry in your RRD_JSON_FILE
-    strcpy(node.Node, "ValidNode");
-    strcpy(node.subNode, "ValidSubNode");
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
     rbuf.jsonPath = strdup("UTJson/validJson.json");
 
     issueData* result = processIssueTypeInStaticProfileappend(&rbuf, &node);
