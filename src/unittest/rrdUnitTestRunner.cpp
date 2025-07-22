@@ -4980,6 +4980,29 @@ TEST(ProcessIssueTypeInStaticProfileappend, ReturnsIssueDataForValidNode)
     free(rbuf.mdata);
 }
 
+TEST(ProcessIssueTypeInStaticProfileappend, ReturnsIssueDataForValidNode)
+{
+    data_buf rbuf;
+    issueNodeData node;
+
+    // Setup test data
+    memset(&rbuf, 0, sizeof(rbuf));
+    memset(&node, 0, sizeof(node));
+    rbuf.mdata = strdup("testData");
+    // Set these values according to a valid entry in your RRD_JSON_FILE
+    strcpy(node.Node, "ValidNode");
+    strcpy(node.subNode, "ValidSubNode");
+
+    issueData* result = processIssueTypeInStaticProfileappend(&rbuf, &node);
+    ASSERT_NE(result, nullptr);
+    // If your test JSON has known expected values, check them:
+    EXPECT_STREQ(result->rfcvalue, "ExpectedRFCValue");
+    EXPECT_STREQ(result->command, "ExpectedCommand");
+    EXPECT_EQ(result->timeout, 100); // Replace 100 with the expected timeout value
+
+    free(rbuf.mdata);
+}
+
 /*
 TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
 {
