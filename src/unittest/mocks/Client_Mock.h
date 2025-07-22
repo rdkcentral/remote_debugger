@@ -21,7 +21,12 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#ifdef IARMBUS_SUPPORT
+typedef enum _RemoteDebugger_EventId_t {
+        IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
+        IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
+        IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT
+} IARM_Bus_RemoteDebugger_EventId_t;
+//#ifdef IARMBUS_SUPPORT
 /* ----------------- RDMMgr ---------- */
 #define IARM_BUS_RDMMGR_NAME "RDMMgr"
 #define RDM_PKG_NAME_MAX_SIZE 128
@@ -119,7 +124,7 @@ typedef struct _PWRMgr_EventData_t
         int32_t reset_sequence_progress;
     } data;
 } IARM_Bus_PWRMgr_EventData_t;
-#endif
+//#endif
 
 /* ---------------- WebConf ------------*/
 #define SUBDOC_NAME_SZ 64
@@ -229,18 +234,65 @@ typedef struct _rbusHandle *rbusHandle_t;
 struct _rbusObject
 {
 };
-typedef struct _rbusObject *rbusObject_t;
 
+typedef struct _rbusObject *rbusObject_t;
 struct _rbusValue
 {
 };
 typedef struct _rbusValue *rbusValue_t;
-
 typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *methodName, rbusError_t error, rbusObject_t params);
+typedef enum
+{
+    RBUS_EVENT_OBJECT_CREATED,   /**< Notification that an object instance was created in table. */
+    RBUS_EVENT_OBJECT_DELETED,   /**< Notification that an object instance was deleted in table. */
+    RBUS_EVENT_VALUE_CHANGED,    /**< Notification that a property value was changed. */
+    RBUS_EVENT_GENERAL,          /**< Provider defined event.*/
+    RBUS_EVENT_INITIAL_VALUE,    /**< Notification of initial value immediately after subscription*/
+    RBUS_EVENT_INTERVAL,         /**< For event with interval*/
+    RBUS_EVENT_DURATION_COMPLETE /**< For event with duration timeout*/
+} rbusEventType_t;
+
+typedef struct
+{
+    char const*     name;       /**< Fully qualified event name */
+    rbusEventType_t type;       /**< The type of event */
+    rbusObject_t    data;       /**< The data for the event */
+} rbusEvent_t;
+typedef struct _rbusFilter* rbusFilter_t;
+
+
+typedef struct _rbusEventSubscription
+{
+    char const*         eventName;  /** Fully qualified event name */
+    rbusFilter_t        filter;     /** Optional filter that the client would like 
+                                        the sender to apply before sending the event
+                                      */
+    uint32_t             interval;   /**< Total interval period after which
+                                         the event needs to be fired. Should
+                                         be in multiples of minInterval
+                                      */
+    uint32_t            duration;   /** Optional maximum duration in seconds until which
+                                        the subscription should be in effect. Beyond this 
+                                        duration, the event would be unsubscribed automatically. 
+                                        Pass "0" for indefinite event subscription which requires 
+                                        the rbusEvent_Unsubscribe API to be called explicitly.
+                                      */
+    void*               handler;    /** fixme rbusEventHandler_t internal*/
+    void*               userData;   /** The userData set when subscribing to the event. */
+    rbusHandle_t        handle;     /** Private use only: The rbus handle associated with this subscription */
+    bool                publishOnSubscribe;
+} rbusEventSubscription_t;
+
+typedef struct _rbusEventSubscription rbusEventSubscription_t;
+
+typedef void (*rbusSubscribeAsyncRespHandler_t)(
+    rbusHandle_t handle, 
+    rbusEventSubscription_t* subscription,
+    rbusError_t error);
 
 /* =============== Implementations ============== */
 /* ---------- IARM Impl -----------*/
-#ifdef IARMBUS_SUPPORT
+
 class ClientIARMMock
 {
 public:
@@ -253,7 +305,7 @@ public:
 };
 
 void setMock(ClientIARMMock *mock);
-#endif
+
 /* ------------------- RBUS Impl--------------- */
 class RBusApiInterface
 {
@@ -264,6 +316,10 @@ public:
     virtual rbusError_t rbusValue_Init(rbusValue_t *value) = 0;
     virtual rbusError_t rbusValue_SetString(rbusValue_t value, char const *str) = 0;
     virtual rbusError_t rbus_set(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
+    virtual rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
+    virtual rbusValue_t rbusObject_GetValue(rbusObject_t object, char const* name) = 0;
+    virtual char const* rbusValue_GetString(rbusValue_t value, int* len) = 0;
+    virtual char* rbusValue_ToString(rbusValue_t v, char* buf, size_t buflen) = 0;
 };
 
 class RBusApiWrapper
@@ -280,6 +336,10 @@ public:
     static rbusError_t rbusValue_Init(rbusValue_t *value);
     static rbusError_t rbusValue_SetString(rbusValue_t value, char const *str);
     static rbusError_t rbus_set(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
+    static rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
+    static rbusValue_t rbusObject_GetValue(rbusObject_t object, char const* name);
+    static char const* rbusValue_GetString(rbusValue_t value, int* len);
+    static char* rbusValue_ToString(rbusValue_t v, char* buf, size_t buflen);
 };
 
 extern rbusError_t (*rbus_open)(rbusHandle_t *, char const *);
@@ -287,6 +347,10 @@ extern rbusError_t (*rbus_close)(rbusHandle_t);
 extern rbusError_t (*rbusValue_Init)(rbusValue_t *);
 extern rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *);
 extern rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
+extern rbusError_t (*rbus_get)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
+extern rbusValue_t (*rbusObject_GetValue)(rbusObject_t , char const *);
+extern char const* (*rbusValue_GetString)(rbusValue_t, int*);
+extern char* (*rbusValue_ToString)(rbusValue_t, char*, size_t);
 
 class MockRBusApi : public RBusApiInterface
 {
@@ -295,7 +359,11 @@ public:
     MOCK_METHOD1(rbus_close, rbusError_t(rbusHandle_t));
     MOCK_METHOD1(rbusValue_Init, rbusError_t(rbusValue_t *));
     MOCK_METHOD2(rbusValue_SetString, rbusError_t(rbusValue_t, char const *));
-    MOCK_METHOD4(rbus_set, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
+    MOCK_METHOD4(rbus_set, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));  
+    MOCK_METHOD4(rbus_get, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
+    MOCK_METHOD2(rbusObject_GetValue, rbusValue_t(rbusObject_t , char const *));
+    MOCK_METHOD2(rbusValue_GetString, char const*(rbusValue_t, int*));
+    MOCK_METHOD3(rbusValue_ToString,char*(rbusValue_t, char*, size_t));
 };
 
 /* ------------------- WebConfig Impl ------------ */
@@ -363,3 +431,22 @@ public:
     MOCK_METHOD(void, PushBlobRequest, (execData * execDataLan), ());
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
+
+
+/*
+#define POWER_CONTROLLER_ERROR_NONE 0
+typedef enum PowerController_PowerState {
+    POWER_STATE_UNKNOWN = 0 ,
+    POWER_STATE_OFF = 1 ,
+    POWER_STATE_STANDBY = 2 ,
+    POWER_STATE_ON = 3 ,
+POWER_STATE_STANDBY_LIGHT_SLEEP = 4 ,
+      POWER_STATE_STANDBY_DEEP_SLEEP = 5
+} PowerController_PowerState_t;
+
+
+typedef void (*PowerController_PowerModeChangedCb)(const PowerController_PowerState_t currentState, const PowerController_PowerState_t newState, void* userdata);
+typedef void (*PowerController_RebootBeginCb)(const char* rebootReasonCustom, const char* rebootReasonOther, const char* rebootRequestor, void* userdata);
+uint32_t PowerController_Connect();
+uint32_t PowerController_UnRegisterRebootBeginCallback(PowerController_RebootBeginCb callback);
+*/

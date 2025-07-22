@@ -301,6 +301,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     free(pkg_name);
     free(pkg_inst_path);
 }
+#endif
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *dataMsg = NULL;
@@ -308,7 +309,6 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 
     (void)(handle);
     (void)(subscription);
-
     rbusValue_t value = rbusObject_GetValue(event->data, "value");
 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
@@ -335,10 +335,9 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     {
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
     }
-
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
-
+#if !defined(GTEST_ENABLE)
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *inString = NULL;
@@ -399,7 +398,7 @@ int RRD_unsubscribe()
     int ret = 0;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-#ifdef IARMBUS_SUPPORT
+#if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
     ret = RRD_IARM_unsubscribe();
     if (ret != 0)
     {

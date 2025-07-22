@@ -21,7 +21,7 @@
 #include <cstdarg>
 
 /* -------- IARM ---------------- */
-#ifdef IARMBUS_SUPPORT
+//#ifdef IARMBUS_SUPPORT
 ClientIARMMock *g_mock = nullptr;
 
 void setMock(ClientIARMMock *mock)
@@ -81,7 +81,7 @@ extern "C"
         return IARM_RESULT_SUCCESS;
     }
 }
-#endif
+//#endif
 
 /* ---------- RBUS --------------*/
 RBusApiInterface *RBusApiWrapper::impl = nullptr;
@@ -128,6 +128,26 @@ rbusError_t RBusApiWrapper::rbus_set(rbusHandle_t handle, char const *objectName
     EXPECT_NE(impl, nullptr);
     return impl->rbus_set(handle, objectName, value, respHandler);
 }
+rbusError_t RBusApiWrapper::rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbus_get(handle, objectName, value, respHandler);
+}
+rbusValue_t RBusApiWrapper::rbusObject_GetValue(rbusObject_t object, char const* name)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusObject_GetValue(object, name);
+}
+char const* RBusApiWrapper::rbusValue_GetString(rbusValue_t value, int* len)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusValue_GetString(value,len);
+}
+char* RBusApiWrapper::rbusValue_ToString(rbusValue_t v, char* buf, size_t buflen)
+{ 
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusValue_ToString(v, buf,buflen);
+}
 const char* rbusError_ToString(rbusError_t e)
 {
     #define rbusError_String(E, S) case E: s = S; break;
@@ -148,6 +168,10 @@ rbusError_t (*rbus_close)(rbusHandle_t) = &RBusApiWrapper::rbus_close;
 rbusError_t (*rbusValue_Init)(rbusValue_t *) = &RBusApiWrapper::rbusValue_Init;
 rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *) = &RBusApiWrapper::rbusValue_SetString;
 rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t) = &RBusApiWrapper::rbus_set;
+char const* (*rbusValue_GetString)(rbusValue_t, int*) = &RBusApiWrapper::rbusValue_GetString;
+char* (*rbusValue_ToString)(rbusValue_t, char*, size_t);
+rbusValue_t (*rbusObject_GetValue)(rbusObject_t, char const*);
+
 
 /* -------- RFC ---------------*/
 SetParamInterface *SetParamWrapper::impl = nullptr;
@@ -242,4 +266,14 @@ extern "C"
         return;
     }
 }
+/*
+uint32_t PowerController_RegisterPowerModeChangedCallback(PowerController_PowerModeChangedCb callback, void* userdata)
+{
+    return POWER_CONTROLLER_ERROR_NONE;
+}
+uint32_t PowerController_Connect()
+{
+    return POWER_CONTROLLER_ERROR_NONE;
+}
 
+*/
