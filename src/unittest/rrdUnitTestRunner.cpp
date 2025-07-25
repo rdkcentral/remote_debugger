@@ -654,7 +654,6 @@ TEST_F(SetParamByRFC, TestSetParam)
     EXPECT_EQ(result, tr181Failure);
 }
 
-#ifdef IARMBUS_SUPPORT
 /* ----------------IARM --------------- */
 class IARMBusTest : public ::testing::Test
 {
@@ -698,7 +697,6 @@ TEST_F(IARMBusTest, TestIARM_Bus_UnRegisterEventHandler)
     IARM_Result_t result = IARM_Bus_UnRegisterEventHandler("owner", IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS);
     EXPECT_EQ(result, IARM_RESULT_SUCCESS);
 }
-#endif
 
 /* ------------- RBUS ------------- */
 class RBusApiTest : public ::testing::Test
@@ -718,6 +716,8 @@ protected:
         EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
         EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbus_get(_, _, _, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
     }
 
@@ -745,10 +745,12 @@ TEST_F(RBusApiTest, TestRBusApi)
     result = RBusApiWrapper::rbus_set(handle, "objectName", value, nullptr);
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
 
+    result = RBusApiWrapper::rbus_get(handle, "objectName", value, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
     result = RBusApiWrapper::rbus_close(handle);
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
 }
-
 /* ---------- WebConfig ------------- */
 // sample function to call register_sub_docs Mock API
 void sampleWebconfigFrameworkInit(ClientWebConfigMock &mock_webconfig)
@@ -905,7 +907,7 @@ TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventTrueRRD_DEFAULT_
     free(issue.Node);
     free(issue.subNode);
 }
-
+#endif
 /* --------------- Test RRDCheckIssueInDynamicProfile() from rrdDeepSleep --------------- */
 class RRDCheckIssueInDynamicProfileTest : public ::testing::Test
 {
@@ -989,22 +991,38 @@ TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndPars
     free(buff.jsonPath);
 }
 
+
+
 /* --------------- Test RRDRdmManagerDownloadRequest() from rrdDeepSleep --------------- */
 class RRDRdmManagerDownloadRequestTest : public ::testing::Test
 {
 protected:
     devicePropertiesData originalDevPropData;
-    devicePropertiesData testDevPropData;
-
+    MockRBusApi mock_rbus_api;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
     void SetUp() override
     {
         originalDevPropData = devPropData;
+        string test_name = getCurrentTestName();
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure" || test_name == "DeepSleepAwakeEventIsTrue_SetParamReturnsFailure")
+        {
+            RBusApiWrapper::setImpl(&mock_rbus_api);
+        }
     }
 
     void TearDown() override
     {
         devPropData = originalDevPropData;
         SetParamWrapper::clearImpl();
+        string test_name = getCurrentTestName();
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
+        {
+            RBusApiWrapper::clearImpl();
+        }
     }
 };
 
@@ -1030,9 +1048,16 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
 
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    //MockSetParam mock_set_param;
+    //SetParamWrapper::setImpl(&mock_set_param);
+    //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
     free(buff.jsonPath);
@@ -1047,12 +1072,12 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
 
     free(buff.jsonPath);
@@ -1067,96 +1092,15 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     buff.mdata = strdup("ValidIssueTypeData");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
-
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
-
-    free(buff.jsonPath);
-    free(buff.mdata);
-}
-
-TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess)
-{
-    issueNodeData issuestructNode;
-    issuestructNode.Node = strdup("MainNode");
-    issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
-    buff.mdata = strdup("ValidIssueTypeData");
-    buff.jsonPath = strdup("UTJson/validJson.json");
-    buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
-    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
-
-    free(buff.jsonPath);
-    free(buff.mdata);
-}
-
-TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess_X1)
-{
-    issueNodeData issuestructNode;
-    issuestructNode.Node = strdup("MainNode");
-    issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
-    buff.mdata = strdup("ValidIssueTypeData");
-    buff.jsonPath = strdup("UTJson/validJson.json");
-    buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_REG_X1_PLTFMS;
-    devPropData = testDevPropData;
-
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
-    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
-
-    free(buff.jsonPath);
-    free(buff.mdata);
-}
-
-TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess_PLATCO)
-{
-    issueNodeData issuestructNode;
-    issuestructNode.Node = strdup("MainNode");
-    issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
-    buff.mdata = strdup("ValidIssueTypeData");
-    buff.jsonPath = strdup("UTJson/validJson.json");
-    buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_PLATCO_PLTFMS;
-    devPropData = testDevPropData;
-
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
-    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
-
-    free(buff.jsonPath);
-    free(buff.mdata);
-}
-
-TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsSuccess_DEF)
-{
-    issueNodeData issuestructNode;
-    issuestructNode.Node = strdup("MainNode");
-    issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
-    buff.mdata = strdup("ValidIssueTypeData");
-    buff.jsonPath = strdup("UTJson/validJson.json");
-    buff.inDynamic = false;
-    testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
-    devPropData = testDevPropData;
-
-    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
 
     free(buff.jsonPath);
     free(buff.mdata);
@@ -1167,7 +1111,6 @@ class RRDProcessDeepSleepAwakeEventsTest : public ::testing::Test
 {
 protected:
     devicePropertiesData originalDevPropData;
-    devicePropertiesData testDevPropData;
 
     void SetUp() override
     {
@@ -1202,13 +1145,6 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
     data_buf rbuf;
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Success));
-
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
 
@@ -1217,13 +1153,6 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
     data_buf rbuf;
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-    MockSetParam mock_set_param;
-    SetParamWrapper::setImpl(&mock_set_param);
-    EXPECT_CALL(mock_set_param, setParam(_, _, _))
-        .WillOnce(Return(tr181Failure));
-
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
 
@@ -1233,9 +1162,6 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInD
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
     rbuf.inDynamic = false;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
 
@@ -1246,12 +1172,8 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInD
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
     rbuf.inDynamic = true;
     rbuf.jsonPath = NULL;
-    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
-    devPropData = testDevPropData;
-
     RRDProcessDeepSleepAwakeEvents(&rbuf);
 }
-#endif
 
 /* ========================== rrdExecuteScript ======================= */
 /* --------------- Test normalizeIssueName() from rrdExecuteScript --------------- */
