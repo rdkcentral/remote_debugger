@@ -3801,3 +3801,192 @@ GTEST_API_ main(int argc, char *argv[])
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+
+TEST(RemoteDebuggerDocStrErrorTest, KnownErrorCodes) {
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OK), "No errors.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OUT_OF_MEMORY), "Out of memory.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_FIRST_ELEMENT), "Invalid first element.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_VERSION), "Invalid 'version' value.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid 'value' array.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, UnknownErrorCode) {
+    // An error code not defined in the map
+    int unknownError = 9999;
+    EXPECT_STREQ(remotedebuggerdoc_strerror(unknownError), "Unknown error.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, EdgeCaseZeroButNotInMap) {
+    EXPECT_STREQ(remotedebuggerdoc_strerror(0), "No errors.");
+}
+
+
+TEST(LookupRrdProfileListTest, NullInput) {
+    EXPECT_FALSE(lookupRrdProfileList(nullptr));
+}
+ 
+TEST(LookupRrdProfileListTest, EmptyStringInput) {
+    EXPECT_FALSE(lookupRrdProfileList(""));
+}
+
+TEST(LookupRrdProfileListTest, ExactMatchFirst) {
+    lookupRrdProfileList("RRD_PROFILE_LIST");
+} 
+
+TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
+    issueData cmd;
+    cmd.command = strdup("echo hello");
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+    // Mock dependencies like mkdir, fopen, etc., as needed
+    bool result = executeCommands(&cmd);
+    //EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
+    //        .WillOnce(Return(fp));
+    //EXPECT_CALL(secureApi, v_secure_pclose(_))
+    //        .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
+    EXPECT_TRUE(result);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
+}
+/*
+TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllfail) {
+    issueData cmd;
+    cmd.command = NULL;
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+    // Mock dependencies like mkdir, fopen, etc., as needed
+    bool result = executeCommands(&cmd);
+    //EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
+    //        .WillOnce(Return(fp));
+    //EXPECT_CALL(secureApi, v_secure_pclose(_))
+    //        .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
+    EXPECT_FALSE(result);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
+} */
+extern bool checkAppendRequest(char *issueRequest);
+/*
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+} */
+
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_apnd";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+}
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_apnd";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseWhenSuffixMissing) {
+    char input[64] = "issue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "issue");  // Should remain unchanged
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseForShortString) {
+    char input[64] = "";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "");  // Should remain unchanged
+}
+/*
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+} */
+
+TEST(CheckAppendRequestTest, ReturnsFalseIfSuffixAtStartOnly) {
+    char input[64] = "_appendissue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "_appendissue");
+}
+
+class GetIssueCommandInfoTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Cleanup if needed
+    }
+    void FreeIssueData(issueData* d) {
+        if (!d) return;
+        if (d->command) free(d->command);
+        if (d->rfcvalue) free(d->rfcvalue);
+        free(d);
+    }
+};
+
+TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
+    const char* jsonstr = R"({
+        "categoryA": {
+            "type1": [ 42, "kill" ]
+        },
+        "Sanity": {
+            "Check": {
+                "Commands": [ "kill", "ls" ]
+            }
+        }
+    })";
+    cJSON* root = cJSON_Parse(jsonstr);
+    ASSERT_NE(root, nullptr);
+
+    issueNodeData node;
+    node.Node = (char*)"categoryA";
+    node.subNode = (char*)"type1";
+
+    char buf[] = "rfcvalue123";
+    issueData* result = getIssueCommandInfo(&node, root, buf);
+    ASSERT_NE(result, nullptr);
+    
+}
+
+TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
+    const char* jsonstr = R"({
+        "categoryB": {
+            "typeX": [ "echo only" ]
+        },
+        "Sanity": {
+            "Check": {
+                "Commands": [ "kill" ]
+            }
+        }
+    })";
+    cJSON* root = cJSON_Parse(jsonstr);
+    ASSERT_NE(root, nullptr);
+
+    issueNodeData node;
+    node.Node = (char*)"categoryB";
+    node.subNode = (char*)"typeX";
+
+    char buf[] = "rfctest";
+    issueData* result = getIssueCommandInfo(&node, root, buf);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->timeout, DEFAULT_TIMEOUT);
+    ASSERT_NE(result->command, nullptr);
+    EXPECT_TRUE(strstr(result->command, "echo only") != nullptr);
+    ASSERT_NE(result->rfcvalue, nullptr);
+    EXPECT_STREQ(result->rfcvalue, "rfctest");
+
+    FreeIssueData(result);
+    cJSON_Delete(root);
+}
