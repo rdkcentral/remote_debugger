@@ -60,7 +60,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 #endif
-#ifdef IARMBUS_SUPPORT
+#if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
 int RRD_IARM_subscribe(void);
 int RRD_IARM_unsubscribe(void);
 void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
