@@ -45,14 +45,12 @@ extern "C"
 #define RRD_PROCESS_NAME "remotedebugger"
 #define RRD_RBUS_TIMEOUT 60
 
-#ifdef IARMBUS_SUPPORT
 /*Enum for IARM Events*/
 typedef enum _RemoteDebugger_EventId_t {
         IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
         IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
         IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT
 } IARM_Bus_RemoteDebugger_EventId_t;
-#endif
 
 /*Event Handler Function*/
 #if !defined(GTEST_ENABLE)
