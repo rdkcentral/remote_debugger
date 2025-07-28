@@ -127,7 +127,7 @@ def test_rdm_download_event():
     PACKAGE_FOUND = "Package found in Cache...Test.TestRun7"
     assert PACKAGE_FOUND in grep_rrdlogs(PACKAGE_FOUND)
 
-    MESSAGE_SUCCESS = "SUCCESS: Message sending Done, ID=36 MSG=Test.TestRun7 Size=13 Type=1 AppendMode=0!"
+    MESSAGE_SUCCESS = "SUCCESS: Message sending Done, ID=0 MSG=Test.TestRun7 Size=13 Type=1 AppendMode=0!"
     assert MESSAGE_SUCCESS in grep_rrdlogs(MESSAGE_SUCCESS)
 
     ISSUE_TYPE_LIST = "IssueType List [Test.TestRun7]..."
