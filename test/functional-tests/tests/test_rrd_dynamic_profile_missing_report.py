@@ -124,7 +124,7 @@ def test_rdm_trigger_event():
 def test_rdm_rrd_trigger_event():
     command = [
         'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.DownloadStatus',
+        'Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus',
         'bool', 'true'
     ]
     result = subprocess.run(command, capture_output=True, text=True)
