@@ -119,6 +119,7 @@ def test_rdm_download_event():
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
+    sleep(2)
 
     RDM_DOWNLOAD_EVENT = "Received event for RDM_DOWNLOAD_EVENT Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus"
     assert RDM_DOWNLOAD_EVENT in grep_rrdlogs(RDM_DOWNLOAD_EVENT)
