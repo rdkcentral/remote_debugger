@@ -21,7 +21,6 @@
 #include <cstdarg>
 
 /* -------- IARM ---------------- */
-#ifdef IARMBUS_SUPPORT
 ClientIARMMock *g_mock = nullptr;
 
 void setMock(ClientIARMMock *mock)
@@ -81,7 +80,6 @@ extern "C"
         return IARM_RESULT_SUCCESS;
     }
 }
-#endif
 
 /* ---------- RBUS --------------*/
 RBusApiInterface *RBusApiWrapper::impl = nullptr;
@@ -127,6 +125,11 @@ rbusError_t RBusApiWrapper::rbus_set(rbusHandle_t handle, char const *objectName
 {
     EXPECT_NE(impl, nullptr);
     return impl->rbus_set(handle, objectName, value, respHandler);
+}
+rbusError_t RBusApiWrapper::rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbus_get(handle, objectName, value, respHandler);
 }
 const char* rbusError_ToString(rbusError_t e)
 {
