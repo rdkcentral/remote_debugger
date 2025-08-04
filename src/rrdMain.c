@@ -97,6 +97,16 @@ bool isRRDEnabled(void)
 	    if (strcasecmp("false", param.value) == 0) {
 		    ret = false;
 	    }
+	    else {
+	            const char *filePath = "/tmp/rrd_enabled";
+                    ILE *fp = fopen(filePath, "w");
+                    if (fp) {
+                        fclose(fp);
+                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:RRD is enabled, touched file %s\n", __FUNCTION__, __LINE__, filePath);
+                    }
+		    else {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]:Failed to touch file %s\n", __FUNCTION__, __LINE__, filePath);
+                    }
     } 
     else {
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:ERROR in getRFCParameter()\n", __FUNCTION__, __LINE__);
