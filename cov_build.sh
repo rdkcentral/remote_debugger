@@ -44,6 +44,10 @@ if [ ! -d tr69hostif ]; then
     git clone https://github.com/rdkcentral/tr69hostif.git
 fi
 
+if [ ! -d power-manager ]; then
+    git clone https://github.com/rdkcentral/power-manager.git
+fi
+
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
