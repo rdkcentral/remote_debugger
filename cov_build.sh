@@ -64,7 +64,6 @@ cp /usr/iarmmgrs/rdmmgr/include/rdmMgr.h /usr/local/include
 cp /usr/iarmbus/core/include/libIBusDaemon.h /usr/local/include
 cp /usr/iarmbus/core/include/libIBus.h /usr/local/include
 cp /usr/iarmbus/core/libIARMCore.h /usr/local/include
-cp /usr/iarmmgrs/hal/include/pwrMgr.h /usr/local/include/
 
 # Build and install stubs from tr69hostif
 
