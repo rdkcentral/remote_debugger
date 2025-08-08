@@ -34,11 +34,7 @@ extern "C"
 #include "rdk_debug.h"
 #ifdef IARMBUS_SUPPORT
 #include "rdmMgr.h"
-#if defined(PWRMGR_PLUGIN)
-#include "power_controller.h"
-#else
-#include "pwrMgr.h"
-#endif
+
 #include "tr181api.h"
 #endif
 #endif
