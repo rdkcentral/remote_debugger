@@ -93,10 +93,24 @@ bool isRRDEnabled(void)
     RFC_ParamData_t param;
     WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
     if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
+        const char *filePath = "/tmp/rrd_enabled";
+        FILE *fp = fopen(filePath, "w");
 	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:getRFCParameter() name=%s,type=%d,value=%s\n", __FUNCTION__, __LINE__, param.name, param.type, param.value);
+		if (fp) {
+            fprintf(fp, "%s\n", param.value);  // Write the RFC parameter value
+            fclose(fp);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Wrote '%s' to file %s\n", __FUNCTION__, __LINE__, param.value, filePath);
+        } 
+		else {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to open file %s for writing\n", __FUNCTION__, __LINE__, filePath);
+        }
 	    if (strcasecmp("false", param.value) == 0) {
+			
 		    ret = false;
 	    }
+
+
+		
 	    /*
 	    else {
 	            const char *filePath = "/tmp/rrd_enabled";
@@ -158,15 +172,6 @@ int main(int argc, char *argv[])
 #endif
     /* Initialize Cache */
     initCache();
-    const char *filePath = "/tmp/rrd_enabled";
-    FILE *fp = fopen(filePath, "w");
-    if (fp) {
-        fclose(fp);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:RRD is enabled, touched file %s\n", __FUNCTION__, __LINE__, filePath);
-    }
-    else {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]:Failed to touch file %s\n", __FUNCTION__, __LINE__, filePath);
-    }
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
     if(!isEnabled) {
