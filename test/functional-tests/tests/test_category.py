@@ -47,7 +47,7 @@ def reset_issuetype_rfc():
 def test_remote_debugger_trigger_event():
     STRING_TEST = "Test"
     reset_issuetype_rfc()
-    #sleep(10)
+    sleep(10)
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
