@@ -63,6 +63,9 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dy
 rm -rf /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
 rm -rf /tmp/RDK-RRD-Test/etc/rrd/remote_debugger.json
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_harmful_with_download.json test/functional-tests/tests/test_rrd_dynamic_with_download_harmful.py
+rm -rf /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
+rm -rf /tmp/RDK-RRD-Test/etc/rrd/remote_debugger.json
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/test_category.json test/functional-tests/tests/test_category.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_append.json test/functional-tests/tests/test_append.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_harmful_report.json test/functional-tests/tests/test_rrd_dynamic_profile_harmful_report.py
 cp remote_debugger.json /etc/rrd/
