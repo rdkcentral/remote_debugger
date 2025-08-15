@@ -45,13 +45,13 @@ def reset_issuetype_rfc():
     assert result.returncode == 0
 
 def test_remote_debugger_trigger_event():
-    MISSING_STRING_TEST = "Test"
+    STRING_TEST = "Test"
     reset_issuetype_rfc()
-    sleep(10)
+    #sleep(10)
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', MISSING_STRING_TEST
+        'string', STRING_TEST
         ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
@@ -174,6 +174,14 @@ def test_rdm_rrd_dwnld_status():
     assert EXEC_RUNTIME_SERVICE in grep_rrdlogs(EXEC_RUNTIME_SERVICE)
 
     START_REMOTE_DEBUGGER = "Starting remote_debugger_Test.TestRun1 service success..."
+    assert START_REMOTE_DEBUGGER in grep_rrdlogs(START_REMOTE_DEBUGGER)
+
+    sleep(15);
+
+    READING = "Reading Issue Type 2:Test.TestRun5"
+    assert READING in grep_rrdlogs(READING)
+
+    START_REMOTE_DEBUGGER = "Starting remote_debugger_Test.TestRun5 service success..."
     assert START_REMOTE_DEBUGGER in grep_rrdlogs(START_REMOTE_DEBUGGER)
 
     remove_logfile()
