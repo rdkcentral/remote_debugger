@@ -17,7 +17,7 @@
 # limitations under the License.
 ##########################################################################
 
-Feature: Remote Debugger Append Request Missing Issuetype
+Feature: Remote Debugger Append Request success case
 
   Scenario: Verify remote debugger process is running
     Given the remote debugger process is not running
