@@ -36,7 +36,7 @@ Feature: Remote Debugger Append Request Missing Issuetype
     When the remotedebugger read the json file form the dynamic path
     Then remotedebugger json read and parse should be success in dynamic path
 
-  Scenario: Verify the Issuetype is found in static profile
+  Scenario: Verify the Issuetype is found in static profile and execute command
     Given the remote debugger received the message from RBUS command
     When the remotedebugger static json profile is present
     Then remotedebugger should read the Json file
