@@ -99,10 +99,10 @@ bool isRRDEnabled(void)
 		if (fp) {
             fprintf(fp, "%s\n", param.value);  // Write the RFC parameter value
             fclose(fp);
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Wrote '%s' to file %s\n", __FUNCTION__, __LINE__, param.value, filePath);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Wrote '%s' to file %s\n", __FUNCTION__, __LINE__, param.value, filePath);
         } 
 		else {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to open file %s for writing\n", __FUNCTION__, __LINE__, filePath);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Failed to open file %s for writing\n", __FUNCTION__, __LINE__, filePath);
         }
 	    if (strcasecmp("false", param.value) == 0) {
 			
