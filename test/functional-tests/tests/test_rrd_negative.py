@@ -145,7 +145,7 @@ def test_rdm_download_event():
     DYNAMIC_JSON_PARSE_FAILED = "Dynamic JSON Parse/Read failed... /tmp/RDK-RRD-Test/etc/rrd/remote_debugger.json"
     assert DYNAMIC_JSON_PARSE_FAILED in grep_rrdlogs(DYNAMIC_JSON_PARSE_FAILED)
 
-    remove_logfile()
+    #remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()
 
