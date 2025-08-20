@@ -68,6 +68,8 @@ cd -
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_neg.json test/functional-tests/tests/test_rrd_negative.py
 
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_missing_report.json test/functional-tests/tests/test_rrd_dynamic_profile_missing_report.py
+cat /opt/logs/remotedebugger.log.0
+cat /opt/logs/rfcscript.txt.0
 rm -rf /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
 rm -rf /tmp/RDK-RRD-Test/etc/rrd/remote_debugger.json
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_harmful_with_download.json test/functional-tests/tests/test_rrd_dynamic_with_download_harmful.py
