@@ -39,5 +39,31 @@
             "Commands": "systemctl list-units --type=service --all",
             "Timeout" : 10
        }
-    }
+    },
+   "DeepSleep": {
+        "Audio" : {
+            "AudioStatus" : {
+                 "Commands": "cat /sys/class/avsync_session0/session_stat;cat /sys/class/vdec/vdec_status;hal_dump",
+                 "Timeout" : 10
+            }
+         },
+        "Video" : {
+            "VideoStatus" : {
+                 "Commands": "cat /sys/class/avsync_session0/session_stat;cat /sys/class/vdec/vdec_status;hal_dump",
+                 "Timeout" : 10
+            }
+         },
+        "Process" : {
+            "ProcessStatus" : {
+                 "Commands": "cat /opt/logs/top_log.txt*",
+                 "Timeout" : 10
+            },
+            "ServiceStatus" : {
+                 "Commands": "systemctl list-units --type=service --all",
+                 "Timeout" : 10
+            }
+
+         }
+     }
 }
+
