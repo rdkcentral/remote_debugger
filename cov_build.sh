@@ -50,7 +50,7 @@ autoreconf -i
 cd rfcapi
 cp /usr/include/cjson/cJSON.h  ./
 cp /usr/local/include/wdmp-c/wdmp-c.h ./
-make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks -DUSE_IARMBUS"
+make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks -DUSE_IARMBUS -DTEMP_LOGGING"
 make install
 cd /usr/rfc/tr181api
 g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c
