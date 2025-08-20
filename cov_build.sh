@@ -48,6 +48,8 @@ cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
 cd rfcapi
+cp /usr/include/cjson/cJSON.h  ./
+cp /usr/local/include/wdmp-c/wdmp-c.h ./
 make CXXFLAGS="$CXXFLAGS -DUSE_IARMBUS"
 make install
 cd /usr/rfc/tr181api
