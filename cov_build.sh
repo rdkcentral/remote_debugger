@@ -48,8 +48,8 @@ cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
 cd rfcapi
-make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks"
-make install
+#make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks"
+#make install
 cd /usr/rfc/tr181api
 g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c
 mv ./libtr181api.so /usr/local/lib
