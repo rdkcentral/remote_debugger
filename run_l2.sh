@@ -63,7 +63,8 @@ rm -rf /opt/logs/remotedebugger.log*
 cd ./test/functional-tests/tests
 make
 cd -
-
+echo "tr69 process :"
+ps -ef | grep tr69hostif
 # Run L2 Test cases
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_neg.json test/functional-tests/tests/test_rrd_negative.py
 
