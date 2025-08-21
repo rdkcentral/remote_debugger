@@ -17,39 +17,30 @@
 # limitations under the License.
 ##########################################################################
 
-Feature: Remote Debugger Missing Issuetype
+Feature: Remote Debugger Append Request success case
 
   Scenario: Verify remote debugger process is running
     Given the remote debugger process is not running
     When I start the remote debugger process
     Then the remote debugger process should be running
 
-  Scenario: Send WebPA event for Issuetype Test and verify logs
+  Scenario: Send WebPA event for Issuetype Test.TestRun4_apnd and verify logs
     Given the remote debugger is running
     When I trigger the event "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType"
     Then the logs should contain "SUCCESS: Message sending Done"
     Then the logs should be seen with "SUCCESS: Message Reception Done"
     And the issuetype request should match between Send and Receive
 
-  Scenario: Verify the Issuetype is not found in static profile
+  Scenario: Verify the Issuetype is found in dynamic profile
+    Given the remote debugger received the message from RBUS command
+    When the remotedebugger read the json file form the dynamic path
+    Then remotedebugger json read and parse should be success in dynamic path
+
+  Scenario: Verify the Issuetype is found in static profile and execute command
     Given the remote debugger received the message from RBUS command
     When the remotedebugger static json profile is present
     Then remotedebugger should read the Json file
     And remotedebugger logs should contain the Json File Parse Success
-    And remotedebugger should log as the Issue requested is not found in the profile
-    
-  Scenario: Verify the Issuetype is not found in dynamic path
-    Given the remote debugger issuetype is missing in static profile
-    When the remotedebugger read the json file form the dynamic path
-    Then remotedebugger json read and parse should be failed
-    And remotedebugger should request RDM to download the package
-  
- Scenario: Verify the Issuetype is not found in downloaded package
-    Given the test package downloaded successfully
-    When the remotedebugger read the json file from dynamic download path
-    Then remotedebugger json read and parse should be success
-    And remotedebugger should Execute the commands successfully
-   
-
-  
+    And remotedebugger should log as the Issue requested found in the profile
+    And Update the command after appending data from both the dynamic and static profiles, then execute the commands
 
