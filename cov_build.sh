@@ -60,6 +60,7 @@ cp ./tr181api.h /usr/local/include
 # Install header files alone from armmgrs repositories
 cd $ROOT
 cd tr69hostif
+git config --global --add safe.directory /usr/tr69hostif
 git checkout feature/RDK-56291
 sh run_l2.sh
 
