@@ -48,8 +48,8 @@ cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
 cd rfcapi
-cp /usr/include/cjson/cJSON.h  ./
-cp /usr/local/include/wdmp-c/wdmp-c.h ./
+#cp /usr/include/cjson/cJSON.h  ./
+#cp /usr/local/include/wdmp-c/wdmp-c.h ./
 make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks -DUSE_IARMBUS -DTEMP_LOGGING"
 make install
 cd /usr/rfc/tr181api
