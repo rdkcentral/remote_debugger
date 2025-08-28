@@ -431,4 +431,3 @@ int RRD_unsubscribe()
 #endif
     return ret;
 }
-
