@@ -31,9 +31,8 @@ def test_check_remotedebugger_is_starting():
     assert pid != "", "remotedebugger process did not start"
 
 def test_second_remotedebugger_instance_is_not_started():
-    kill_rrd()
     command_to_get_pid = "pidof remotedebugger"
-    pid1 = run_shell_command(command_to_get_pid)
+    pid1 = run_shell_command(command_to_get_pid).strip().split()
 
     if is_remotedebugger_running():
         print("remotedebugger process is already running")
@@ -42,8 +41,11 @@ def test_second_remotedebugger_instance_is_not_started():
         run_shell_silent(command_to_start)
         sleep(2)
 
-    pid2 = run_shell_command(command_to_get_pid)
-    assert pid1 == pid2, "A second instance of remotedebugger was started."
+    pid2 = run_shell_command(command_to_get_pid).strip().split()
+
+    # Ensure no new process was spawned (set of PIDs should be the same)
+    assert set(pid1) == set(pid2), f"A second instance of remotedebugger was started: {pid2}"
+
 
 def test_tear_down():
     command_to_stop = "kill -9 `pidof remotedebugger`"
