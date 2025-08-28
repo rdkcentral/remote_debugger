@@ -35,16 +35,20 @@ def test_second_remotedebugger_instance_is_not_started():
     pid1 = run_shell_command(command_to_get_pid).strip().split()
 
     if is_remotedebugger_running():
-        print("remotedebugger process is already running")
+        print(f"remotedebugger process is already running with PID(s): {pid1}")
     else:
         command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
         run_shell_silent(command_to_start)
         sleep(2)
+        pid1 = run_shell_command(command_to_get_pid).strip().split()
 
     pid2 = run_shell_command(command_to_get_pid).strip().split()
 
-    # Ensure no new process was spawned (set of PIDs should be the same)
-    assert set(pid1) == set(pid2), f"A second instance of remotedebugger was started: {pid2}"
+    # Assert only one PID exists (no second instance)
+    assert len(pid2) == 1, f"A second instance of remotedebugger was started: {pid2}"
+    # Optional: ensure it's the same PID as before
+    assert pid1[0] == pid2[0], f"PID changed unexpectedly: before={pid1}, after={pid2}"
+
 
 
 def test_tear_down():
