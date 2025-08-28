@@ -31,6 +31,7 @@ def test_check_remotedebugger_is_starting():
     assert pid != "", "remotedebugger process did not start"
 
 def test_second_remotedebugger_instance_is_not_started():
+    kill_rrd()
     command_to_get_pid = "pidof remotedebugger"
     pid1 = run_shell_command(command_to_get_pid)
 
