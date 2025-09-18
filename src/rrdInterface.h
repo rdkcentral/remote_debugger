@@ -45,14 +45,12 @@ extern "C"
 #define RRD_PROCESS_NAME "remotedebugger"
 #define RRD_RBUS_TIMEOUT 60
 
-#ifdef IARMBUS_SUPPORT
 /*Enum for IARM Events*/
 typedef enum _RemoteDebugger_EventId_t {
         IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
         IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA,
         IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT
 } IARM_Bus_RemoteDebugger_EventId_t;
-#endif
 
 /*Event Handler Function*/
 #if !defined(GTEST_ENABLE)
@@ -60,7 +58,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 #endif
-#ifdef IARMBUS_SUPPORT
+#if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
 int RRD_IARM_subscribe(void);
 int RRD_IARM_unsubscribe(void);
 void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len);
