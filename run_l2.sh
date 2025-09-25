@@ -60,7 +60,10 @@ rm -rf /opt/logs/remotedebugger.log*
 
 # Run L2 Test cases
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_missing_report.json test/functional-tests/tests/test_rrd_dynamic_profile_missing_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/test_category.json test/functional-tests/tests/test_rrd_dynamic_subcategory_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_append.json test/functional-tests/tests/test_rrd_append_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_harmful_report.json test/functional-tests/tests/test_rrd_dynamic_profile_harmful_report.py
+cp remote_debugger.json /etc/rrd/
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_report.json test/functional-tests/tests/test_rrd_dynamic_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_append_dynamic_profile_static_notfound.json test/functional-tests/tests/test_rrd_append_dynamic_profile_static_notfound.py
 pytest  --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_single_instance.json test/functional-tests/tests/test_rrd_single_instance.py
@@ -75,3 +78,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_em
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_missing_command_report.json test/functional-tests/tests/test_rrd_static_profile_missing_command_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_static.json test/functional-tests/tests/test_rrd_deepsleep_static_report.py
