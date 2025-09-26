@@ -91,4 +91,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_ba
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_static.json test/functional-tests/tests/test_rrd_deepsleep_static_report.py
 cp remote_debugger.json /media/apps/RDK-RRD-DEEPSLEEP/etc/rrd/remote_debugger.json
-pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_dynamic.json test/functional-tests/tests/test_deepsleep_dynamic.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_dynamic.json test/functional-tests/tests/test_rrd_deepsleep_dynamic_report.py
