@@ -48,7 +48,7 @@ cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
 cd rfcapi
-make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks -DUSE_IARMBUS"
+make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks"
 make install
 cd /usr/rfc/tr181api
 g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c
@@ -78,5 +78,5 @@ cd $WORKDIR
 autoreconf -i
 autoupdate
 ./configure --prefix=${INSTALL_DIR} --enable-iarmbusSupport=yes
-make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I./unittest/mocks -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT -DUSECOV" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
+make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I./unittest/mocks -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT -DUSECOV -DUSE_L2_SUPPORT" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
 make install
