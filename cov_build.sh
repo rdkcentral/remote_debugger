@@ -64,7 +64,6 @@ cp /usr/iarmmgrs/rdmmgr/include/rdmMgr.h /usr/local/include
 cp /usr/iarmbus/core/include/libIBusDaemon.h /usr/local/include
 cp /usr/iarmbus/core/include/libIBus.h /usr/local/include
 cp /usr/iarmbus/core/libIARMCore.h /usr/local/include
-cp /usr/iarmmgrs/hal/include/pwrMgr.h /usr/local/include/
 
 # Build and install stubs from tr69hostif
 
@@ -79,5 +78,5 @@ cd $WORKDIR
 autoreconf -i
 autoupdate
 ./configure --prefix=${INSTALL_DIR} --enable-iarmbusSupport=yes
-make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT -DUSECOV" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
+make remotedebugger_CFLAGS="-I/usr/include/cjson -I/usr/local/include/wdmp-c -I/usr/local/include/rbus -I/usr/local/include -I./unittest/mocks -I/usr/local/include/trower-base64 -DIARMBUS_SUPPORT -DUSECOV -DUSE_L2_SUPPORT" remotedebugger_LDFLAGS="-L/usr/local/lib -lrdkloggers -lcjson -lrfcapi -lrbus -lmsgpackc -lsecure_wrapper -lwebconfig_framework -lIARMBus -ltr181api  -L/usr/local/lib/x86_64-linux-gnu -ltrower-base64 -L/usr/lib/x86_64-linux-gnu"
 make install

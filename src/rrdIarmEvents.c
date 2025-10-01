@@ -157,12 +157,14 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
 	    rbusValue_Init(&value);
         rbusValue_SetString(value,"root");
         rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
-        if (rc != RBUS_ERROR_SUCCESS)
+#ifndef USE_L2_SUPPORT
+	if (rc != RBUS_ERROR_SUCCESS)
         {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbus_set failed for [%s] with error [%d]\n\n", __FUNCTION__, __LINE__,RRD_WEBCFG_FORCE_SYNC ,rc);
             return;
         }
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
+#endif
+	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
         sbuf = (data_buf *)malloc(sizeof(data_buf));
         if (!sbuf)
@@ -244,7 +246,9 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                 return;
             }
             strncpy((char *)sbuf->mdata, (const char *)DEEP_SLEEP_STR, msgLen);
+#if !defined(GTEST_ENABLE)
             RRDMsgDeliver(msqid, sbuf);
+#endif
 #ifdef USECOV
 	    RRD_data_buff_deAlloc(sbuf);
 #endif
