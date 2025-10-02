@@ -93,8 +93,19 @@ bool isRRDEnabled(void)
     RFC_ParamData_t param;
     WDMP_STATUS status = getRFCParameter("RDKRemoteDebugger", RRD_RFC, &param);
     if(status == WDMP_SUCCESS || status == WDMP_ERR_DEFAULT_VALUE) {
+        const char *filePath = "/tmp/rrd_enabled";
+        FILE *fp = fopen(filePath, "w");
 	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:getRFCParameter() name=%s,type=%d,value=%s\n", __FUNCTION__, __LINE__, param.name, param.type, param.value);
+		if (fp) {
+            fprintf(fp, "%s\n", param.value);  // Write the RFC parameter value
+            fclose(fp);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Wrote '%s' to file %s\n", __FUNCTION__, __LINE__, param.value, filePath);
+        } 
+		else {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Failed to open file %s for writing\n", __FUNCTION__, __LINE__, filePath);
+        }
 	    if (strcasecmp("false", param.value) == 0) {
+			
 		    ret = false;
 	    }
     } 
@@ -145,7 +156,6 @@ int main(int argc, char *argv[])
 #endif
     /* Initialize Cache */
     initCache();
-
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
     if(!isEnabled) {
@@ -154,6 +164,7 @@ int main(int argc, char *argv[])
     }
     
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Starting RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
+
     if ((msqid = msgget(key, IPC_CREAT | 0666 )) < 0)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]:Message Queue ID Creation failed, msqid=%d!!!\n",__FUNCTION__,__LINE__,msqid);
