@@ -31,7 +31,7 @@ key_t key = 1234;
 #endif
 #define RRD_TMP_DIR "/tmp/"
 uint32_t gWebCfgBloBVersion = 0;
-rbusHandle_t    rrdRbusHandle;
+extern rbusHandle_t rrdRbusHandle;
 
 /*Function: RRD_subscribe
  *Details: This helps to perform Bus init/connect and event handler registration for receiving
@@ -53,14 +53,6 @@ int RRD_subscribe()
 	return ret;
     }
 #endif
-    //RBUS Event Subscribe for RRD
-    ret = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Open! \n", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
     subscriptions[0].eventName = RRD_SET_ISSUE_EVENT;
     subscriptions[0].filter = NULL;
