@@ -24,6 +24,7 @@ jobs:
         with:
           repository: 'rdkcentral/rfc'
           path: rfc
+          ref: feature/rdkb_rfcapi
 
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
