@@ -44,6 +44,10 @@ if [ ! -d tr69hostif ]; then
     git clone https://github.com/rdkcentral/tr69hostif.git
 fi
 
+if [ ! -d power-manager ]; then
+    git clone https://github.com/rdkcentral/power-manager.git
+fi
+
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
@@ -59,6 +63,7 @@ cp ./tr181api.h /usr/local/include
 cd $ROOT
 
 cp /usr/iarmmgrs/rdmmgr/include/rdmMgr.h /usr/local/include
+cp /usr/power-manager/source/include/pwrMgr.h /usr/local/include/
 
 # Install header files alone from iarmbus repositories
 cp /usr/iarmbus/core/include/libIBusDaemon.h /usr/local/include
