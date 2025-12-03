@@ -201,8 +201,6 @@ sequenceDiagram
     deactivate Main
 ```
 
-### 1.2 Text-Based Complete Sequence
-
 ```
 USER                    MAIN             CONFIG          SYSINFO         LOGPROC         ARCHIVE         UPLOAD          EXTSCRIPT       FILESYSTEM      LOGGER
   |                      |                |               |               |               |               |               |               |               |
@@ -395,67 +393,6 @@ sequenceDiagram
     deactivate Config
 ```
 
-### 2.2 Text-Based Configuration Sequence
-
-```
-MAIN            CONFIG              FILESYSTEM          TR181           LOGGER
-  |               |                   |                   |               |
-  |--Load-------->|                   |                   |               |
-  |   Config      |                   |                   |               |
-  |               |                   |                   |               |
-  |               |---Initialize------|                   |               |
-  |               |   defaults        |                   |               |
-  |               |                   |                   |               |
-  |               |---Read----------->|                   |               |
-  |               | include.properties|                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               |---Parse-----------|                   |               |
-  |               |   RDK_PATH, etc   |                   |               |
-  |               |                   |                   |               |
-  |               |---Read----------->|                   |               |
-  |               | device.properties |                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               |---Check---------->|                   |               |
-  |               | BUILD_TYPE & file |                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               +--(if prod)------->|                   |               |
-  |               |  opt/dcm.props    |                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               +--(if non-prod)----|                   |               |
-  |               |                   |                   |               |
-  |               |---Check---------->|                   |               |
-  |               |  tr181 exists?    |                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               +-(if exists)-------|------------------>|               |
-  |               |                   Query RFC params    |               |
-  |               |<------------------------------------ --|               |
-  |               |                   |                   |               |
-  |               |---Read----------->|                   |               |
-  |               | DCMSettings.conf  |                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               +-(if incomplete)-->|                   |               |
-  |               | Fallback dcm.props|                   |               |
-  |               |<------------------|                   |               |
-  |               |                   |                   |               |
-  |               |---Validate--------|                   |               |
-  |               |   critical values |                   |               |
-  |               |                   |                   |               |
-  |               +-(if invalid)------|-------------------|-------------->|
-  |               |                                       Log ERROR       |
-  |<--ERROR-------|                   |                   |               |
-  |               |                   |                   |               |
-  |               +-(if valid)--------|-------------------|-------------->|
-  |               |                                       Log SUCCESS     |
-  |<--SUCCESS-----|                   |                   |               |
-  |  with config  |                   |                   |               |
-```
-
 ## 3. Archive Creation Sequence Diagram
 
 ### 3.1 Archive Creation Process (Mermaid)
@@ -600,80 +537,6 @@ sequenceDiagram
     Archive->>Log: Log: Archive created successfully (X bytes)
     Archive-->>Main: Return SUCCESS
     deactivate Archive
-```
-
-### 3.2 Text-Based Archive Creation Sequence
-
-```
-MAIN            ARCHIVE             LIBARCHIVE/TAR      FILESYSTEM          LOGGER
-  |               |                   |                   |                   |
-  |--Create------>|                   |                   |                   |
-  |   Archive     |                   |                   |                   |
-  |               |                   |                   |                   |
-  |               |---Generate--------|                   |                   |
-  |               |   filename        |                   |                   |
-  |               |                   |                   |                   |
-  |               |---Change--------->|                   |                   |
-  |               |   directory       to /tmp/rrd/        |                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               |---Check---------->|                   |                   |
-  |               |   disk space      |                   |                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               +-(if libarchive)-->|                   |                   |
-  |               |   Initialize      |                   |                   |
-  |               |<------------------|                   |                   |
-  |               |                   |                   |                   |
-  |               |---Set filters---->|                   |                   |
-  |               |   & format        |                   |                   |
-  |               |<------------------|                   |                   |
-  |               |                   |                   |                   |
-  |               |---Open----------->|                   |                   |
-  |               |   archive file    |                   |                   |
-  |               |<------------------|                   |                   |
-  |               |                   |                   |                   |
-  |               |---Open source-----|------------------>|                   |
-  |               |   directory       |                   |                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               +--FOR EACH FILE----|                   |                   |
-  |               |                   |                   |                   |
-  |               |   Read entry------|------------------>|                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               |   Write header--->|                   |                   |
-  |               |<------------------|                   |                   |
-  |               |                   |                   |                   |
-  |               |   Open file-------|------------------>|                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               |   WHILE data:     |                   |                   |
-  |               |    Read block-----|------------------>|                   |
-  |               |<----------------------------------------------|           |
-  |               |    Write data---->|                   |                   |
-  |               |<------------------|                   |                   |
-  |               |   END WHILE       |                   |                   |
-  |               |                   |                   |                   |
-  |               |   Close file------|------------------>|                   |
-  |               |                   |                   |                   |
-  |               +--END FOR----------|                   |                   |
-  |               |                   |                   |                   |
-  |               |---Close---------->|                   |                   |
-  |               |   archive         |                   |                   |
-  |               |<------------------|                   |                   |
-  |               |                   |                   |                   |
-  |               +-(else tar cmd)----|------------------>|                   |
-  |               |   Execute tar     |                   |                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               |---Verify----------|------------------>|                   |
-  |               |   archive exists  |                   |                   |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               |---Log success-----|-------------------|------------------>|
-  |               |                   |                   |                   |
-  |<--SUCCESS-----|                   |                   |                   |
 ```
 
 ## 4. Upload Management Sequence Diagram
@@ -821,80 +684,6 @@ sequenceDiagram
     deactivate Upload
 ```
 
-### 4.2 Text-Based Upload Sequence
-
-```
-MAIN            UPLOAD              FILESYSTEM          EXTSCRIPT           REMOTE SERVER       LOGGER
-  |               |                   |                   |                   |                   |
-  |--Execute----->|                   |                   |                   |                   |
-  |   Upload      |                   |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |---Initialize------|                   |                   |                   |
-  |               |   attempt=1       |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               +--RETRY LOOP-------|                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |   Check lock----->|                   |                   |                   |
-  |               |<------------------|                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               +-(if locked)-------|                   |                   |                   |
-  |               |   Sleep 60s       |                   |                   |                   |
-  |               |   attempt++       |                   |                   |                   |
-  |               +-(if attempt>10)---|-------------------|-------------------|------------------>|
-  |               |                                       Log TIMEOUT         |                   |
-  |<--ERROR-------|                   |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               +-(if lock free)----|                   |                   |                   |
-  |               |   Exit loop       |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |---Change dir----->|                   |                   |                   |
-  |               |   to /tmp/rrd/    |                   |                   |                   |
-  |               |<------------------|                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |---Build-----------|                   |                   |                   |
-  |               |   command         |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |---Execute---------|------------------>|                   |                   |
-  |               |   uploadSTBLogs   |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |                   |<------------------|                   |                   |
-  |               |                                       Create lock         |                   |
-  |               |                   |                   |                   |                   |
-  |               |                   |                   |---Read archive--->|                   |
-  |               |                   |                   |<------------------|                   |
-  |               |                   |                   |                   |                   |
-  |               |                   |                   |---HTTP POST------>|                   |
-  |               |                   |                   |                   Upload archive      |
-  |               |                   |                   |<------------------|                   |
-  |               |                   |                   Response            |                   |
-  |               |                   |                   |                   |                   |
-  |               |                   |<------------------|                   |                   |
-  |               |                                       Remove lock         |                   |
-  |               |                   |                   |                   |                   |
-  |               |<------------------|-------------------|                   |                   |
-  |               Exit code           |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               +-(if error)--------|-------------------|-------------------|------------------>|
-  |               |                                                           Log FAILED          |
-  |<--ERROR-------|                   |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               +-(if success)------|-------------------|-------------------|------------------>|
-  |               |                                                           Log SUCCESS         |
-  |<--SUCCESS-----|                   |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |--Cleanup----->|                   |                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |---Remove--------->|                   |                   |                   |
-  |               |   archive         |                   |                   |                   |
-  |               |<------------------|                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |               |---Remove--------->|                   |                   |                   |
-  |               |   source dir      |                   |                   |                   |
-  |               |<------------------|                   |                   |                   |
-  |               |                   |                   |                   |                   |
-  |<--Done--------|                   |                   |                   |                   |
-```
-
 ## 5. Error Handling Sequence Diagram
 
 ### 5.1 Error Handling Flow (Mermaid)
@@ -982,63 +771,6 @@ sequenceDiagram
         deactivate ErrorHandler
         Module->>Module: Resume normal flow
     end
-```
-
-### 5.2 Text-Based Error Handling Sequence
-
-```
-MODULE          ERROR_HANDLER       LOGGER              CLEANUP             MAIN
-  |               |                   |                   |                   |
-  |--Error------->|                   |                   |                   |
-  |   Detected    |                   |                   |                   |
-  |               |                   |                   |                   |
-  |               |---Categorize------|                   |                   |
-  |               |   error type      |                   |                   |
-  |               |                   |                   |                   |
-  |               +-(FATAL)-----------|------------------>|                   |
-  |               |                   Log FATAL           |                   |
-  |               |                   |                   |                   |
-  |               |---Initiate--------|------------------>|                   |
-  |               |   cleanup         |                   |                   |
-  |               |<----------------------------------------------|           |
-  |               |                   Cleanup complete    |                   |
-  |               |                   |                   |                   |
-  |               |---Return error----|-------------------|------------------>|
-  |               |   code            |                   |                   |
-  |               |                   |                   |                   |
-  |               |                   |                   |                   Exit
-  |               |                   |                   |                   |
-  |               +-(RECOVERABLE)-----|------------------>|                   |
-  |               |                   Log RECOVERABLE     |                   |
-  |               |                   |                   |                   |
-  |               |---Check retry-----|                   |                   |
-  |               |   count           |                   |                   |
-  |               |                   |                   |                   |
-  |               +-(if retry OK)-----|                   |                   |
-  |<--Retry-------|                   |                   |                   |
-  |   operation   |                   |                   |                   |
-  |               |                   |                   |                   |
-  |               +-(if no retry)-----|                   |                   |
-  |               |   Check fallback  |                   |                   |
-  |               |                   |                   |                   |
-  |               +-(if fallback)-----|                   |                   |
-  |<--Use---------|                   |                   |                   |
-  |   fallback    |                   |                   |                   |
-  |               |                   |                   |                   |
-  |               +-(if no fallback)--|------------------>|                   |
-  |               |                                       Cleanup             |
-  |               |<----------------------------------------------|           |
-  |               |                   |                   |                   |
-  |               |---Return error----|-------------------|------------------>|
-  |               |                   |                   |                   Exit
-  |               |                   |                   |                   |
-  |               +-(WARNING)---------|------------------>|                   |
-  |               |                   Log WARNING         |                   |
-  |               |                   |                   |                   |
-  |               |---Set flag--------|                   |                   |
-  |               |                   |                   |                   |
-  |<--Continue----|                   |                   |                   |
-  |   operation   |                   |                   |                   |
 ```
 
 ## Document Revision History
