@@ -15,68 +15,50 @@ This document describes the high-level design for migrating the `uploadRRDLogs.s
 
 ### 2.1 System Context
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Embedded Device System                        │
-│                                                                  │
-│  ┌────────────────┐                                             │
-│  │  RRD Service   │                                             │
-│  │  (Trigger)     │                                             │
-│  └────────┬───────┘                                             │
-│           │                                                      │
-│           │ Executes with                                       │
-│           │ (uploaddir, issuetype)                             │
-│           ▼                                                      │
-│  ┌─────────────────────────────────────────────────────┐       │
-│  │        uploadRRDLogs (C Program)                     │       │
-│  │  ┌──────────────────────────────────────────────┐   │       │
-│  │  │  Main Orchestration Layer                    │   │       │
-│  │  └─────┬──────────────────────────────────┬─────┘   │       │
-│  │        │                                  │          │       │
-│  │        ▼                                  ▼          │       │
-│  │  ┌──────────────────┐        ┌──────────────────┐   │       │
-│  │  │ Configuration    │        │  Log Processing  │   │       │
-│  │  │ Manager          │        │  Engine          │   │       │
-│  │  └──────────────────┘        └──────────────────┘   │       │
-│  │        │                                  │          │       │
-│  │        ▼                                  ▼          │       │
-│  │  ┌──────────────────┐        ┌──────────────────┐   │       │
-│  │  │ System Info      │        │  Archive Manager │   │       │
-│  │  │ Provider         │        │                  │   │       │
-│  │  └──────────────────┘        └──────────────────┘   │       │
-│  │                                       │              │       │
-│  │                                       ▼              │       │
-│  │                            ┌──────────────────┐     │       │
-│  │                            │ Upload Manager   │     │       │
-│  │                            └──────────────────┘     │       │
-│  └─────────────────────────────────┬────────────────────┘      │
-│                                    │                            │
-│  ┌─────────────────────────────────┼──────────────┐            │
-│  │  External Dependencies          │              │            │
-│  │                                 │              │            │
-│  │  ┌──────────────┐     ┌─────────▼─────────┐   │            │
-│  │  │ tr181 Tool   │     │ uploadSTBLogs.sh  │   │            │
-│  │  │ (RFC Params) │     │ (Upload Script)   │   │            │
-│  │  └──────────────┘     └───────────────────┘   │            │
-│  │                                                 │            │
-│  └─────────────────────────────────────────────────┘           │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────┐           │
-│  │  File System                                     │           │
-│  │  - /etc/include.properties                      │           │
-│  │  - /etc/device.properties                       │           │
-│  │  - /tmp/DCMSettings.conf                        │           │
-│  │  - /tmp/rrd/ (working directory)                │           │
-│  │  - $LOG_PATH/remote-debugger.log                │           │
-│  └─────────────────────────────────────────────────┘           │
-└──────────────────────────────────────────────────────────────────┘
-                                │
-                                │ HTTPS/HTTP
-                                ▼
-                   ┌────────────────────────┐
-                   │  Remote Log Server     │
-                   │  (DCM/SSR Server)      │
-                   └────────────────────────┘
+```mermaid
+graph TB
+    subgraph Device["Embedded Device System"]
+        RRDService["RRD Service<br/>(Trigger)"]
+        
+        subgraph Program["uploadRRDLogs C Program"]
+            Main["Main Orchestration<br/>Layer"]
+            Config["Configuration<br/>Manager"]
+            LogProc["Log Processing<br/>Engine"]
+            SysInfo["System Info<br/>Provider"]
+            Archive["Archive<br/>Manager"]
+            Upload["Upload<br/>Manager"]
+            
+            Main --> Config
+            Main --> LogProc
+            Config --> SysInfo
+            LogProc --> Archive
+            Archive --> Upload
+        end
+        
+        subgraph ExtDeps["External Dependencies"]
+            RBus["RBus API<br/>(RFC Params)"]
+            UploadLib["libuploadSTBLogs<br/>(Upload Library)"]
+        end
+        
+        subgraph FileSystem["File System"]
+            Props1["/etc/include.properties"]
+            Props2["/etc/device.properties"]
+            DCM["/tmp/DCMSettings.conf"]
+            WorkDir["/tmp/rrd/"]
+            LogFile["$LOG_PATH/remote-debugger.log"]
+        end
+        
+        RRDService -->|"Execute with<br/>uploaddir, issuetype"| Main
+        Config -.-> RBus
+        Upload -.-> UploadLib
+        Program -.-> FileSystem
+    end
+    
+    Upload -->|"HTTPS/HTTP"| RemoteServer["Remote Log Server<br/>(DCM/SSR Server)"]
+    
+    style Device fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style Program fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Main fill:#fff3e0,stroke:#f57c00,stroke-width:2px
 ```
 
 ### 2.2 High-Level Component View
@@ -152,7 +134,7 @@ void rrd_upload_cleanup(void);
 
 **Responsibilities:**
 - Parse property files (key=value format)
-- Query TR-181 parameters via tr181 tool
+- Query RFC parameters via RBus API
 - Handle configuration priority and fallback
 - Provide configuration values to other modules
 - Manage configuration data structures
@@ -181,7 +163,7 @@ void rrd_config_cleanup(rrd_config_t *config);
 ```
 
 **Configuration Priority:**
-1. TR-181 RFC parameters (if available and not prod build with /opt/dcm.properties)
+1. RFC parameters via RBus (if available and not prod build with /opt/dcm.properties)
 2. DCMSettings.conf (/tmp/DCMSettings.conf)
 3. dcm.properties (/opt/dcm.properties or /etc/dcm.properties)
 
@@ -192,20 +174,42 @@ KEY="value with spaces"
 # Comments
 ```
 
-**RFC Parameters to Query:**
+**RFC Parameters to Query via RBus:**
 - `Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl`
 - `Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl`
+
+**RBus API Usage:**
+```c
+#include <rbus.h>
+
+// Initialize RBus connection
+rbusHandle_t handle;
+rbusError_t err = rbus_open(&handle, "uploadRRDLogs");
+
+// Get RFC parameter
+rbusValue_t value;
+rbusProperty_t property;
+err = rbus_get(handle, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl", &value);
+if (err == RBUS_ERROR_SUCCESS) {
+    const char* serverUrl = rbusValue_GetString(value, NULL);
+    // Use serverUrl
+    rbusValue_Release(value);
+}
+
+// Close RBus connection
+rbus_close(handle);
+```
 
 **Error Handling:**
 - Missing files → Try fallback sources
 - Parse errors → Log warning, use defaults
-- tr181 not available → Skip RFC query
+- RBus connection failure → Skip RFC query, fall back to DCM config
 - Empty critical values → Return error
 
 **Dependencies:**
 - System Info Provider (for file access)
 - File I/O functions
-- Process execution (for tr181)
+- RBus library (librbus)
 
 ---
 
@@ -233,9 +237,14 @@ int rrd_sysinfo_get_dir_size(const char *dirpath, size_t *size);
 ```
 
 **MAC Address Retrieval:**
-- Method 1: Parse `/sys/class/net/[interface]/address`
-- Method 2: ioctl SIOCGIFHWADDR (fallback)
-- Method 3: Execute `getMacAddressOnly` from utils.sh (compatibility)
+- Method 1: Query TR-181 parameters via RBus
+  - `Device.DeviceInfo.X_COMCAST-COM_STB_MAC` (Video platforms)
+  - `Device.DeviceInfo.X_COMCAST-COM_CM_MAC` (Broadband platforms)
+  - `Device.X_CISCO_COM_MACAddress` (Alternative)
+- Method 2: Read from cache files (fallback)
+  - `/tmp/device_details.cache` (Video platforms)
+  - `/tmp/estb_mac` or `/nvram/estb_mac` (Broadband platforms)
+- Method 3: Execute `getMacAddressOnly` from utils.sh (last resort)
 - Format: XX:XX:XX:XX:XX:XX (colon-separated)
 
 **Timestamp Format:**
@@ -256,8 +265,9 @@ int rrd_sysinfo_get_dir_size(const char *dirpath, size_t *size);
 
 **Dependencies:**
 - POSIX system calls (stat, access, opendir)
-- Network interface access (sys/ioctl.h)
+- RBus library (for TR-181 parameter queries)
 - Time functions (time.h)
+- File I/O for cache file reading
 
 ---
 
@@ -346,24 +356,36 @@ Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 
 **Archive Creation Approach:**
 
-**Option 1: Use libarchive (Preferred)**
-- Library: libarchive
-- Advantages: Native C API, efficient, portable
+**Using libarchive Library:**
+- Library: libarchive (required)
+- Advantages: Native C API, efficient, portable, secure
+- No shell execution, direct memory-to-file streaming
+- Full control over compression and archive format
 - Implementation:
   ```c
   struct archive *a = archive_write_new();
   archive_write_add_filter_gzip(a);
   archive_write_set_format_ustar(a);
   archive_write_open_filename(a, filename);
-  // Add files iteratively
+  
+  // Iterate through source directory
+  // For each file, create archive entry and write data
+  struct archive_entry *entry = archive_entry_new();
+  archive_entry_set_pathname(entry, filename);
+  archive_entry_set_size(entry, file_size);
+  archive_entry_set_filetype(entry, AE_IFREG);
+  archive_entry_set_perm(entry, 0644);
+  archive_write_header(a, entry);
+  
+  // Stream file data
+  while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0) {
+      archive_write_data(a, buffer, bytes_read);
+  }
+  
+  archive_entry_free(entry);
   archive_write_close(a);
+  archive_write_free(a);
   ```
-
-**Option 2: Execute tar Command (Fallback)**
-- Use `system()` or `fork()/exec()`
-- Command: `tar -zcf archive.tgz -C source_dir .`
-- Redirect stderr to log file
-- Check return code
 
 **Implementation Considerations:**
 - Stream processing to minimize memory usage
@@ -378,8 +400,7 @@ Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 - Archive write errors → Cleanup and return error
 
 **Dependencies:**
-- libarchive (if using Option 1)
-- System calls (if using Option 2)
+- libarchive (required)
 - File system operations
 - System Info Provider
 
@@ -394,8 +415,8 @@ Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 **Responsibilities:**
 - Check for concurrent upload operations (lock file)
 - Retry logic for lock acquisition
-- Execute uploadSTBLogs.sh script
-- Monitor upload progress
+- Call uploadSTBLogs library APIs for upload
+- Monitor upload progress via library callbacks
 - Clean up after upload (success or failure)
 
 **Key Functions:**
@@ -427,20 +448,28 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir);
   - If no lock: Proceed with upload
 
 **Upload Execution:**
-- **Script:** `$RDK_PATH/uploadSTBLogs.sh`
-- **Method:** `fork()` + `execl()` or `system()`
+- **Library:** `libuploadSTBLogs.so`
+- **Header:** `<uploadSTBLogs.h>`
+- **Method:** Direct library API calls
+- **API Function:**
+  ```c
+  int uploadSTBLogs_upload(
+      const char *log_server,
+      const char *protocol,
+      const char *http_upload_link,
+      const char *archive_path,
+      const char *working_dir,
+      uploadSTBLogs_callback_t *callbacks
+  );
+  ```
 - **Parameters:**
-  1. `LOG_SERVER` - Server URL
-  2. `1` - Flag parameter
-  3. `1` - Flag parameter
-  4. `0` - Flag parameter
-  5. `UPLOAD_PROTOCOL` - HTTP or HTTPS
-  6. `HTTP_UPLOAD_LINK` - Upload endpoint URL
-  7. `0` - Flag parameter
-  8. `1` - Flag parameter
-  9. `UPLOAD_DEBUG_FILE` - Archive filename
-- **Working Directory:** `/tmp/rrd/`
-- **Return Code:** Capture and check uploadSTBLogs.sh exit status
+  - `log_server` - Server URL
+  - `protocol` - HTTP or HTTPS
+  - `http_upload_link` - Upload endpoint URL
+  - `archive_path` - Full path to archive file
+  - `working_dir` - Working directory (e.g., `/tmp/rrd/`)
+  - `callbacks` - Optional progress/status callbacks
+- **Return Value:** 0 on success, non-zero error code on failure
 
 **Cleanup Operations:**
 - **On Success:**
@@ -455,12 +484,13 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir);
 
 **Error Handling:**
 - Lock timeout → Return failure, cleanup
-- Script execution failure → Log error, cleanup
+- Library API failure → Log error with API error code, cleanup
+- Network errors → Captured from library return codes
 - Cleanup errors → Log but don't fail if primary operation succeeded
 
 **Dependencies:**
 - System Info Provider (file operations)
-- Process execution functions
+- libuploadSTBLogs (upload library)
 - File system operations
 
 ---
@@ -469,48 +499,90 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir);
 
 **Module Name:** `rrd_log`
 
-**Purpose:** Centralized logging for all operations
+**Purpose:** Centralized logging using rdklogger framework
 
 **Responsibilities:**
-- Write timestamped log entries
-- Format log messages consistently
-- Handle log file rotation (if needed)
-- Thread-safe logging (if multi-threaded)
+- Use rdklogger (RDK_LOG macro) for all logging operations
+- Follow RDK standard logging practices
+- Format log messages consistently with RDK conventions
+- Log to remote-debugger.log via rdklogger configuration
+- Thread-safe logging (provided by rdklogger)
 
 **Key Functions:**
 ```c
-int rrd_log_init(const char *log_path);
-void rrd_log_write(const char *format, ...);
-void rrd_log_error(const char *format, ...);
-void rrd_log_cleanup(void);
+// Initialize rdklogger
+int rrd_log_init(const char *debug_ini_file);
+
+// Logging macros (using rdklogger)
+#define LOG_UPLOADRRDLOGS "LOG.RDK.UPLOADRRDLOGS"
+
+// Use RDK_LOG macro for all logging
+// RDK_LOG(level, module, format, ...)
+// Example:
+// RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS, "[%s:%d] Starting upload\n", __FUNCTION__, __LINE__);
 ```
 
 **Log Format:**
 ```
-[TIMESTAMP]: uploadRRDLogs: [LEVEL] message
-Example: 2025-12-01-03-45-30PM: uploadRRDLogs: [INFO] Starting log upload for CRASH_REPORT
+Timestamp LOG.RDK.UPLOADRRDLOGS: [function:line] message
+Example: 201201-15:45:30.123 [INFO] LOG.RDK.UPLOADRRDLOGS: [rrd_upload_orchestrate:145] Starting log upload for CRASH_REPORT
 ```
 
-**Log Levels:**
-- INFO: Normal operations
-- WARN: Warnings, non-critical issues
-- ERROR: Error conditions
-- DEBUG: Detailed debugging (optional, compile-time)
+**Note:** Timestamp format and prefix are automatically handled by rdklogger framework
 
-**Log File:**
-- Path: `$LOG_PATH/remote-debugger.log`
-- Append mode
-- Create if doesn't exist
-- No automatic rotation (handled externally)
+**Log Levels (rdklogger):**
+- `RDK_LOG_TRACE1`: Entry/Exit tracing
+- `RDK_LOG_DEBUG`: Debug information
+- `RDK_LOG_INFO`: Normal operational messages
+- `RDK_LOG_WARN`: Warning conditions
+- `RDK_LOG_ERROR`: Error conditions
+- `RDK_LOG_FATAL`: Fatal errors (not typically used)
+
+**Log File Configuration:**
+- Module: `LOG.RDK.UPLOADRRDLOGS`
+- Configuration: Via debug.ini file (rdklogger config)
+- Default Path: `$LOG_PATH/remote-debugger.log` (shared with RRD daemon)
+- Rotation: Handled by rdklogger/logrotate
+- Log level: Configured via debug.ini or RFC
 
 **Implementation:**
-- Use `fprintf()` or `syslog()` (configurable)
-- Mutex protection if multi-threaded
-- Buffer flushing for critical messages
+```c
+#include <rdk_debug.h>
+
+// Initialization in main()
+int main(int argc, char *argv[]) {
+    // Initialize rdklogger with debug.ini configuration
+    rdk_logger_init("/etc/debug.ini");
+    
+    // Log messages using RDK_LOG macro
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS, 
+            "[%s:%d] uploadRRDLogs started\n", __FUNCTION__, __LINE__);
+    
+    // ... rest of program
+}
+
+// Example logging throughout code
+void rrd_upload_execute() {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Checking upload lock\n", __FUNCTION__, __LINE__);
+    
+    if (error_condition) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload failed: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+    }
+}
+```
+
+**Features:**
+- Thread-safe (built into rdklogger)
+- Automatic timestamp and module prefix
+- Configurable log levels via debug.ini
+- RFC-based log level control
+- Automatic log rotation support
 
 **Dependencies:**
-- System Info Provider (timestamp)
-- File I/O
+- rdklogger library (rdk_debug.h)
+- debug.ini configuration file
 
 ---
 
@@ -518,164 +590,74 @@ Example: 2025-12-01-03-45-30PM: uploadRRDLogs: [INFO] Starting log upload for CR
 
 ### 4.1 Primary Data Flow
 
-```
-┌──────────────────┐
-│ Command Line     │
-│ (UPLOADDIR,      │
-│  ISSUETYPE)      │
-└────────┬─────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 1. Argument Validation                              │
-│    - Check argc == 3                                │
-│    - Validate paths                                 │
-└────────┬───────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 2. Configuration Loading                            │
-│    - Load include.properties                        │
-│    - Load device.properties                         │
-│    - Query TR-181 (if available)                    │
-│    - Parse DCMSettings.conf                         │
-│    - Fallback to dcm.properties                     │
-└────────┬───────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 3. System Info Gathering                            │
-│    - Get MAC address                                │
-│    - Generate timestamp                             │
-│    - Validate paths                                 │
-└────────┬───────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 4. Log Processing                                   │
-│    - Validate source directory                      │
-│    - Convert issue type to uppercase                │
-│    - Handle LOGUPLOAD_ENABLE special case           │
-└────────┬───────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 5. Archive Creation                                 │
-│    - Generate filename                              │
-│    - Create tar.gz archive                          │
-│    - Validate archive created                       │
-└────────┬───────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 6. Upload Coordination                              │
-│    - Check for upload lock                          │
-│    - Wait/retry if locked                           │
-│    - Execute uploadSTBLogs.sh                       │
-│    - Monitor upload status                          │
-└────────┬───────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────────────────────────────────────────┐
-│ 7. Cleanup                                          │
-│    - Remove archive file                            │
-│    - Remove source directory                        │
-│    - Close log file                                 │
-│    - Return status code                             │
-└────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Start["Command Line<br/>(UPLOADDIR, ISSUETYPE)"] --> ArgVal["1. Argument Validation<br/>- Check argc == 3<br/>- Validate paths"]
+    ArgVal --> ConfigLoad["2. Configuration Loading<br/>- Load include.properties<br/>- Load device.properties<br/>- Query RFC via RBus (if available)<br/>- Parse DCMSettings.conf<br/>- Fallback to dcm.properties"]
+    ConfigLoad --> SysInfo["3. System Info Gathering<br/>- Get MAC address<br/>- Generate timestamp<br/>- Validate paths"]
+    SysInfo --> LogProc["4. Log Processing<br/>- Validate source directory<br/>- Convert issue type to uppercase<br/>- Handle LOGUPLOAD_ENABLE special case"]
+    LogProc --> Archive["5. Archive Creation<br/>- Generate filename<br/>- Create tar.gz archive<br/>- Validate archive created"]
+    Archive --> Upload["6. Upload Coordination<br/>- Check for upload lock<br/>- Wait/retry if locked<br/>- Execute uploadSTBLogs.sh<br/>- Monitor upload status"]
+    Upload --> Cleanup["7. Cleanup<br/>- Remove archive file<br/>- Remove source directory<br/>- Close log file<br/>- Return status code"]
+    Cleanup --> End([End])
+    
+    style Start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style End fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style ArgVal fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style ConfigLoad fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style SysInfo fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style LogProc fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Archive fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Upload fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Cleanup fill:#fff3e0,stroke:#f57c00,stroke-width:2px
 ```
 
 ### 4.2 Configuration Data Flow
 
-```
-┌──────────────────────────────────────────────────────┐
-│ Configuration Sources (Priority Order)               │
-└──────────────────────────────────────────────────────┘
-         │
-         ▼
-    ┌────────────────────────────────────────┐
-    │ Is BUILD_TYPE == "prod" AND            │
-    │ /opt/dcm.properties exists?            │
-    └──┬────────────────────────────────┬────┘
-       │ YES                            │ NO
-       │                                │
-       ▼                                ▼
-┌──────────────────┐          ┌──────────────────────┐
-│ Use ONLY         │          │ Try TR-181 RFC       │
-│ /opt/dcm.props   │          │ (if tr181 available) │
-│ (Override RFC)   │          └──────────┬───────────┘
-└──────┬───────────┘                     │
-       │                                 ▼
-       │                    ┌────────────────────────┐
-       │                    │ Query RFC Parameters:  │
-       │                    │ - LogServerUrl         │
-       │                    │ - SsrUrl               │
-       │                    └──────────┬─────────────┘
-       │                               │
-       │                               ▼
-       │                    ┌────────────────────────┐
-       │                    │ Parse DCMSettings.conf │
-       │                    │ - UploadRepository:URL │
-       │                    │ - uploadProtocol       │
-       │                    └──────────┬─────────────┘
-       │                               │
-       │              ┌────────────────┘
-       ▼              ▼
-┌───────────────────────────────┐
-│ Merge Configuration:          │
-│ - LOG_SERVER                  │
-│ - HTTP_UPLOAD_LINK            │
-│ - UPLOAD_PROTOCOL             │
-│ - RDK_PATH                    │
-│ - LOG_PATH                    │
-└───────┬───────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│ Validate Required Values:     │
-│ - LOG_SERVER not empty        │
-│ - HTTP_UPLOAD_LINK not empty  │
-│ - Set defaults if missing     │
-└───────┬───────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│ Configuration Ready           │
-└───────────────────────────────┘
+```mermaid
+flowchart TD
+    Start["Configuration Sources<br/>(Priority Order)"] --> CheckProd{"BUILD_TYPE == prod<br/>AND /opt/dcm.properties<br/>exists?"}
+    
+    CheckProd -->|YES| UseProdDCM["Use ONLY<br/>/opt/dcm.props<br/>(Override RFC)"]
+    CheckProd -->|NO| CheckRBus{"RBus<br/>available?"}
+    
+    CheckRBus -->|YES| QueryRFC["Query RFC via RBus:<br/>- LogServerUrl<br/>- SsrUrl"]
+    CheckRBus -->|NO| ParseDCM
+    
+    QueryRFC --> ParseDCM["Parse DCMSettings.conf<br/>- UploadRepository:URL<br/>- uploadProtocol"]
+    
+    UseProdDCM --> Merge
+    ParseDCM --> Merge["Merge Configuration:<br/>- LOG_SERVER<br/>- HTTP_UPLOAD_LINK<br/>- UPLOAD_PROTOCOL<br/>- RDK_PATH<br/>- LOG_PATH"]
+    
+    Merge --> Validate["Validate Required Values:<br/>- LOG_SERVER not empty<br/>- HTTP_UPLOAD_LINK not empty<br/>- Set defaults if missing"]
+    
+    Validate --> Ready["Configuration Ready"]
+    
+    style Start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style CheckProd fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style CheckTR181 fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style UseProdDCM fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style QueryRFC fill:#b3e5fc,stroke:#0277bd,stroke-width:2px
+    style ParseDCM fill:#b3e5fc,stroke:#0277bd,stroke-width:2px
+    style Merge fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style Validate fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style Ready fill:#a5d6a7,stroke:#2e7d32,stroke-width:3px
 ```
 
 ### 4.3 Error Flow
 
-```
-┌─────────────────┐
-│ Error Detected  │
-└────────┬────────┘
-         │
-         ▼
-┌──────────────────────────────┐
-│ Log Error with Context        │
-│ - Timestamp                   │
-│ - Error code                  │
-│ - Error message               │
-└────────┬─────────────────────┘
-         │
-         ▼
-┌──────────────────────────────┐
-│ Attempt Cleanup               │
-│ - Remove partial files        │
-│ - Close open handles          │
-│ - Release resources           │
-└────────┬─────────────────────┘
-         │
-         ▼
-┌──────────────────────────────┐
-│ Return Error Code             │
-│ - 1: Argument error           │
-│ - 2: Config error             │
-│ - 3: Archive error            │
-│ - 4: Upload error             │
-│ - Other: Script-defined       │
-└───────────────────────────────┘
+```mermaid
+flowchart TD
+    Error["Error Detected"] --> LogError["Log Error with Context<br/>- Timestamp<br/>- Error code<br/>- Error message"]
+    LogError --> Cleanup["Attempt Cleanup<br/>- Remove partial files<br/>- Close open handles<br/>- Release resources"]
+    Cleanup --> ReturnCode["Return Error Code<br/>- 1: Argument error<br/>- 2: Config error<br/>- 3: Archive error<br/>- 4: Upload error<br/>- Other: Script-defined"]
+    ReturnCode --> End([Program Exit])
+    
+    style Error fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    style LogError fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style Cleanup fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style ReturnCode fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style End fill:#e0e0e0,stroke:#616161,stroke-width:2px
 ```
 
 ## 5. Key Algorithms and Data Structures
@@ -691,6 +673,12 @@ FUNCTION parse_property_file(filepath, config_struct):
     IF file not accessible THEN
         RETURN error_code
     END IF
+    
+    // Track which required properties have been found
+    found_count = 0
+    required_properties = ["LOG_SERVER", "HTTP_UPLOAD_LINK", "UPLOAD_PROTOCOL", 
+                          "RDK_PATH", "LOG_PATH", "BUILD_TYPE"]
+    total_required = LENGTH(required_properties)
     
     FOR each line in file:
         TRIM whitespace
@@ -709,13 +697,43 @@ FUNCTION parse_property_file(filepath, config_struct):
         
         MATCH key:
             CASE "LOG_SERVER":
-                COPY value to config_struct.log_server
+                IF config_struct.log_server is empty THEN
+                    COPY value to config_struct.log_server
+                    found_count++
+                END IF
             CASE "HTTP_UPLOAD_LINK":
-                COPY value to config_struct.http_upload_link
+                IF config_struct.http_upload_link is empty THEN
+                    COPY value to config_struct.http_upload_link
+                    found_count++
+                END IF
             CASE "UPLOAD_PROTOCOL":
-                COPY value to config_struct.upload_protocol
+                IF config_struct.upload_protocol is empty THEN
+                    COPY value to config_struct.upload_protocol
+                    found_count++
+                END IF
+            CASE "RDK_PATH":
+                IF config_struct.rdk_path is empty THEN
+                    COPY value to config_struct.rdk_path
+                    found_count++
+                END IF
+            CASE "LOG_PATH":
+                IF config_struct.log_path is empty THEN
+                    COPY value to config_struct.log_path
+                    found_count++
+                END IF
+            CASE "BUILD_TYPE":
+                IF config_struct.build_type is empty THEN
+                    COPY value to config_struct.build_type
+                    found_count++
+                END IF
             // ... other cases
         END MATCH
+        
+        // Early exit optimization: if all required properties found, stop parsing
+        IF found_count >= total_required THEN
+            LOG debug "All required properties found, early exit"
+            BREAK
+        END IF
     END FOR
     
     CLOSE file
@@ -738,46 +756,86 @@ typedef struct {
 
 ### 5.2 MAC Address Retrieval Algorithm
 
-**Purpose:** Get device MAC address using multiple fallback methods
+**Purpose:** Get device MAC address using standard TR-181 parameters with cache fallback
 
 **Algorithm:**
 ```
 FUNCTION get_mac_address(output_buffer, buffer_size):
-    // Method 1: Read from sysfs
-    interface_list = ["eth0", "wlan0", "erouter0"]
-    FOR each interface in interface_list:
-        path = "/sys/class/net/" + interface + "/address"
-        IF file_exists(path) THEN
-            READ mac_address from path
-            IF mac_address is valid THEN
-                COPY to output_buffer
-                RETURN success
-            END IF
-        END IF
-    END FOR
+    // Method 1: Query TR-181 parameter via RBus
+    // Device.DeviceInfo.X_COMCAST-COM_STB_MAC (Video platforms)
+    // Device.DeviceInfo.X_COMCAST-COM_CM_MAC (Broadband platforms)
+    // Device.X_CISCO_COM_MACAddress (Alternative)
     
-    // Method 2: ioctl
-    FOR each interface in interface_list:
-        socket = socket(AF_INET, SOCK_DGRAM, 0)
-        IF socket valid THEN
-            SET ifr.ifr_name = interface
-            IF ioctl(socket, SIOCGIFHWADDR, &ifr) succeeds THEN
-                FORMAT MAC from ifr.ifr_hwaddr.sa_data
-                COPY to output_buffer
-                CLOSE socket
-                RETURN success
-            END IF
-            CLOSE socket
-        END IF
-    END FOR
+    tr181_params = [
+        "Device.DeviceInfo.X_COMCAST-COM_STB_MAC",
+        "Device.DeviceInfo.X_COMCAST-COM_CM_MAC",
+        "Device.X_CISCO_COM_MACAddress"
+    ]
     
-    // Method 3: Execute getMacAddressOnly (compatibility)
-    EXECUTE "$RDK_PATH/utils.sh getMacAddressOnly"
-    IF execution succeeds AND output valid THEN
-        COPY output to buffer
-        RETURN success
+    IF rbus_handle_available THEN
+        FOR each param in tr181_params:
+            result = rbus_get(rbus_handle, param, &value)
+            IF result == SUCCESS AND value not empty THEN
+                mac_address = rbusValue_GetString(value)
+                IF mac_address is valid format THEN
+                    COPY mac_address to output_buffer
+                    rbusValue_Release(value)
+                    RETURN success
+                END IF
+                rbusValue_Release(value)
+            END IF
+        END FOR
     END IF
     
+    // Method 2: Read from device cache files (fallback)
+    // Video platforms: /tmp/device_details.cache
+    // Broadband platforms: /tmp/estb_mac or /nvram/estb_mac or equivalent
+    
+    cache_files = [
+        "/tmp/device_details.cache",     // Video
+        "/tmp/estb_mac",                 // Broadband
+        "/nvram/estb_mac",               // Broadband persistent
+        "/tmp/.deviceDetails.cache"      // Alternative
+    ]
+    
+    FOR each cache_file in cache_files:
+        IF file_exists(cache_file) THEN
+            OPEN cache_file for reading
+            FOR each line in file:
+                // Look for MAC address patterns
+                // Format 1: MAC=XX:XX:XX:XX:XX:XX
+                // Format 2: estb_mac=XX:XX:XX:XX:XX:XX
+                // Format 3: Just the MAC address
+                
+                IF line matches "MAC=" OR "estb_mac=" THEN
+                    EXTRACT value after '='
+                    IF value is valid MAC format THEN
+                        COPY value to output_buffer
+                        CLOSE file
+                        RETURN success
+                    END IF
+                ELSE IF line matches MAC address pattern THEN
+                    IF line is valid MAC format THEN
+                        COPY line to output_buffer
+                        CLOSE file
+                        RETURN success
+                    END IF
+                END IF
+            END FOR
+            CLOSE file
+        END IF
+    END FOR
+    
+    // Method 3: Execute getMacAddressOnly utility (last resort)
+    IF file_exists("$RDK_PATH/utils.sh") THEN
+        EXECUTE "$RDK_PATH/utils.sh getMacAddressOnly"
+        IF execution succeeds AND output valid THEN
+            COPY output to buffer
+            RETURN success
+        END IF
+    END IF
+    
+    LOG error "Failed to retrieve MAC address from all sources"
     RETURN error_no_mac_found
 END FUNCTION
 ```
@@ -942,89 +1000,189 @@ export LOG_PATH=/opt/logs
 | /tmp/rrd/ | Archive creation workspace |
 | {UPLOADDIR} | Source log files |
 
-### 6.3 External Script Interface
+### 6.3 uploadSTBLogs Library Interface
 
-**uploadSTBLogs.sh Interface:**
+**libuploadSTBLogs API:**
 
-**Invocation:**
-```bash
-$RDK_PATH/uploadSTBLogs.sh \
-    "$LOG_SERVER" \
-    1 \
-    1 \
-    0 \
-    "$UPLOAD_PROTOCOL" \
-    "$HTTP_UPLOAD_LINK" \
-    0 \
-    1 \
-    "$UPLOAD_DEBUG_FILE"
+**Library:** `libuploadSTBLogs.so`
+
+**Header:** `#include <uploadSTBLogs.h>`
+
+**Primary Upload Function:**
+```c
+int uploadSTBLogs_upload(
+    const char *log_server,
+    const char *protocol,
+    const char *http_upload_link,
+    const char *archive_path,
+    const char *working_dir,
+    uploadSTBLogs_callback_t *callbacks
+);
 ```
 
 **Parameters:**
-1. Log server URL
-2. Flag (always 1)
-3. Flag (always 1)
-4. Flag (always 0)
-5. Upload protocol (HTTP/HTTPS)
-6. HTTP upload endpoint URL
-7. Flag (always 0)
-8. Flag (always 1)
-9. Archive filename
+- `log_server` - Server URL (e.g., "logs.example.com")
+- `protocol` - "HTTP" or "HTTPS"
+- `http_upload_link` - Upload endpoint URL path
+- `archive_path` - Absolute path to archive file to upload
+- `working_dir` - Working directory for upload operation
+- `callbacks` - Optional callback structure for progress updates
 
-**Expected Behavior:**
-- Creates `/tmp/.log-upload.pid` lock file
-- Uploads archive to remote server
-- Removes lock file upon completion
-- Returns 0 on success, non-zero on failure
+**Callback Structure:**
+```c
+typedef struct {
+    void (*on_progress)(int percent, void *user_data);
+    void (*on_status)(const char *message, void *user_data);
+    void (*on_error)(int error_code, const char *message, void *user_data);
+    void *user_data;
+} uploadSTBLogs_callback_t;
+```
 
-**Working Directory:**
-- Must be executed from `/tmp/rrd/`
+**Return Values:**
+- `0` - Upload successful
+- `UPLOAD_ERR_NETWORK` - Network error
+- `UPLOAD_ERR_SERVER` - Server rejected upload
+- `UPLOAD_ERR_FILE` - File access error
+- `UPLOAD_ERR_AUTH` - Authentication failure
+- `UPLOAD_ERR_TIMEOUT` - Operation timeout
 
-### 6.4 TR-181 Interface
+**Concurrency Control:**
+- Library internally manages `/tmp/.log-upload.pid` lock file
+- Caller should use `rrd_upload_wait_for_lock()` before calling upload API
+- Library cleans up lock file on completion or error
 
-**tr181 Tool Interface:**
+**Thread Safety:**
+- Library is thread-safe
+- Multiple concurrent uploads from different processes prevented by lock file
+- Can be called from any thread within the same process
 
-**Invocation:**
-```bash
-/usr/bin/tr181 -g <parameter_path>
+**Example Usage:**
+```c
+uploadSTBLogs_callback_t callbacks = {
+    .on_progress = upload_progress_callback,
+    .on_status = upload_status_callback,
+    .on_error = upload_error_callback,
+    .user_data = NULL
+};
+
+int result = uploadSTBLogs_upload(
+    config->log_server,
+    config->upload_protocol,
+    config->http_upload_link,
+    archive_path,
+    "/tmp/rrd/",
+    &callbacks
+);
+
+if (result != 0) {
+    rrd_log_error("Upload failed with error code: %d", result);
+    return result;
+}
+```
+
+### 6.4 RBus Interface
+
+**RBus API Interface:**
+
+**Library:** librbus (link with `-lrbus`)
+
+**Header:** `#include <rbus.h>`
+
+**Initialization:**
+```c
+rbusHandle_t handle;
+rbusError_t err = rbus_open(&handle, "uploadRRDLogs");
+if (err != RBUS_ERROR_SUCCESS) {
+    // RBus not available, fall back to DCM config
+}
 ```
 
 **Parameters to Query:**
 - `Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl`
 - `Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl`
 
-**Expected Output:**
-- Single line with parameter value
-- Empty string if parameter not set
-- Error message to stderr on failure
+**Query Function:**
+```c
+int rrd_config_query_rbus_param(rbusHandle_t handle, const char* param, char* output, size_t size) {
+    rbusValue_t value;
+    rbusError_t err = rbus_get(handle, param, &value);
+    
+    if (err != RBUS_ERROR_SUCCESS) {
+        return -1;  // Parameter not available
+    }
+    
+    const char* str_value = rbusValue_GetString(value, NULL);
+    if (str_value != NULL && strlen(str_value) > 0) {
+        strncpy(output, str_value, size - 1);
+        output[size - 1] = '\0';
+        rbusValue_Release(value);
+        return 0;
+    }
+    
+    rbusValue_Release(value);
+    return -1;  // Empty value
+}
+```
+
+**Cleanup:**
+```c
+rbus_close(handle);
+```
 
 **Error Handling:**
-- Tool not present: Skip RFC query
-- Query fails: Use DCM configuration fallback
+- RBus not initialized: Skip RFC query
+- Parameter query fails: Use DCM configuration fallback
 - Empty result: Use DCM configuration fallback
+- Connection errors: Log warning, continue with fallback config
 
 ### 6.5 Logging Interface
 
-**Log File:** `$LOG_PATH/remote-debugger.log`
+**Logging Framework:** rdklogger
+
+**Module Name:** `LOG.RDK.UPLOADRRDLOGS`
+
+**Header:** `#include <rdk_debug.h>`
+
+**Initialization:**
+```c
+rdk_logger_init("/etc/debug.ini");
+```
 
 **Log Entry Format:**
 ```
-YYYY-MM-DD-HH-MM-SS[AM|PM]: uploadRRDLogs: [LEVEL] message
+YYMMDD-HH:MM:SS.mmm [LEVEL] LOG.RDK.UPLOADRRDLOGS: [function:line] message
 ```
 
 **Example Entries:**
 ```
-2025-12-01-03-45-30PM: uploadRRDLogs: [INFO] Starting log upload for CRASH_REPORT
-2025-12-01-03-45-32PM: uploadRRDLogs: [INFO] Archive created: 112233445566_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
-2025-12-01-03-46-15PM: uploadRRDLogs: [INFO] Upload successful
-2025-12-01-03-46-16PM: uploadRRDLogs: [ERROR] Failed to remove archive file: Permission denied
+201201-15:45:30.123 [INFO] LOG.RDK.UPLOADRRDLOGS: [rrd_upload_orchestrate:145] Starting log upload for CRASH_REPORT
+201201-15:45:32.456 [INFO] LOG.RDK.UPLOADRRDLOGS: [rrd_archive_create:89] Archive created: 112233445566_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
+201201-15:46:15.789 [INFO] LOG.RDK.UPLOADRRDLOGS: [rrd_upload_execute:234] Upload successful
+201201-15:46:16.012 [ERROR] LOG.RDK.UPLOADRRDLOGS: [rrd_upload_cleanup_files:301] Failed to remove archive file: Permission denied
 ```
 
 **Log Levels:**
-- `[INFO]`: Normal operational messages
-- `[WARN]`: Warning conditions
-- `[ERROR]`: Error conditions
-- `[DEBUG]`: Debugging information (optional)
+- `RDK_LOG_TRACE1`: Function entry/exit tracing
+- `RDK_LOG_DEBUG`: Detailed debug information
+- `RDK_LOG_INFO`: Normal operational messages
+- `RDK_LOG_WARN`: Warning conditions
+- `RDK_LOG_ERROR`: Error conditions
+
+**Configuration:**
+- **File:** `/etc/debug.ini`
+- **Module Section:** `[LOG.RDK.UPLOADRRDLOGS]`
+- **Log Levels:** Configurable per module
+- **Output:** Shared log file `$LOG_PATH/remote-debugger.log`
+
+**Example debug.ini Configuration:**
+```ini
+[LOG.RDK.UPLOADRRDLOGS]
+LOG_LEVEL=4
+APPENDER=FILE
+FILE=/opt/logs/remote-debugger.log
+FILE_SIZE=10240
+FILE_COUNT=5
+```
 
 ## 7. Error Handling Strategy
 
@@ -1037,7 +1195,7 @@ YYYY-MM-DD-HH-MM-SS[AM|PM]: uploadRRDLogs: [LEVEL] message
 - Out of memory
 
 **Category 2: Recoverable Errors (Retry/Fallback)**
-- TR-181 query failure → Fall back to DCM config
+- RBus query failure → Fall back to DCM config
 - uploadSTBLogs.sh busy → Retry with timeout
 - Temporary file I/O error → Retry operation
 
@@ -1254,8 +1412,8 @@ cleanup:
 **Autotools Configuration:**
 ```
 configure.ac additions:
-- Check for libarchive (optional)
-- Check for tr181 tool
+- Check for librbus (required)
+- Check for libarchive (required)
 - Detect system properties files locations
 - Support cross-compilation
 ```
@@ -1267,7 +1425,7 @@ uploadRRDLogs_SOURCES = rrd_main.c rrd_config.c rrd_sysinfo.c \
                         rrd_logproc.c rrd_archive.c rrd_upload.c \
                         rrd_log.c
 uploadRRDLogs_CFLAGS = -Wall -Wextra -Os -std=c99
-uploadRRDLogs_LDFLAGS = -larchive (optional)
+uploadRRDLogs_LDFLAGS = -lrbus -larchive -luploadSTBLogs -lrdkloggers
 ```
 
 ## 11. Dependencies Matrix
@@ -1275,22 +1433,23 @@ uploadRRDLogs_LDFLAGS = -larchive (optional)
 | Module | Depends On | External Libraries | System Calls |
 |--------|------------|-------------------|--------------|
 | rrd_main | All modules | stdlib, stdio | - |
-| rrd_config | rrd_sysinfo, rrd_log | string | fopen, fgets, popen |
+| rrd_config | rrd_sysinfo, rrd_log | string, rbus | fopen, fgets, rbus_open/get/close |
 | rrd_sysinfo | rrd_log | string, time, net | stat, access, opendir, ioctl |
 | rrd_logproc | rrd_sysinfo, rrd_log | string | stat, opendir |
-| rrd_archive | rrd_sysinfo, rrd_log | libarchive (opt) | system/fork/exec |
-| rrd_upload | rrd_sysinfo, rrd_log | - | access, system/fork/exec |
-| rrd_log | - | stdarg, time | fopen, fprintf |
+| rrd_archive | rrd_sysinfo, rrd_log | libarchive | archive_write_* |
+| rrd_upload | rrd_sysinfo, rrd_log | libuploadSTBLogs | uploadSTBLogs_upload |
+| rrd_log | - | rdklogger | RDK_LOG, rdk_logger_init |
 
-**Optional Dependencies:**
-- **libarchive:** For native C tar creation (preferred)
-- **tr181 tool:** For RFC parameter queries
-- **uploadSTBLogs.sh:** External script (required)
+**Required Dependencies:**
+- **librbus:** For RFC parameter queries via RBus IPC
+- **libarchive:** For tar.gz archive creation with gzip compression
+- **libuploadSTBLogs:** For log upload operations to remote server
+- **librdkloggers:** For RDK standard logging framework
 
 **Fallback Strategies:**
-- No libarchive → Use system tar command
-- No tr181 → Use DCM configuration only
-- uploadSTBLogs.sh unavailable → Fatal error (required)
+- RBus connection failure → Use DCM configuration only
+- libuploadSTBLogs unavailable → Build failure (required at compile time)
+- libarchive unavailable → Build failure (required at compile time)
 
 ## 12. Testing Strategy
 
@@ -1352,7 +1511,7 @@ uploadRRDLogs_LDFLAGS = -larchive (optional)
 - Same exit codes for common scenarios
 - Log format compatibility
 - Archive naming convention
-- Integration with uploadSTBLogs.sh
+- Compatible with uploadSTBLogs library implementation
 
 **Allowed Changes:**
 - Performance improvements
@@ -1363,7 +1522,7 @@ uploadRRDLogs_LDFLAGS = -larchive (optional)
 
 **Must Support:**
 - All property file formats
-- TR-181 RFC parameters
+- RFC parameters via RBus API
 - DCM configuration sources
 - Priority and fallback order
 
