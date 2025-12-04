@@ -18,7 +18,7 @@ sequenceDiagram
     participant LogProc as Log Processor
     participant Archive as Archive Manager
     participant Upload as Upload Manager
-    participant ExtScript as uploadSTBLogs.sh
+    participant LibLogUpload as liblogupload Library
     participant Log as Logger
     participant FS as File System
     participant Remote as Remote Server
@@ -45,10 +45,7 @@ sequenceDiagram
     FS-->>Config: Properties
     
     alt Non-prod OR No /opt/dcm.properties
-        Config->>ExtScript: Execute tr181 (RFC query)
-        activate ExtScript
-        ExtScript-->>Config: RFC Parameters
-        deactivate ExtScript
+        Config->>Config: Query RFC via RBus API<br/>LogServerUrl, SsrUrl
         Config->>FS: Read /tmp/DCMSettings.conf
         FS-->>Config: DCM Settings
     else Prod with /opt/dcm.properties
@@ -66,8 +63,7 @@ sequenceDiagram
     
     Main->>SysInfo: Get MAC Address
     activate SysInfo
-    SysInfo->>FS: Read /sys/class/net/*/address
-    FS-->>SysInfo: MAC Address
+    SysInfo->>SysInfo: Query TR-181 params via RBus<br/>OR call GetEstbMac() API
     SysInfo-->>Main: MAC Address
     
     Main->>SysInfo: Get Timestamp
@@ -167,16 +163,15 @@ sequenceDiagram
     Upload->>FS: Change to /tmp/rrd/
     FS-->>Upload: Changed
     
-    Upload->>ExtScript: Execute uploadSTBLogs.sh<br/>with parameters
-    activate ExtScript
-    ExtScript->>FS: Create lock file
-    ExtScript->>Remote: HTTP/HTTPS POST archive
+    Upload->>LibLogUpload: logupload_upload()<br/>with archive, server, callbacks
+    activate LibLogUpload
+    LibLogUpload->>Remote: HTTP/HTTPS POST archive
     activate Remote
-    Remote-->>ExtScript: Upload response
+    Remote-->>LibLogUpload: Upload response
     deactivate Remote
-    ExtScript->>FS: Remove lock file
-    ExtScript-->>Upload: Exit code
-    deactivate ExtScript
+    LibLogUpload->>Upload: Progress/Status callbacks
+    LibLogUpload-->>Upload: Return code
+    deactivate LibLogUpload
     
     alt Upload failed
         Upload->>Log: Log upload failure
@@ -202,7 +197,7 @@ sequenceDiagram
 ```
 
 ```
-USER                    MAIN             CONFIG          SYSINFO         LOGPROC         ARCHIVE         UPLOAD          EXTSCRIPT       FILESYSTEM      LOGGER
+USER                    MAIN             CONFIG          SYSINFO         LOGPROC         ARCHIVE         UPLOAD          LIBLOGUPLOAD    FILESYSTEM      LOGGER
   |                      |                |               |               |               |               |               |               |               |
   |--Execute------------>|                |               |               |               |               |               |               |               |
   |  uploadRRDLogs       |                |               |               |               |               |               |               |               |
@@ -222,18 +217,17 @@ USER                    MAIN             CONFIG          SYSINFO         LOGPROC
   |                      |                |                                                                                   Read properties             |
   |                      |                |<-------------------------------------------------------------------------------|               |               |
   |                      |                |               |               |               |               |               |               |               |
-  |                      |                |---------------|---------------|---------------|---------------|-------------->|               |               |
-  |                      |                |                                                                   Execute tr181 (if available) |               |
-  |                      |                |<------------------------------------------------------------------------------|               |               |
+  |                      |                |---Query RFC via RBus API------|---------------|---------------|---------------|               |               |
+  |                      |                |   (LogServerUrl, SsrUrl)      |               |               |               |               |               |
+  |                      |                |<---RFC values------------------|               |               |               |               |               |
   |                      |                |               |               |               |               |               |               |               |
   |                      |<---Config------|               |               |               |               |               |               |               |
   |                      |    Data        |               |               |               |               |               |               |               |
   |                      |                |               |               |               |               |               |               |               |
   |                      |----------------|-------------->|               |               |               |               |               |               |
   |                      |                                Get MAC Address |               |               |               |               |               |
-  |                      |                                |---------------|---------------|---------------|---------------|-------------->|               |
-  |                      |                                                                                                    Read MAC     |               |
-  |                      |                                |<------------------------------------------------------------------------------|               |
+  |                      |                                |---Query TR-181 via RBus-------|---------------|---------------|               |               |
+  |                      |                                |   OR GetEstbMac() API         |               |               |               |               |
   |                      |<-------------------------------|               |               |               |               |               |               |
   |                      |                                                |               |               |               |               |               |
   |                      |----------------|---------------|-------------->|               |               |               |               |               |
@@ -256,9 +250,9 @@ USER                    MAIN             CONFIG          SYSINFO         LOGPROC
   |                      |                                                                                                    Check lock   |               |
   |                      |                                                                                |<------------------------------------------------------------------------------|
   |                      |                                                                                |               |               |               |
-  |                      |                                                                                |---------------|---------------|-------------->|
-  |                      |                                                                                                Execute uploadSTBLogs.sh        |
-  |                      |                                                                                |<------------------------------------------------------------------------------|
+  |                      |                                                                                |---------------|-------------->|               |
+  |                      |                                                                                                Call logupload_upload() API     |
+  |                      |                                                                                |<---Callbacks---|               |               |
   |                      |<-------------------------------|---------------|---------------|---------------|               |               |               |
   |                      |                                                                                                |               |               |
   |                      |----------------|---------------|---------------|---------------|---------------|---------------|-------------->|               |
@@ -277,7 +271,7 @@ sequenceDiagram
     participant Main
     participant Config as Config Manager
     participant FS as File System
-    participant TR181 as tr181 Tool
+    participant RBus as RBus API
     participant Log as Logger
 
     Main->>Config: rrd_config_load()
@@ -307,27 +301,21 @@ sequenceDiagram
         Config->>Config: Parse and store LOG_SERVER, etc.
         Config->>Log: Log: Skipping RFC (prod override)
     else Non-prod OR no /opt/dcm.properties
-        Config->>FS: Check /usr/bin/tr181 exists
-        activate FS
-        FS-->>Config: Exists: true
-        deactivate FS
+        Config->>Log: Log: Querying RFC parameters via RBus
+        Config->>RBus: rbus_open("uploadRRDLogs")
+        activate RBus
+        RBus-->>Config: RBus handle
         
-        alt tr181 available
-            Config->>Log: Log: Querying RFC parameters
-            Config->>TR181: tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl
-            activate TR181
-            TR181-->>Config: LOG_SERVER value
-            deactivate TR181
-            
-            Config->>TR181: tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl
-            activate TR181
-            TR181-->>Config: SsrUrl value
-            deactivate TR181
-            Config->>Config: Store RFC values
-            Config->>Log: Log: RFC parameters retrieved
-        else tr181 not available
-            Config->>Log: Log: tr181 not available, skipping RFC
-        end
+        Config->>RBus: rbus_get()<br/>LogServerUrl parameter
+        RBus-->>Config: LOG_SERVER value
+        
+        Config->>RBus: rbus_get()<br/>SsrUrl parameter
+        RBus-->>Config: SsrUrl value
+        
+        Config->>RBus: rbus_close()
+        deactivate RBus
+        Config->>Config: Store RFC values
+        Config->>Log: Log: RFC parameters retrieved via RBus
         
         Config->>FS: Open /tmp/DCMSettings.conf
         activate FS
@@ -548,7 +536,7 @@ sequenceDiagram
     participant Main
     participant Upload as Upload Manager
     participant FS as File System
-    participant Script as uploadSTBLogs.sh
+    participant LibLogUpload as liblogupload
     participant Remote as Remote Server
     participant Log as Logger
 
@@ -585,68 +573,45 @@ sequenceDiagram
     FS-->>Upload: Changed
     deactivate FS
     
-    Upload->>Upload: Build command:<br/>uploadSTBLogs.sh LOG_SERVER 1 1 0<br/>PROTOCOL HTTP_LINK 0 1 ARCHIVE
+    Upload->>Upload: Prepare logupload_params:<br/>server_url, protocol, archive_path<br/>setup callbacks
     
-    Upload->>Log: Log: Executing upload command
+    Upload->>Log: Log: Calling liblogupload API
     
-    alt Using fork/exec
-        Upload->>Upload: fork()
-        
-        alt Child process
-            Upload->>Script: execl(uploadSTBLogs.sh, args)
-            activate Script
-            
-            Script->>FS: Create /tmp/.log-upload.pid
-            activate FS
-            FS-->>Script: Lock created
-            deactivate FS
-            
-            Script->>Log: Log upload operations
-            
-            Script->>FS: Read archive file
-            activate FS
-            FS-->>Script: Archive data
-            deactivate FS
-            
-            Script->>Remote: POST archive via HTTP/HTTPS
-            activate Remote
-            
-            alt Upload successful
-                Remote-->>Script: HTTP 200 OK
-            else Upload failed
-                Remote-->>Script: HTTP error
-            end
-            deactivate Remote
-            
-            Script->>FS: Remove /tmp/.log-upload.pid
-            activate FS
-            FS-->>Script: Lock removed
-            deactivate FS
-            
-            Script-->>Upload: Exit code
-            deactivate Script
-        end
-        
-        Upload->>Upload: waitpid(child_pid)
-        Upload->>Upload: Get child exit status
-        
-    else Using system()
-        Upload->>Script: system(command_string)
-        activate Script
-        
-        Script->>FS: Create lock, perform upload
-        Script->>Remote: Upload archive
-        activate Remote
-        Remote-->>Script: Response
-        deactivate Remote
-        Script->>FS: Remove lock
-        
-        Script-->>Upload: Return code
-        deactivate Script
+    Upload->>LibLogUpload: logupload_upload(params, callbacks)
+    activate LibLogUpload
+    
+    LibLogUpload->>FS: Access archive file
+    activate FS
+    FS-->>LibLogUpload: File handle
+    deactivate FS
+    
+    LibLogUpload->>Log: Progress callback (0%)
+    
+    LibLogUpload->>FS: Read archive file
+    activate FS
+    FS-->>LibLogUpload: Archive data
+    deactivate FS
+    
+    LibLogUpload->>Remote: POST archive via HTTP/HTTPS
+    activate Remote
+    
+    LibLogUpload->>Log: Progress callback (50%)
+    
+    alt Upload successful
+        Remote-->>LibLogUpload: HTTP 200 OK
+        LibLogUpload->>Log: Status callback (Upload complete)
+        LibLogUpload->>Log: Progress callback (100%)
+    else Upload failed
+        Remote-->>LibLogUpload: HTTP error
+        LibLogUpload->>Log: Error callback (error code, message)
     end
+    deactivate Remote
     
-    alt Exit code != 0
-        Upload->>Log: Log: ERROR - Upload failed (exit code: X)
+    LibLogUpload-->>Upload: Return code (LOGUPLOAD_SUCCESS or error)
+    deactivate LibLogUpload
+    
+    alt Return code != LOGUPLOAD_SUCCESS
+        Upload->>Log: Log: ERROR - Upload failed (code: X)
         Upload-->>Main: Return ERROR_UPLOAD_FAILED
     end
     
@@ -777,4 +742,4 @@ sequenceDiagram
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | December 1, 2025 | GitHub Copilot | Initial sequence diagram documentation |
+| 1.0 | December 1, 2025 | Vismal | Initial sequence diagram documentation |
