@@ -37,7 +37,7 @@ graph TB
         
         subgraph ExtDeps["External Dependencies"]
             RBus["RBus API<br/>(RFC Params)"]
-            UploadLib["libuploadSTBLogs<br/>(Upload Library)"]
+            LogUpload["liblogupload Library<br/>(Upload API)"]
         end
         
         subgraph FileSystem["File System"]
@@ -50,7 +50,7 @@ graph TB
         
         RRDService -->|"Execute with<br/>uploaddir, issuetype"| Main
         Config -.-> RBus
-        Upload -.-> UploadLib
+        Upload -.-> LogUpload
         Program -.-> FileSystem
     end
     
@@ -241,10 +241,10 @@ int rrd_sysinfo_get_dir_size(const char *dirpath, size_t *size);
   - `Device.DeviceInfo.X_COMCAST-COM_STB_MAC` (Video platforms)
   - `Device.DeviceInfo.X_COMCAST-COM_CM_MAC` (Broadband platforms)
   - `Device.X_CISCO_COM_MACAddress` (Alternative)
-- Method 2: Read from cache files (fallback)
-  - `/tmp/device_details.cache` (Video platforms)
-  - `/tmp/estb_mac` or `/nvram/estb_mac` (Broadband platforms)
-- Method 3: Execute `getMacAddressOnly` from utils.sh (last resort)
+- Method 2: Call `GetEstbMac()` API from common utils library (fallback)
+  - Function signature: `size_t GetEstbMac(char *pEstbMac, size_t szBufSize)`
+  - Platform-agnostic method to retrieve device MAC address
+  - Returns number of characters copied to output buffer
 - Format: XX:XX:XX:XX:XX:XX (colon-separated)
 
 **Timestamp Format:**
@@ -266,8 +266,8 @@ int rrd_sysinfo_get_dir_size(const char *dirpath, size_t *size);
 **Dependencies:**
 - POSIX system calls (stat, access, opendir)
 - RBus library (for TR-181 parameter queries)
+- Common utils library (GetEstbMac API)
 - Time functions (time.h)
-- File I/O for cache file reading
 
 ---
 
@@ -346,6 +346,8 @@ int rrd_archive_generate_filename(const char *mac,
                                   char *filename,
                                   size_t size);
 int rrd_archive_cleanup(const char *archive_path);
+int rrd_archive_check_cpu_usage(float *cpu_usage);
+int rrd_archive_adjust_priority(float cpu_usage);
 ```
 
 **Archive Naming Convention:**
@@ -353,6 +355,17 @@ int rrd_archive_cleanup(const char *archive_path);
 {MAC}_{ISSUETYPE}_{TIMESTAMP}_RRD_DEBUG_LOGS.tgz
 Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 ```
+
+**CPU-Aware Priority Management:**
+- Monitor system CPU usage before and during archive creation
+- Dynamically adjust process priority based on system load
+- Thresholds:
+  - CPU usage < 50%: Normal priority (nice value 0)
+  - CPU usage 50-75%: Lower priority (nice value 10)
+  - CPU usage > 75%: Lowest priority (nice value 19)
+- Read CPU stats from `/proc/stat` to calculate system-wide usage
+- Check CPU every 5 seconds during archive creation
+- Prevents archiving from degrading critical system operations
 
 **Archive Creation Approach:**
 
@@ -392,6 +405,9 @@ Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 - No loading entire directory into memory
 - Progress monitoring (optional)
 - Atomic creation (temp file + rename)
+- CPU usage monitoring with dynamic priority adjustment
+- Use `nice()` system call to adjust process priority
+- Graceful degradation under high system load
 
 **Error Handling:**
 - Disk space exhaustion → Return error, cleanup partial files
@@ -403,6 +419,8 @@ Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 - libarchive (required)
 - File system operations
 - System Info Provider
+- POSIX priority functions (nice, getpriority)
+- /proc/stat for CPU statistics
 
 ---
 
@@ -415,8 +433,8 @@ Example: 11:22:33:44:55:66_CRASH_REPORT_2025-12-01-03-45-30PM_RRD_DEBUG_LOGS.tgz
 **Responsibilities:**
 - Check for concurrent upload operations (lock file)
 - Retry logic for lock acquisition
-- Call uploadSTBLogs library APIs for upload
-- Monitor upload progress via library callbacks
+- Call logupload library API for upload operations
+- Monitor upload progress via callback mechanisms
 - Clean up after upload (success or failure)
 
 **Key Functions:**
@@ -428,10 +446,10 @@ int rrd_upload_execute(const char *log_server,
                        const char *archive_filename);
 int rrd_upload_check_lock(bool *is_locked);
 int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds);
-int rrd_upload_invoke_stb_upload(const char *log_server,
-                                 const char *protocol,
-                                 const char *http_link,
-                                 const char *archive_filename);
+int rrd_upload_invoke_logupload_api(const char *log_server,
+                                    const char *protocol,
+                                    const char *http_link,
+                                    const char *archive_filename);
 int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir);
 ```
 
@@ -448,27 +466,25 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir);
   - If no lock: Proceed with upload
 
 **Upload Execution:**
-- **Library:** `libuploadSTBLogs.so`
-- **Header:** `<uploadSTBLogs.h>`
+- **Library:** `liblogupload.so`
+- **Header:** `<logupload.h>`
 - **Method:** Direct library API calls
 - **API Function:**
   ```c
-  int uploadSTBLogs_upload(
-      const char *log_server,
+  int logupload_upload(
+      const char *server_url,
       const char *protocol,
-      const char *http_upload_link,
-      const char *archive_path,
-      const char *working_dir,
-      uploadSTBLogs_callback_t *callbacks
+      const char *upload_link,
+      const char *file_path,
+      logupload_callback_t *callbacks
   );
   ```
 - **Parameters:**
-  - `log_server` - Server URL
-  - `protocol` - HTTP or HTTPS
-  - `http_upload_link` - Upload endpoint URL
-  - `archive_path` - Full path to archive file
-  - `working_dir` - Working directory (e.g., `/tmp/rrd/`)
-  - `callbacks` - Optional progress/status callbacks
+  - `server_url` - Server URL (e.g., "logs.example.com")
+  - `protocol` - Upload protocol ("HTTP" or "HTTPS")
+  - `upload_link` - Upload endpoint URL path
+  - `file_path` - Absolute path to archive file
+  - `callbacks` - Optional callback structure for progress/status updates
 - **Return Value:** 0 on success, non-zero error code on failure
 
 **Cleanup Operations:**
@@ -484,13 +500,14 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir);
 
 **Error Handling:**
 - Lock timeout → Return failure, cleanup
-- Library API failure → Log error with API error code, cleanup
-- Network errors → Captured from library return codes
+- Library API failure → Log error with error code, cleanup
+- Network errors → Captured from API return codes and callbacks
+- Library not linked → Build failure (required at link time)
 - Cleanup errors → Log but don't fail if primary operation succeeded
 
 **Dependencies:**
 - System Info Provider (file operations)
-- libuploadSTBLogs (upload library)
+- liblogupload (upload library)
 - File system operations
 
 ---
@@ -597,7 +614,7 @@ flowchart TD
     ConfigLoad --> SysInfo["3. System Info Gathering<br/>- Get MAC address<br/>- Generate timestamp<br/>- Validate paths"]
     SysInfo --> LogProc["4. Log Processing<br/>- Validate source directory<br/>- Convert issue type to uppercase<br/>- Handle LOGUPLOAD_ENABLE special case"]
     LogProc --> Archive["5. Archive Creation<br/>- Generate filename<br/>- Create tar.gz archive<br/>- Validate archive created"]
-    Archive --> Upload["6. Upload Coordination<br/>- Check for upload lock<br/>- Wait/retry if locked<br/>- Execute uploadSTBLogs.sh<br/>- Monitor upload status"]
+    Archive --> Upload["6. Upload Coordination<br/>- Check for upload lock<br/>- Wait/retry if locked<br/>- Call liblogupload API<br/>- Monitor upload via callbacks"]
     Upload --> Cleanup["7. Cleanup<br/>- Remove archive file<br/>- Remove source directory<br/>- Close log file<br/>- Return status code"]
     Cleanup --> End([End])
     
@@ -756,7 +773,7 @@ typedef struct {
 
 ### 5.2 MAC Address Retrieval Algorithm
 
-**Purpose:** Get device MAC address using standard TR-181 parameters with cache fallback
+**Purpose:** Get device MAC address using standard TR-181 parameters with API fallback
 
 **Algorithm:**
 ```
@@ -787,52 +804,20 @@ FUNCTION get_mac_address(output_buffer, buffer_size):
         END FOR
     END IF
     
-    // Method 2: Read from device cache files (fallback)
-    // Video platforms: /tmp/device_details.cache
-    // Broadband platforms: /tmp/estb_mac or /nvram/estb_mac or equivalent
+    // Method 2: Call GetEstbMac() API from common utils library (fallback)
+    // Platform-agnostic method to retrieve device MAC address
     
-    cache_files = [
-        "/tmp/device_details.cache",     // Video
-        "/tmp/estb_mac",                 // Broadband
-        "/nvram/estb_mac",               // Broadband persistent
-        "/tmp/.deviceDetails.cache"      // Alternative
-    ]
-    
-    FOR each cache_file in cache_files:
-        IF file_exists(cache_file) THEN
-            OPEN cache_file for reading
-            FOR each line in file:
-                // Look for MAC address patterns
-                // Format 1: MAC=XX:XX:XX:XX:XX:XX
-                // Format 2: estb_mac=XX:XX:XX:XX:XX:XX
-                // Format 3: Just the MAC address
-                
-                IF line matches "MAC=" OR "estb_mac=" THEN
-                    EXTRACT value after '='
-                    IF value is valid MAC format THEN
-                        COPY value to output_buffer
-                        CLOSE file
-                        RETURN success
-                    END IF
-                ELSE IF line matches MAC address pattern THEN
-                    IF line is valid MAC format THEN
-                        COPY line to output_buffer
-                        CLOSE file
-                        RETURN success
-                    END IF
-                END IF
-            END FOR
-            CLOSE file
-        END IF
-    END FOR
-    
-    // Method 3: Execute getMacAddressOnly utility (last resort)
-    IF file_exists("$RDK_PATH/utils.sh") THEN
-        EXECUTE "$RDK_PATH/utils.sh getMacAddressOnly"
-        IF execution succeeds AND output valid THEN
-            COPY output to buffer
+    result = GetEstbMac(output_buffer, buffer_size)
+    IF result > 0 AND result < buffer_size THEN
+        // Validate MAC address format
+        IF output_buffer is valid MAC format THEN
+            LOG debug "Retrieved MAC address using GetEstbMac() API"
             RETURN success
+        ELSE
+            LOG warning "GetEstbMac() returned invalid MAC format"
         END IF
+    ELSE
+        LOG warning "GetEstbMac() failed or returned empty result"
     END IF
     
     LOG error "Failed to retrieve MAC address from all sources"
@@ -878,7 +863,99 @@ FUNCTION execute_upload_with_lock(parameters):
 END FUNCTION
 ```
 
-### 5.4 Archive Filename Generation Algorithm
+### 5.4 CPU-Aware Priority Management Algorithm
+
+**Purpose:** Monitor system CPU and adjust process priority dynamically
+
+**Algorithm:**
+```
+FUNCTION check_and_adjust_cpu_priority():
+    // Read CPU statistics from /proc/stat
+    OPEN "/proc/stat" for reading
+    READ first line (starts with "cpu")
+    PARSE values: user, nice, system, idle, iowait, irq, softirq
+    CLOSE file
+    
+    // Calculate total CPU time and idle time
+    total_cpu = user + nice + system + idle + iowait + irq + softirq
+    total_idle = idle + iowait
+    
+    // Calculate CPU usage percentage (compare with previous sample)
+    IF previous_sample exists THEN
+        delta_total = total_cpu - previous_total_cpu
+        delta_idle = total_idle - previous_total_idle
+        cpu_usage_percent = ((delta_total - delta_idle) / delta_total) * 100
+    ELSE
+        // First sample, cannot calculate usage yet
+        STORE total_cpu and total_idle
+        RETURN success
+    END IF
+    
+    // Store current sample for next calculation
+    previous_total_cpu = total_cpu
+    previous_total_idle = total_idle
+    
+    // Determine appropriate nice value based on CPU usage
+    IF cpu_usage_percent < 50 THEN
+        target_nice = 0      // Normal priority
+        LOG debug "Low CPU usage, normal priority"
+    ELSE IF cpu_usage_percent >= 50 AND cpu_usage_percent < 75 THEN
+        target_nice = 10     // Lower priority
+        LOG info "Moderate CPU usage, lowering priority to nice=10"
+    ELSE IF cpu_usage_percent >= 75 THEN
+        target_nice = 19     // Lowest priority
+        LOG info "High CPU usage, setting lowest priority nice=19"
+    END IF
+    
+    // Get current process priority
+    current_nice = getpriority(PRIO_PROCESS, 0)
+    
+    // Adjust priority only if needed
+    IF current_nice != target_nice THEN
+        result = nice(target_nice - current_nice)
+        IF result < 0 THEN
+            LOG warning "Failed to adjust process priority"
+            RETURN error_priority_adjustment_failed
+        END IF
+        LOG info "Process priority adjusted to nice=" + target_nice
+    END IF
+    
+    RETURN success
+END FUNCTION
+
+FUNCTION create_archive_with_cpu_awareness(source_dir, archive_filename):
+    // Initial CPU check before starting
+    check_and_adjust_cpu_priority()
+    
+    // Initialize archive creation
+    archive = archive_write_new()
+    // ... setup archive as documented
+    
+    file_count = 0
+    last_cpu_check = current_time()
+    
+    FOR each file in source_dir:
+        // Process file and write to archive
+        // ... as documented in archive creation section
+        
+        file_count++
+        
+        // Check CPU usage every 5 seconds or every 10 files
+        IF (current_time() - last_cpu_check) >= 5 OR file_count % 10 == 0 THEN
+            check_and_adjust_cpu_priority()
+            last_cpu_check = current_time()
+        END IF
+    END FOR
+    
+    // Finalize archive
+    archive_write_close(archive)
+    archive_write_free(archive)
+    
+    RETURN success
+END FUNCTION
+```
+
+### 5.5 Archive Filename Generation Algorithm
 
 **Purpose:** Generate standardized archive filename
 
@@ -906,7 +983,7 @@ FUNCTION generate_archive_filename(mac, issue_type, timestamp, output_buffer, si
 END FUNCTION
 ```
 
-### 5.5 Directory Validation Algorithm
+### 5.6 Directory Validation Algorithm
 
 **Purpose:** Validate source directory for archiving
 
@@ -1000,33 +1077,31 @@ export LOG_PATH=/opt/logs
 | /tmp/rrd/ | Archive creation workspace |
 | {UPLOADDIR} | Source log files |
 
-### 6.3 uploadSTBLogs Library Interface
+### 6.3 logupload Library Interface
 
-**libuploadSTBLogs API:**
+**liblogupload API:**
 
-**Library:** `libuploadSTBLogs.so`
+**Library:** `liblogupload.so`
 
-**Header:** `#include <uploadSTBLogs.h>`
+**Header:** `#include <logupload.h>`
 
 **Primary Upload Function:**
 ```c
-int uploadSTBLogs_upload(
-    const char *log_server,
+int logupload_upload(
+    const char *server_url,
     const char *protocol,
-    const char *http_upload_link,
-    const char *archive_path,
-    const char *working_dir,
-    uploadSTBLogs_callback_t *callbacks
+    const char *upload_link,
+    const char *file_path,
+    logupload_callback_t *callbacks
 );
 ```
 
 **Parameters:**
-- `log_server` - Server URL (e.g., "logs.example.com")
-- `protocol` - "HTTP" or "HTTPS"
-- `http_upload_link` - Upload endpoint URL path
-- `archive_path` - Absolute path to archive file to upload
-- `working_dir` - Working directory for upload operation
-- `callbacks` - Optional callback structure for progress updates
+- `server_url` - Log server URL (e.g., "logs.example.com")
+- `protocol` - Upload protocol: "HTTP" or "HTTPS"
+- `upload_link` - Upload endpoint URL path
+- `file_path` - Absolute path to archive file to upload
+- `callbacks` - Optional callback structure for progress/status updates
 
 **Callback Structure:**
 ```c
@@ -1035,47 +1110,80 @@ typedef struct {
     void (*on_status)(const char *message, void *user_data);
     void (*on_error)(int error_code, const char *message, void *user_data);
     void *user_data;
-} uploadSTBLogs_callback_t;
+} logupload_callback_t;
 ```
 
 **Return Values:**
-- `0` - Upload successful
-- `UPLOAD_ERR_NETWORK` - Network error
-- `UPLOAD_ERR_SERVER` - Server rejected upload
-- `UPLOAD_ERR_FILE` - File access error
-- `UPLOAD_ERR_AUTH` - Authentication failure
-- `UPLOAD_ERR_TIMEOUT` - Operation timeout
+- `LOGUPLOAD_SUCCESS` (0) - Upload successful
+- `LOGUPLOAD_ERR_INVALID_ARGS` (1) - Invalid arguments
+- `LOGUPLOAD_ERR_FILE_ACCESS` (2) - File not found or access error
+- `LOGUPLOAD_ERR_NETWORK` (3) - Network connection error
+- `LOGUPLOAD_ERR_SERVER` (4) - Server rejected upload (HTTP 4xx/5xx)
+- `LOGUPLOAD_ERR_AUTH` (5) - Authentication failure
+- `LOGUPLOAD_ERR_TIMEOUT` (6) - Operation timeout
+- `LOGUPLOAD_ERR_UNKNOWN` (7) - Unknown error
 
 **Concurrency Control:**
 - Library internally manages `/tmp/.log-upload.pid` lock file
-- Caller should use `rrd_upload_wait_for_lock()` before calling upload API
-- Library cleans up lock file on completion or error
+- Multiple concurrent uploads prevented by lock file
+- Lock file cleaned up automatically on completion or error
 
 **Thread Safety:**
-- Library is thread-safe
-- Multiple concurrent uploads from different processes prevented by lock file
-- Can be called from any thread within the same process
+- Library is thread-safe for concurrent calls from different threads
+- Multiple simultaneous uploads from different processes prevented by lock file
 
 **Example Usage:**
 ```c
-uploadSTBLogs_callback_t callbacks = {
-    .on_progress = upload_progress_callback,
-    .on_status = upload_status_callback,
-    .on_error = upload_error_callback,
-    .user_data = NULL
-};
+// Callback implementations
+void upload_progress_callback(int percent, void *user_data) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Upload progress: %d%%\n", __FUNCTION__, __LINE__, percent);
+}
 
-int result = uploadSTBLogs_upload(
-    config->log_server,
-    config->upload_protocol,
-    config->http_upload_link,
-    archive_path,
-    "/tmp/rrd/",
-    &callbacks
-);
+void upload_status_callback(const char *message, void *user_data) {
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Upload status: %s\n", __FUNCTION__, __LINE__, message);
+}
 
-if (result != 0) {
-    rrd_log_error("Upload failed with error code: %d", result);
+void upload_error_callback(int error_code, const char *message, void *user_data) {
+    RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Upload error %d: %s\n", __FUNCTION__, __LINE__, error_code, message);
+}
+
+// Main upload function
+int rrd_upload_invoke_logupload_api(
+    const char *log_server,
+    const char *protocol,
+    const char *http_link,
+    const char *archive_path)
+{
+    logupload_callback_t callbacks = {
+        .on_progress = upload_progress_callback,
+        .on_status = upload_status_callback,
+        .on_error = upload_error_callback,
+        .user_data = NULL
+    };
+    
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Calling logupload_upload() API\n", __FUNCTION__, __LINE__);
+    
+    int result = logupload_upload(
+        log_server,
+        protocol,
+        http_link,
+        archive_path,
+        &callbacks
+    );
+    
+    if (result == LOGUPLOAD_SUCCESS) {
+        RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload completed successfully\n", __FUNCTION__, __LINE__);
+    } else {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload failed with error code: %d\n",
+                __FUNCTION__, __LINE__, result);
+    }
+    
     return result;
 }
 ```
@@ -1196,7 +1304,7 @@ FILE_COUNT=5
 
 **Category 2: Recoverable Errors (Retry/Fallback)**
 - RBus query failure → Fall back to DCM config
-- uploadSTBLogs.sh busy → Retry with timeout
+- Upload lock busy → Retry with timeout
 - Temporary file I/O error → Retry operation
 
 **Category 3: Warning Conditions (Log and Continue)**
@@ -1425,7 +1533,7 @@ uploadRRDLogs_SOURCES = rrd_main.c rrd_config.c rrd_sysinfo.c \
                         rrd_logproc.c rrd_archive.c rrd_upload.c \
                         rrd_log.c
 uploadRRDLogs_CFLAGS = -Wall -Wextra -Os -std=c99
-uploadRRDLogs_LDFLAGS = -lrbus -larchive -luploadSTBLogs -lrdkloggers
+uploadRRDLogs_LDFLAGS = -lrbus -larchive -llogupload -lrdkloggers -lcommonutils
 ```
 
 ## 11. Dependencies Matrix
@@ -1434,21 +1542,22 @@ uploadRRDLogs_LDFLAGS = -lrbus -larchive -luploadSTBLogs -lrdkloggers
 |--------|------------|-------------------|--------------|
 | rrd_main | All modules | stdlib, stdio | - |
 | rrd_config | rrd_sysinfo, rrd_log | string, rbus | fopen, fgets, rbus_open/get/close |
-| rrd_sysinfo | rrd_log | string, time, net | stat, access, opendir, ioctl |
+| rrd_sysinfo | rrd_log | string, time, rbus, commonutils | stat, access, opendir, GetEstbMac |
 | rrd_logproc | rrd_sysinfo, rrd_log | string | stat, opendir |
-| rrd_archive | rrd_sysinfo, rrd_log | libarchive | archive_write_* |
-| rrd_upload | rrd_sysinfo, rrd_log | libuploadSTBLogs | uploadSTBLogs_upload |
+| rrd_archive | rrd_sysinfo, rrd_log | libarchive | archive_write_*, nice, getpriority |
+| rrd_upload | rrd_sysinfo, rrd_log | liblogupload | logupload_upload |
 | rrd_log | - | rdklogger | RDK_LOG, rdk_logger_init |
 
 **Required Dependencies:**
 - **librbus:** For RFC parameter queries via RBus IPC
 - **libarchive:** For tar.gz archive creation with gzip compression
-- **libuploadSTBLogs:** For log upload operations to remote server
+- **liblogupload:** For log upload operations to remote server
 - **librdkloggers:** For RDK standard logging framework
+- **libcommonutils:** For GetEstbMac() API to retrieve device MAC address
 
 **Fallback Strategies:**
 - RBus connection failure → Use DCM configuration only
-- libuploadSTBLogs unavailable → Build failure (required at compile time)
+- liblogupload unavailable → Build failure (required at link time)
 - libarchive unavailable → Build failure (required at compile time)
 
 ## 12. Testing Strategy
@@ -1511,7 +1620,7 @@ uploadRRDLogs_LDFLAGS = -lrbus -larchive -luploadSTBLogs -lrdkloggers
 - Same exit codes for common scenarios
 - Log format compatibility
 - Archive naming convention
-- Compatible with uploadSTBLogs library implementation
+- Compatible with liblogupload library API
 
 **Allowed Changes:**
 - Performance improvements
@@ -1550,4 +1659,4 @@ uploadRRDLogs_LDFLAGS = -lrbus -larchive -luploadSTBLogs -lrdkloggers
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | December 1, 2025 | GitHub Copilot | Initial HLD document |
+| 1.0 | December 1, 2025 | Vismal | Initial HLD document |
