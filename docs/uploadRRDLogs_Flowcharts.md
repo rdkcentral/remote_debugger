@@ -1,0 +1,361 @@
+# uploadRRDLogs - Flowchart Documentation
+
+## Document Information
+- **Component Name:** uploadRRDLogs (C Implementation)
+- **Version:** 1.0
+- **Date:** December 1, 2025
+
+## 1. Main Program Flowchart
+
+### 1.1 Overall Program Flow (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Start uploadRRDLogs]) --> ValidateArgs{Validate<br/>argc == 3?}
+    ValidateArgs -->|No| PrintUsage[Print Usage Message]
+    PrintUsage --> Exit1[Exit Code 1]
+    
+    ValidateArgs -->|Yes| StoreArgs[Store UPLOADDIR<br/>and ISSUETYPE]
+    StoreArgs --> InitLog[Initialize Logging<br/>Subsystem]
+    InitLog --> LoadConfig[Load Configuration<br/>from Multiple Sources]
+    
+    LoadConfig --> ConfigOK{Config<br/>Valid?}
+    ConfigOK -->|No| LogConfigError[Log Configuration Error]
+    LogConfigError --> Exit2[Exit Code 2]
+    
+    ConfigOK -->|Yes| GetMAC[Get MAC Address<br/>from System]
+    GetMAC --> MACOK{MAC<br/>Retrieved?}
+    MACOK -->|No| LogMACError[Log MAC Error]
+    LogMACError --> Exit2
+    
+    MACOK -->|Yes| GetTimestamp[Generate Timestamp<br/>YYYY-MM-DD-HH-MM-SS]
+    GetTimestamp --> ValidateDir{Source Dir<br/>Exists and<br/>Not Empty?}
+    
+    ValidateDir -->|No| LogDirError[Log Directory Empty/Missing]
+    LogDirError --> Exit3[Exit Code 0]
+    
+    ValidateDir -->|Yes| ConvertIssue[Convert ISSUETYPE<br/>to Uppercase]
+    ConvertIssue --> CheckSpecial{Issue Type ==<br/>LOGUPLOAD_ENABLE?}
+    
+    CheckSpecial -->|Yes| MoveLiveLogs[Move RRD_LIVE_LOGS.tar.gz<br/>to Source Directory]
+    MoveLiveLogs --> GenFilename
+    CheckSpecial -->|No| GenFilename[Generate Archive Filename<br/>MAC_ISSUE_TIME_RRD_DEBUG_LOGS.tgz]
+    
+    GenFilename --> CreateArchive[Create tar.gz Archive<br/>from Source Directory]
+    CreateArchive --> ArchiveOK{Archive<br/>Created?}
+    
+    ArchiveOK -->|No| LogArchiveError[Log Archive Error]
+    LogArchiveError --> Cleanup1[Cleanup Partial Files]
+    Cleanup1 --> Exit3B[Exit Code 3]
+    
+    ArchiveOK -->|Yes| CheckLock{Check Upload<br/>Lock File<br/>/tmp/.log-upload.pid}
+    
+    CheckLock -->|Exists| WaitLock[Wait 60 seconds]
+    WaitLock --> IncAttempt[Increment Attempt Counter]
+    IncAttempt --> MaxAttempts{Attempts<br/> <= 10?}
+    MaxAttempts -->|Yes| CheckLock
+    MaxAttempts -->|No| LogLockTimeout[Log Lock Timeout Error]
+    LogLockTimeout --> Cleanup2[Remove Archive and Source]
+    Cleanup2 --> Exit4[Exit Code 4]
+    
+    CheckLock -->|Not Exists| InvokeUpload[Call liblogupload API<br/>logupload_upload with callbacks]
+    InvokeUpload --> UploadOK{Upload<br/>Success?}
+    
+    UploadOK -->|No| LogUploadFail[Log Upload Failure]
+    LogUploadFail --> Cleanup3[Remove Archive and Source]
+    Cleanup3 --> Exit4B[Exit Code 4]
+    
+    UploadOK -->|Yes| LogUploadSuccess[Log Upload Success]
+    LogUploadSuccess --> Cleanup4[Remove Archive and Source]
+    Cleanup4 --> CleanupOK{Cleanup<br/>Success?}
+    
+    CleanupOK -->|No| LogCleanupWarn[Log Cleanup Warning]
+    LogCleanupWarn --> Exit0[Exit Code 0]
+    CleanupOK -->|Yes| Exit0
+    
+    Exit1 --> End([End])
+    Exit2 --> End
+    Exit3 --> End
+    Exit3B --> End
+    Exit4 --> End
+    Exit4B --> End
+    Exit0 --> End
+```
+
+## 2. Configuration Loading Flowchart
+
+### 2.1 Configuration Loading (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Start Config Loading]) --> InitStruct[Initialize Config Structure<br/>with Defaults]
+    InitStruct --> LoadInclude[Load /etc/include.properties]
+    LoadInclude --> IncludeOK{File<br/>Loaded?}
+    
+    IncludeOK -->|No| LogIncludeWarn[Log Warning]
+    IncludeOK -->|Yes| ParseInclude[Parse Properties]
+    LogIncludeWarn --> LoadDevice
+    ParseInclude --> LoadDevice[Load /etc/device.properties]
+    
+    LoadDevice --> DeviceOK{File<br/>Loaded?}
+    DeviceOK -->|No| LogDeviceWarn[Log Warning]
+    DeviceOK -->|Yes| ParseDevice[Parse Properties]
+    LogDeviceWarn --> CheckBuildType
+    ParseDevice --> CheckBuildType{BUILD_TYPE == prod<br/>AND /opt/dcm.properties<br/>exists?}
+    
+    CheckBuildType -->|Yes| LoadOptDCM[Load /opt/dcm.properties<br/>OVERRIDE RFC]
+    LoadOptDCM --> ParseOptDCM[Parse DCM Properties]
+    ParseOptDCM --> ValidateConfig
+    
+    CheckBuildType -->|No| QueryRBus[Query RFC via RBus API:<br/>LogServerUrl, SsrUrl]
+    QueryRBus --> ParseRFC[Store RFC values]
+    ParseRFC --> LoadDCMSettings[Load /tmp/DCMSettings.conf]
+    
+    LoadDCMSettings --> DCMSettingsOK{File<br/>Exists?}
+    DCMSettingsOK -->|No| LoadFallbackDCM
+    DCMSettingsOK -->|Yes| ParseDCMSettings[Parse DCM Settings:<br/>- UploadRepository:URL<br/>- uploadProtocol]
+    ParseDCMSettings --> ValidateConfig
+    
+    DCMSettingsOK -->|No| LoadFallbackDCM[Load dcm.properties<br/>/opt or /etc]
+    LoadFallbackDCM --> FallbackOK{File<br/>Loaded?}
+    FallbackOK -->|No| LogFallbackError[Log Error]
+    LogFallbackError --> ReturnError[Return Error]
+    FallbackOK -->|Yes| ParseFallbackDCM[Parse Fallback DCM]
+    ParseFallbackDCM --> ValidateConfig
+    
+    ValidateConfig{LOG_SERVER and<br/>HTTP_UPLOAD_LINK<br/>not empty?}
+    ValidateConfig -->|No| SetDefaults[Set Default Protocol<br/>HTTP if missing]
+    SetDefaults --> StillInvalid{Required<br/>Values<br/>Missing?}
+    StillInvalid -->|Yes| ReturnError
+    StillInvalid -->|No| LogConfig
+    
+    ValidateConfig -->|Yes| LogConfig[Log Configuration Summary]
+    LogConfig --> ReturnSuccess[Return Success]
+    
+    ReturnError --> End([End])
+    ReturnSuccess --> End
+```
+
+## 3. Archive Creation Flowchart
+
+### 3.1 Archive Creation (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Start Archive Creation]) --> ChangeDir[Change to Working Directory<br/>/tmp/rrd/]
+    ChangeDir --> DirOK{Directory<br/>Accessible?}
+    
+    DirOK -->|No| LogDirError[Log Directory Error]
+    LogDirError --> ReturnError[Return Error Code 3]
+    
+    DirOK -->|Yes| GenFilename[Generate Archive Filename<br/>MAC_ISSUE_TIMESTAMP_RRD_DEBUG_LOGS.tgz]
+    GenFilename --> CheckSpace{Check<br/>Disk Space<br/>Available?}
+    
+    CheckSpace -->|No| LogSpaceError[Log Disk Space Error]
+    LogSpaceError --> ReturnError
+    
+    CheckSpace -->|Yes| UseLibarchive[Use libarchive API<br/>(Required Dependency)]
+    UseLibarchive --> InitArchive[archive_write_new]
+    InitArchive --> SetGzip[archive_write_add_filter_gzip]
+    SetGzip --> SetFormat[archive_write_set_format_ustar]
+    SetFormat --> OpenArchive[archive_write_open_filename]
+    OpenArchive --> OpenOK{Open<br/>Success?}
+    
+    OpenOK -->|No| LogOpenError[Log Open Error]
+    LogOpenError --> ReturnError
+    
+    OpenOK -->|Yes| OpenSourceDir[Open Source Directory]
+    OpenSourceDir --> ReadEntry[Read Directory Entry]
+    ReadEntry --> MoreEntries{More<br/>Entries?}
+    
+    MoreEntries -->|No| CloseArchive[archive_write_close]
+    CloseArchive --> VerifyArchive
+    
+    MoreEntries -->|Yes| IsFile{Is Regular<br/>File?}
+    IsFile -->|No| ReadEntry
+    
+    IsFile -->|Yes| CreateHeader[Create Archive Entry Header]
+    CreateHeader --> WriteHeader[archive_write_header]
+    WriteHeader --> OpenFile[Open Source File]
+    OpenFile --> FileOK{File<br/>Opened?}
+    
+    FileOK -->|No| LogFileWarn[Log Warning]
+    LogFileWarn --> ReadEntry
+    
+    FileOK -->|Yes| ReadBlock[Read File Block<br/>8KB buffer]
+    ReadBlock --> BlockData{Data<br/>Read?}
+    
+    BlockData -->|Yes| WriteBlock[archive_write_data]
+    WriteBlock --> ReadBlock
+    
+    BlockData -->|No| CloseFile[Close Source File]
+    CloseFile --> FinishEntry[archive_write_finish_entry]
+    FinishEntry --> ReadEntry
+    
+    VerifyArchive{Archive File<br/>Exists and<br/>Size > 0?}
+    
+    VerifyArchive -->|No| LogVerifyError[Log Verification Error]
+    LogVerifyError --> ReturnError
+    
+    VerifyArchive -->|Yes| LogSuccess[Log Archive Created]
+    LogSuccess --> ReturnSuccess[Return Success]
+    
+    ReturnError --> End([End])
+    ReturnSuccess --> End
+```
+
+## 4. Upload Management Flowchart
+
+### 4.1 Upload with Lock Management (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Start Upload Process]) --> InitVars[Initialize Variables:<br/>attempt = 1<br/>max_attempts = 10<br/>wait_seconds = 60]
+    InitVars --> CheckLock{Check Lock File<br/>/tmp/.log-upload.pid<br/>exists?}
+    
+    CheckLock -->|Not Exists| LogProceed[Log: Lock Free, Proceeding]
+    LogProceed --> ChangeDir[Change to Working Dir<br/>/tmp/rrd/]
+    
+    CheckLock -->|Exists| LogWait[Log: Upload Lock Detected<br/>Waiting 60 seconds]
+    LogWait --> Sleep[Sleep 60 seconds]
+    Sleep --> IncAttempt[Increment attempt]
+    IncAttempt --> CheckMax{attempt <=<br/>max_attempts?}
+    
+    CheckMax -->|No| LogTimeout[Log: Lock Timeout Error]
+    LogTimeout --> ReturnLockError[Return Error Code 4]
+    
+    CheckMax -->|Yes| CheckLock
+    
+    ChangeDir --> DirOK{Directory<br/>Change OK?}
+    DirOK -->|No| LogDirError[Log Directory Error]
+    LogDirError --> ReturnError[Return Error Code 4]
+    
+    DirOK -->|Yes| PrepareParams[Prepare liblogupload params:<br/>- server_url<br/>- protocol<br/>- archive_path<br/>- callbacks structure]
+    
+    PrepareParams --> LogCall[Log: Calling liblogupload API]
+    LogCall --> CallAPI[Call logupload_upload()<br/>with params and callbacks]
+    
+    CallAPI --> MonitorCallbacks[Monitor callbacks:<br/>- on_progress<br/>- on_status<br/>- on_error]
+    
+    MonitorCallbacks --> CheckResult{Return<br/>Code?}
+    
+    CheckResult -->|LOGUPLOAD_SUCCESS| LogUploadSuccess[Log Upload Success]
+    LogUploadSuccess --> ReturnSuccess[Return Success Code 0]
+    
+    ReturnLockError --> End([End])
+    ReturnError --> End
+    ExitChild --> End
+    ReturnSuccess --> End
+```
+
+## 5. Cleanup Operations Flowchart
+
+### 5.1 Cleanup Process (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Start Cleanup]) --> InputParams[Input Parameters:<br/>- archive_path<br/>- source_dir<br/>- upload_status]
+    
+    InputParams --> LogStart[Log: Starting Cleanup]
+    LogStart --> RemoveArchive[Remove Archive File]
+    RemoveArchive --> ArchiveRemoved{Archive<br/>Removed?}
+    
+    ArchiveRemoved -->|No| CheckArchiveExists{Archive<br/>Still Exists?}
+    CheckArchiveExists -->|Yes| LogArchiveError[Log: Failed to Remove Archive]
+    CheckArchiveExists -->|No| LogArchiveNotFound[Log: Archive Already Removed]
+    LogArchiveError --> RemoveSource
+    LogArchiveNotFound --> RemoveSource
+    
+    ArchiveRemoved -->|Yes| LogArchiveSuccess[Log: Archive Removed]
+    LogArchiveSuccess --> RemoveSource[Remove Source Directory<br/>Recursively]
+    
+    RemoveSource --> SourceRemoved{Source Dir<br/>Removed?}
+    SourceRemoved -->|No| CheckSourceExists{Source<br/>Still Exists?}
+    CheckSourceExists -->|Yes| LogSourceError[Log: Failed to Remove Source]
+    CheckSourceExists -->|No| LogSourceNotFound[Log: Source Already Removed]
+    LogSourceError --> DetermineResult
+    LogSourceNotFound --> DetermineResult
+    
+    SourceRemoved -->|Yes| LogSourceSuccess[Log: Source Directory Removed]
+    LogSourceSuccess --> DetermineResult{Upload<br/>Was Successful?}
+    
+    DetermineResult -->|Yes| LogCleanupComplete[Log: Cleanup Complete - Upload Success]
+    LogCleanupComplete --> ReturnSuccess[Return Success]
+    
+    DetermineResult -->|No| LogCleanupFailed[Log: Cleanup Complete - Upload Failed]
+    LogCleanupFailed --> ReturnError[Return Error]
+    
+    ReturnSuccess --> End([End])
+    ReturnError --> End
+```
+
+## 6. Special Case: LOGUPLOAD_ENABLE Flowchart
+
+### 6.1 LOGUPLOAD_ENABLE Handling (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Check Issue Type]) --> CompareIssue{Issue Type ==<br/>LOGUPLOAD_ENABLE?}
+    
+    CompareIssue -->|No| SkipSpecial[Skip Special Handling]
+    SkipSpecial --> ContinueNormal[Continue Normal Flow]
+    
+    CompareIssue -->|Yes| LogSpecial[Log: Handling LOGUPLOAD_ENABLE]
+    LogSpecial --> CheckLiveLog{RRD_LIVE_LOGS.tar.gz<br/>exists in /tmp/rrd/?}
+    
+    CheckLiveLog -->|No| LogNoLive[Log: Live logs not found]
+    LogNoLive --> ContinueNormal
+    
+    CheckLiveLog -->|Yes| LogFoundLive[Log: Found live logs file]
+    LogFoundLive --> MoveLive[Move RRD_LIVE_LOGS.tar.gz<br/>to source directory]
+    MoveLive --> MoveOK{Move<br/>Success?}
+    
+    MoveOK -->|No| LogMoveError[Log: Warning - Failed to move live logs]
+    LogMoveError --> ContinueNormal
+    
+    MoveOK -->|Yes| LogMoveSuccess[Log: Live logs moved successfully]
+    LogMoveSuccess --> ContinueNormal
+    
+    ContinueNormal --> End([Continue to Archive Creation])
+```
+
+## 7. Error Handling Decision Tree
+
+### 7.1 Error Handling Flow (Mermaid)
+
+```mermaid
+flowchart TD
+    Start([Error Detected]) --> Categorize{Error<br/>Category?}
+    
+    Categorize -->|Fatal| LogFatal[Log: FATAL ERROR with context]
+    LogFatal --> CleanupFatal[Cleanup Resources]
+    CleanupFatal --> ExitFatal[Exit with Error Code 1-3]
+    
+    Categorize -->|Recoverable| LogRecover[Log: Recoverable Error]
+    LogRecover --> CheckRetry{Retry<br/>Available?}
+    CheckRetry -->|Yes| IncrementRetry[Increment Retry Counter]
+    IncrementRetry --> CheckMaxRetry{Max Retries<br/>Exceeded?}
+    CheckMaxRetry -->|No| RetryOperation[Retry Operation]
+    RetryOperation --> End1([Return to Operation])
+    CheckMaxRetry -->|Yes| LogMaxRetry[Log: Max Retries Exceeded]
+    LogMaxRetry --> CleanupRecover[Cleanup Resources]
+    CleanupRecover --> ExitRecover[Exit with Error Code 4]
+    CheckRetry -->|No| TryFallback{Fallback<br/>Available?}
+    TryFallback -->|Yes| UseFallback[Use Fallback Method]
+    UseFallback --> End2([Return to Operation])
+    TryFallback -->|No| CleanupRecover
+    
+    Categorize -->|Warning| LogWarning[Log: WARNING with context]
+    LogWarning --> MarkWarning[Set Warning Flag]
+    MarkWarning --> ContinueWarn[Continue Operation]
+    ContinueWarn --> End3([Return to Operation])
+    
+    ExitFatal --> End([Program Termination])
+    ExitRecover --> End
+```
+
+## Document Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | December 1, 2025 | Vismal | Initial flowchart documentation |
