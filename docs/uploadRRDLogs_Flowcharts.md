@@ -58,7 +58,7 @@ flowchart TD
     LogLockTimeout --> Cleanup2[Remove Archive and Source]
     Cleanup2 --> Exit4[Exit Code 4]
     
-    CheckLock -->|Not Exists| InvokeUpload[Invoke uploadSTBLogs.sh<br/>with Parameters]
+    CheckLock -->|Not Exists| InvokeUpload[Call liblogupload API<br/>logupload_upload with callbacks]
     InvokeUpload --> UploadOK{Upload<br/>Success?}
     
     UploadOK -->|No| LogUploadFail[Log Upload Failure]
@@ -107,13 +107,8 @@ flowchart TD
     LoadOptDCM --> ParseOptDCM[Parse DCM Properties]
     ParseOptDCM --> ValidateConfig
     
-    CheckBuildType -->|No| CheckTR181{/usr/bin/tr181<br/>exists?}
-    CheckTR181 -->|No| SkipRFC[Skip RFC Query]
-    SkipRFC --> LoadDCMSettings
-    
-    CheckTR181 -->|Yes| QueryLogServer[Query RFC:<br/>LogServerUrl]
-    QueryLogServer --> QuerySSR[Query RFC:<br/>SsrUrl]
-    QuerySSR --> ParseRFC[Parse RFC Results]
+    CheckBuildType -->|No| QueryRBus[Query RFC via RBus API:<br/>LogServerUrl, SsrUrl]
+    QueryRBus --> ParseRFC[Store RFC values]
     ParseRFC --> LoadDCMSettings[Load /tmp/DCMSettings.conf]
     
     LoadDCMSettings --> DCMSettingsOK{File<br/>Exists?}
@@ -235,36 +230,16 @@ flowchart TD
     DirOK -->|No| LogDirError[Log Directory Error]
     LogDirError --> ReturnError[Return Error Code 4]
     
-    DirOK -->|Yes| BuildCmd[Build uploadSTBLogs.sh Command:<br/>- LOG_SERVER<br/>- Flags: 1 1 0<br/>- UPLOAD_PROTOCOL<br/>- HTTP_UPLOAD_LINK<br/>- Flags: 0 1<br/>- ARCHIVE_FILENAME]
+    DirOK -->|Yes| PrepareParams[Prepare liblogupload params:<br/>- server_url<br/>- protocol<br/>- archive_path<br/>- callbacks structure]
     
-    BuildCmd --> LogCmd[Log Command to be Executed]
-    LogCmd --> CheckExec{Choose<br/>Execution<br/>Method}
+    PrepareParams --> LogCall[Log: Calling liblogupload API]
+    LogCall --> CallAPI[Call logupload_upload()<br/>with params and callbacks]
     
-    CheckExec -->|fork/exec| Fork[fork process]
-    Fork --> ForkOK{Fork<br/>Success?}
+    CallAPI --> MonitorCallbacks[Monitor callbacks:<br/>- on_progress<br/>- on_status<br/>- on_error]
     
-    ForkOK -->|No| LogForkError[Log Fork Error]
-    LogForkError --> ReturnError
+    MonitorCallbacks --> CheckResult{Return<br/>Code?}
     
-    ForkOK -->|Yes| IsChild{Child<br/>Process?}
-    IsChild -->|Yes| ExecScript[execl uploadSTBLogs.sh<br/>with arguments]
-    ExecScript --> ExecFailed[Log Exec Failed<br/>If reached]
-    ExecFailed --> ExitChild[_exit 127]
-    
-    IsChild -->|No| WaitChild[waitpid for child]
-    WaitChild --> CheckStatus{Child Exit<br/>Status == 0?}
-    
-    CheckExec -->|system| SystemCall[system uploadSTBLogs.sh<br/>with arguments]
-    SystemCall --> SystemResult{Return<br/>Code == 0?}
-    
-    SystemResult -->|No| LogSystemError[Log Upload Failed]
-    LogSystemError --> ReturnError
-    
-    CheckStatus -->|No| LogUploadFail[Log Upload Failed]
-    LogUploadFail --> ReturnError
-    
-    SystemResult -->|Yes| LogUploadSuccess
-    CheckStatus -->|Yes| LogUploadSuccess[Log Upload Success]
+    CheckResult -->|LOGUPLOAD_SUCCESS| LogUploadSuccess[Log Upload Success]
     LogUploadSuccess --> ReturnSuccess[Return Success Code 0]
     
     ReturnLockError --> End([End])
@@ -383,4 +358,4 @@ flowchart TD
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | December 1, 2025 | GitHub Copilot | Initial flowchart documentation |
+| 1.0 | December 1, 2025 | Vismal | Initial flowchart documentation |
