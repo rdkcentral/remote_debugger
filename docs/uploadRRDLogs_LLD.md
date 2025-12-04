@@ -233,7 +233,7 @@ typedef struct {
 /* Function prototypes */
 int rrd_config_load(rrd_config_t *config);
 int rrd_config_parse_properties(const char *filepath, rrd_config_t *config);
-int rrd_config_query_rfc(rrd_config_t *config);
+int rrd_config_query_rfc_via_rbus(rrd_config_t *config);
 int rrd_config_parse_dcm_settings(const char *filepath, rrd_config_t *config);
 int rrd_config_parse_dcm_properties(const char *filepath, rrd_config_t *config);
 int rrd_config_validate(rrd_config_t *config);
@@ -387,53 +387,54 @@ int rrd_config_parse_properties(const char *filepath, rrd_config_t *config) {
 }
 ```
 
-**Function: rrd_config_query_rfc**
+**Function: rrd_config_query_rfc_via_rbus**
 ```c
-int rrd_config_query_rfc(rrd_config_t *config) {
-    char cmd[512];
-    char output[MAX_CONFIG_VALUE_LENGTH];
-    FILE *fp;
+int rrd_config_query_rfc_via_rbus(rrd_config_t *config) {
+    rbusHandle_t handle;
+    rbusError_t err;
+    rbusValue_t value;
+    const char *str_value;
     
-    /* Query LogServerUrl */
-    snprintf(cmd, sizeof(cmd), 
-             "/usr/bin/tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl 2>&1");
-    
-    fp = popen(cmd, "r");
-    if (fp == NULL) {
+    // Initialize RBus connection
+    err = rbus_open(&handle, "uploadRRDLogs");
+    if (err != RBUS_ERROR_SUCCESS) {
+        RDK_LOG(RDK_LOG_WARN, LOG_UPLOADRRDLOGS,
+                "[%s:%d] RBus connection failed, skipping RFC query\n",
+                __FUNCTION__, __LINE__);
         return -1;
     }
     
-    if (fgets(output, sizeof(output), fp) != NULL) {
-        trim_whitespace(output);
-        if (output[0] != '\0' && strstr(output, "error") == NULL) {
-            strncpy(config->log_server, output, sizeof(config->log_server) - 1);
+    // Query LogServerUrl
+    err = rbus_get(handle, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.LogServerUrl", &value);
+    if (err == RBUS_ERROR_SUCCESS) {
+        str_value = rbusValue_GetString(value, NULL);
+        if (str_value != NULL && strlen(str_value) > 0) {
+            strncpy(config->log_server, str_value, MAX_CONFIG_VALUE_LENGTH - 1);
+            config->log_server[MAX_CONFIG_VALUE_LENGTH - 1] = '\0';
+            RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+                    "[%s:%d] Retrieved LogServerUrl from RFC\n",
+                    __FUNCTION__, __LINE__);
         }
-    }
-    pclose(fp);
-    
-    /* Query SsrUrl */
-    snprintf(cmd, sizeof(cmd),
-             "/usr/bin/tr181 -g Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl 2>&1");
-    
-    fp = popen(cmd, "r");
-    if (fp == NULL) {
-        return -1;
+        rbusValue_Release(value);
     }
     
-    if (fgets(output, sizeof(output), fp) != NULL) {
-        trim_whitespace(output);
-        if (output[0] != '\0' && strstr(output, "error") == NULL) {
-            /* Append /cgi-bin/S3.cgi if not present */
-            if (strstr(output, "S3.cgi") == NULL) {
-                snprintf(config->http_upload_link, sizeof(config->http_upload_link),
-                         "%s/cgi-bin/S3.cgi", output);
-            } else {
-                strncpy(config->http_upload_link, output, 
-                       sizeof(config->http_upload_link) - 1);
-            }
+    // Query SsrUrl
+    err = rbus_get(handle, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.LogUpload.SsrUrl", &value);
+    if (err == RBUS_ERROR_SUCCESS) {
+        str_value = rbusValue_GetString(value, NULL);
+        if (str_value != NULL && strlen(str_value) > 0) {
+            snprintf(config->http_upload_link, MAX_CONFIG_VALUE_LENGTH,
+                     "%s/cgi-bin/S3.cgi", str_value);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+                    "[%s:%d] Retrieved SsrUrl from RFC\n",
+                    __FUNCTION__, __LINE__);
         }
+        rbusValue_Release(value);
     }
-    pclose(fp);
+    
+    // Close RBus connection
+    rbus_close(handle);
+    config->use_rfc_config = true;
     
     return 0;
 }
@@ -500,9 +501,8 @@ int rrd_sysinfo_get_dir_size(const char *dirpath, uint64_t *size);
 int rrd_sysinfo_get_available_space(const char *path, uint64_t *available);
 
 /* Helper functions */
-static int read_mac_from_sysfs(const char *interface, char *mac_addr, size_t size);
-static int read_mac_from_ioctl(const char *interface, char *mac_addr, size_t size);
-static int read_mac_from_utils(char *mac_addr, size_t size);
+static int read_mac_via_rbus(char *mac_addr, size_t size);
+static int read_mac_via_getestbmac(char *mac_addr, size_t size);
 
 #endif /* RRD_SYSINFO_H */
 ```
@@ -512,94 +512,91 @@ static int read_mac_from_utils(char *mac_addr, size_t size);
 **Function: rrd_sysinfo_get_mac_address**
 ```c
 int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
-    const char *interfaces[] = {"eth0", "wlan0", "erouter0", NULL};
-    int i;
     int result;
     
-    if (size < 18) { /* Minimum size for XX:XX:XX:XX:XX:XX\0 */
+    if (mac_addr == NULL || size < 18) {
         return -1;
     }
     
-    /* Method 1: Try reading from sysfs */
-    for (i = 0; interfaces[i] != NULL; i++) {
-        result = read_mac_from_sysfs(interfaces[i], mac_addr, size);
-        if (result == 0) {
-            return 0;
-        }
-    }
-    
-    /* Method 2: Try ioctl */
-    for (i = 0; interfaces[i] != NULL; i++) {
-        result = read_mac_from_ioctl(interfaces[i], mac_addr, size);
-        if (result == 0) {
-            return 0;
-        }
-    }
-    
-    /* Method 3: Try utils.sh getMacAddressOnly (compatibility) */
-    result = read_mac_from_utils(mac_addr, size);
+    // Method 1: Query TR-181 parameters via RBus
+    result = read_mac_via_rbus(mac_addr, size);
     if (result == 0) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Retrieved MAC via RBus\n",
+                __FUNCTION__, __LINE__);
         return 0;
     }
     
+    // Method 2: Call GetEstbMac() API from common utils library (fallback)
+    result = read_mac_via_getestbmac(mac_addr, size);
+    if (result == 0) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Retrieved MAC via GetEstbMac() API\n",
+                __FUNCTION__, __LINE__);
+        return 0;
+    }
+    
+    RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Failed to retrieve MAC address from all sources\n",
+            __FUNCTION__, __LINE__);
     return -1;
 }
 
-static int read_mac_from_sysfs(const char *interface, char *mac_addr, size_t size) {
-    char path[256];
-    FILE *fp;
+static int read_mac_via_rbus(char *mac_addr, size_t size) {
+    rbusHandle_t handle;
+    rbusError_t err;
+    rbusValue_t value;
+    const char *str_value;
+    const char *tr181_params[] = {
+        "Device.DeviceInfo.X_COMCAST-COM_STB_MAC",
+        "Device.DeviceInfo.X_COMCAST-COM_CM_MAC",
+        "Device.X_CISCO_COM_MACAddress",
+        NULL
+    };
     
-    snprintf(path, sizeof(path), "/sys/class/net/%s/address", interface);
-    
-    fp = fopen(path, "r");
-    if (fp == NULL) {
+    // Initialize RBus connection
+    err = rbus_open(&handle, "uploadRRDLogs_mac");
+    if (err != RBUS_ERROR_SUCCESS) {
         return -1;
     }
     
-    if (fgets(mac_addr, size, fp) == NULL) {
-        fclose(fp);
-        return -1;
+    // Try each TR-181 parameter
+    for (int i = 0; tr181_params[i] != NULL; i++) {
+        err = rbus_get(handle, tr181_params[i], &value);
+        if (err == RBUS_ERROR_SUCCESS) {
+            str_value = rbusValue_GetString(value, NULL);
+            if (str_value != NULL && strlen(str_value) > 0) {
+                // Validate MAC format (XX:XX:XX:XX:XX:XX)
+                if (strlen(str_value) == 17) {
+                    strncpy(mac_addr, str_value, size - 1);
+                    mac_addr[size - 1] = '\0';
+                    rbusValue_Release(value);
+                    rbus_close(handle);
+                    return 0;
+                }
+            }
+            rbusValue_Release(value);
+        }
     }
     
-    fclose(fp);
-    
-    /* Remove newline */
-    mac_addr[strcspn(mac_addr, "\n")] = '\0';
-    
-    /* Validate format */
-    if (strlen(mac_addr) != 17) {
-        return -1;
-    }
-    
-    return 0;
+    rbus_close(handle);
+    return -1;
 }
 
-static int read_mac_from_ioctl(const char *interface, char *mac_addr, size_t size) {
-    int sock;
-    struct ifreq ifr;
-    unsigned char *hwaddr;
+static int read_mac_via_getestbmac(char *mac_addr, size_t size) {
+    size_t result;
     
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock < 0) {
-        return -1;
+    // Call GetEstbMac() API from common utils library
+    result = GetEstbMac(mac_addr, size);
+    
+    if (result > 0 && result < size) {
+        // Validate MAC format
+        if (strlen(mac_addr) == 17 && mac_addr[2] == ':' && mac_addr[5] == ':') {
+            return 0;
+        }
     }
     
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, interface, IFNAMSIZ - 1);
-    
-    if (ioctl(sock, SIOCGIFHWADDR, &ifr) < 0) {
-        close(sock);
-        return -1;
-    }
-    
-    close(sock);
-    
-    hwaddr = (unsigned char *)ifr.ifr_hwaddr.sa_data;
-    snprintf(mac_addr, size, "%02x:%02x:%02x:%02x:%02x:%02x",
-             hwaddr[0], hwaddr[1], hwaddr[2], 
-             hwaddr[3], hwaddr[4], hwaddr[5]);
-    
-    return 0;
+    return -1;
 }
 ```
 
@@ -833,21 +830,21 @@ int rrd_logproc_handle_live_logs(const rrd_config_t *config, const char *source_
 
 /* Archive buffer size */
 #define ARCHIVE_BUFFER_SIZE       8192
+#define CPU_CHECK_INTERVAL        5      /* Seconds between CPU checks */
+#define CPU_THRESHOLD_LOW         50.0   /* Normal priority */
+#define CPU_THRESHOLD_MEDIUM      75.0   /* Lower priority */
 
 /* Function prototypes */
 int rrd_archive_create(const rrd_config_t *config, rrd_context_t *ctx);
 int rrd_archive_generate_filename(const char *mac, const char *issue_type,
                                   const char *timestamp, char *filename, size_t size);
 int rrd_archive_verify(const char *archive_path);
+int rrd_archive_check_cpu_usage(float *cpu_usage);
+int rrd_archive_adjust_priority(float cpu_usage);
 
-/* Implementation options */
-#ifdef HAVE_LIBARCHIVE
+/* libarchive is REQUIRED - no fallback */
 int rrd_archive_create_with_libarchive(const char *source_dir, 
                                        const char *archive_path);
-#endif
-
-int rrd_archive_create_with_tar(const char *source_dir, 
-                                const char *archive_path);
 
 #endif /* RRD_ARCHIVE_H */
 ```
@@ -897,27 +894,39 @@ int rrd_archive_create(const rrd_config_t *config, rrd_context_t *ctx) {
         }
     }
     
-    rrd_log_info("Creating archive: %s", ctx->archive_filename);
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Creating archive: %s\n",
+            __FUNCTION__, __LINE__, ctx->archive_filename);
     
-#ifdef HAVE_LIBARCHIVE
+    // Check CPU usage and adjust priority before starting
+    float cpu_usage;
+    result = rrd_archive_check_cpu_usage(&cpu_usage);
+    if (result == 0) {
+        rrd_archive_adjust_priority(cpu_usage);
+    }
+    
+    // Create archive using libarchive (required)
     result = rrd_archive_create_with_libarchive(ctx->upload_dir, ctx->archive_path);
-#else
-    result = rrd_archive_create_with_tar(ctx->upload_dir, ctx->archive_path);
-#endif
     
     if (result != 0) {
-        rrd_log_error("Archive creation failed");
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Archive creation failed\n",
+                __FUNCTION__, __LINE__);
         return -1;
     }
     
     /* Verify archive */
     result = rrd_archive_verify(ctx->archive_path);
     if (result != 0) {
-        rrd_log_error("Archive verification failed");
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Archive verification failed\n",
+                __FUNCTION__, __LINE__);
         return -1;
     }
     
-    rrd_log_info("Archive created successfully");
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Archive created successfully\n",
+            __FUNCTION__, __LINE__);
     return 0;
 }
 ```
@@ -951,31 +960,100 @@ int rrd_archive_generate_filename(const char *mac, const char *issue_type,
 }
 ```
 
-**Function: rrd_archive_create_with_tar (Fallback Method)**
+**Function: rrd_archive_check_cpu_usage**
 ```c
-int rrd_archive_create_with_tar(const char *source_dir, const char *archive_path) {
-    char cmd[MAX_PATH_LENGTH * 2 + 128];
-    int result;
-    char log_redirect[MAX_PATH_LENGTH + 32];
+int rrd_archive_check_cpu_usage(float *cpu_usage) {
+    FILE *fp;
+    char line[256];
+    unsigned long long user, nice, system, idle, iowait, irq, softirq;
+    unsigned long long total_cpu, total_idle;
+    static unsigned long long prev_total = 0, prev_idle = 0;
     
-    /* Build tar command */
-    snprintf(log_redirect, sizeof(log_redirect), 
-             "2>> %s/remote-debugger.log", getenv("LOG_PATH") ?: "/opt/logs");
-    
-    snprintf(cmd, sizeof(cmd),
-             "tar -zcf %s -C %s . %s",
-             archive_path, source_dir, log_redirect);
-    
-    rrd_log_info("Executing: %s", cmd);
-    
-    /* Execute tar command */
-    result = system(cmd);
-    
-    if (result != 0) {
-        rrd_log_error("tar command failed with exit code: %d", WEXITSTATUS(result));
-        /* Remove partial archive */
-        unlink(archive_path);
+    fp = fopen("/proc/stat", "r");
+    if (fp == NULL) {
         return -1;
+    }
+    
+    // Read first line (starts with "cpu")
+    if (fgets(line, sizeof(line), fp) == NULL) {
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+    
+    // Parse CPU values
+    if (sscanf(line, "cpu %llu %llu %llu %llu %llu %llu %llu",
+               &user, &nice, &system, &idle, &iowait, &irq, &softirq) != 7) {
+        return -1;
+    }
+    
+    total_cpu = user + nice + system + idle + iowait + irq + softirq;
+    total_idle = idle + iowait;
+    
+    // Calculate CPU usage percentage (need previous sample)
+    if (prev_total > 0) {
+        unsigned long long delta_total = total_cpu - prev_total;
+        unsigned long long delta_idle = total_idle - prev_idle;
+        *cpu_usage = ((float)(delta_total - delta_idle) / (float)delta_total) * 100.0;
+    } else {
+        *cpu_usage = 0.0;
+    }
+    
+    // Store current sample for next calculation
+    prev_total = total_cpu;
+    prev_idle = total_idle;
+    
+    return 0;
+}
+```
+
+**Function: rrd_archive_adjust_priority**
+```c
+int rrd_archive_adjust_priority(float cpu_usage) {
+    int target_nice;
+    int current_nice;
+    int result;
+    
+    // Determine appropriate nice value based on CPU usage
+    if (cpu_usage < CPU_THRESHOLD_LOW) {
+        target_nice = 0;      // Normal priority
+        RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+                "[%s:%d] CPU usage %.1f%% < %.1f%%, normal priority\n",
+                __FUNCTION__, __LINE__, cpu_usage, CPU_THRESHOLD_LOW);
+    } else if (cpu_usage >= CPU_THRESHOLD_LOW && cpu_usage < CPU_THRESHOLD_MEDIUM) {
+        target_nice = 10;     // Lower priority
+        RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+                "[%s:%d] CPU usage %.1f%%, lowering priority to nice=10\n",
+                __FUNCTION__, __LINE__, cpu_usage);
+    } else {
+        target_nice = 19;     // Lowest priority
+        RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+                "[%s:%d] CPU usage %.1f%%, setting lowest priority nice=19\n",
+                __FUNCTION__, __LINE__, cpu_usage);
+    }
+    
+    // Get current process priority
+    errno = 0;
+    current_nice = getpriority(PRIO_PROCESS, 0);
+    if (errno != 0) {
+        RDK_LOG(RDK_LOG_WARN, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Failed to get current priority\n",
+                __FUNCTION__, __LINE__);
+        return -1;
+    }
+    
+    // Adjust priority only if needed
+    if (current_nice != target_nice) {
+        result = nice(target_nice - current_nice);
+        if (result < 0 && errno != 0) {
+            RDK_LOG(RDK_LOG_WARN, LOG_UPLOADRRDLOGS,
+                    "[%s:%d] Failed to adjust process priority\n",
+                    __FUNCTION__, __LINE__);
+            return -1;
+        }
+        RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Process priority adjusted to nice=%d\n",
+                __FUNCTION__, __LINE__, target_nice);
     }
     
     return 0;
@@ -1022,13 +1100,28 @@ int rrd_archive_verify(const char *archive_path) {
 #define MAX_UPLOAD_ATTEMPTS       10
 #define UPLOAD_WAIT_SECONDS       60
 
+/* liblogupload return codes */
+#define LOGUPLOAD_SUCCESS         0
+#define LOGUPLOAD_ERR_INVALID_ARGS 1
+#define LOGUPLOAD_ERR_FILE_ACCESS  2
+#define LOGUPLOAD_ERR_NETWORK      3
+#define LOGUPLOAD_ERR_SERVER       4
+#define LOGUPLOAD_ERR_AUTH         5
+#define LOGUPLOAD_ERR_TIMEOUT      6
+#define LOGUPLOAD_ERR_UNKNOWN      7
+
 /* Function prototypes */
 int rrd_upload_execute(const rrd_config_t *config, rrd_context_t *ctx);
 int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds);
-int rrd_upload_invoke_stb_script(const rrd_config_t *config, 
-                                 const char *archive_filename);
+int rrd_upload_invoke_logupload_api(const rrd_config_t *config, 
+                                    const char *archive_path);
 int rrd_upload_cleanup_files(rrd_context_t *ctx);
 int rrd_upload_remove_directory_recursive(const char *dirpath);
+
+/* Callback functions for liblogupload */
+void upload_progress_callback(int percent, void *user_data);
+void upload_status_callback(const char *message, void *user_data);
+void upload_error_callback(int error_code, const char *message, void *user_data);
 
 #endif /* RRD_UPLOAD_H */
 ```
@@ -1039,32 +1132,36 @@ int rrd_upload_remove_directory_recursive(const char *dirpath);
 ```c
 int rrd_upload_execute(const rrd_config_t *config, rrd_context_t *ctx) {
     int result;
-    char working_dir[] = "/tmp/rrd";
     
-    rrd_log_info("Starting upload process for %s", ctx->archive_filename);
-    
-    /* Wait for upload lock */
+    // Wait for upload lock to be free
     result = rrd_upload_wait_for_lock(MAX_UPLOAD_ATTEMPTS, UPLOAD_WAIT_SECONDS);
     if (result != 0) {
-        rrd_log_error("Upload lock timeout after %d attempts", MAX_UPLOAD_ATTEMPTS);
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload lock timeout after %d attempts\n",
+                __FUNCTION__, __LINE__, MAX_UPLOAD_ATTEMPTS);
         return -1;
     }
     
-    /* Change to working directory */
-    if (chdir(working_dir) != 0) {
-        rrd_log_error("Failed to change to working directory: %s", working_dir);
-        return -1;
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Starting upload of %s\n",
+            __FUNCTION__, __LINE__, ctx->archive_filename);
+    
+    // Invoke liblogupload API
+    result = rrd_upload_invoke_logupload_api(config, ctx->archive_path);
+    
+    if (result == 0) {
+        RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload successful\n",
+                __FUNCTION__, __LINE__);
+        ctx->upload_success = true;
+    } else {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload failed\n",
+                __FUNCTION__, __LINE__);
+        ctx->upload_success = false;
     }
     
-    /* Invoke upload script */
-    result = rrd_upload_invoke_stb_script(config, ctx->archive_filename);
-    if (result != 0) {
-        rrd_log_error("Upload failed with code: %d", result);
-        return -1;
-    }
-    
-    rrd_log_info("Upload completed successfully");
-    return 0;
+    return result;
 }
 ```
 
@@ -1094,67 +1191,76 @@ int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
 }
 ```
 
-**Function: rrd_upload_invoke_stb_script**
+**Function: upload_progress_callback**
 ```c
-int rrd_upload_invoke_stb_script(const rrd_config_t *config, 
-                                 const char *archive_filename) {
-    pid_t pid;
-    int status;
-    char *args[12];
-    char script_path[MAX_PATH_LENGTH];
+void upload_progress_callback(int percent, void *user_data) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Upload progress: %d%%\n",
+            __FUNCTION__, __LINE__, percent);
+}
+```
+
+**Function: upload_status_callback**
+```c
+void upload_status_callback(const char *message, void *user_data) {
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Upload status: %s\n",
+            __FUNCTION__, __LINE__, message);
+}
+```
+
+**Function: upload_error_callback**
+```c
+void upload_error_callback(int error_code, const char *message, void *user_data) {
+    RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Upload error %d: %s\n",
+            __FUNCTION__, __LINE__, error_code, message);
+}
+```
+
+**Function: rrd_upload_invoke_logupload_api**
+```c
+int rrd_upload_invoke_logupload_api(const rrd_config_t *config, 
+                                    const char *archive_path) {
+    logupload_callback_t callbacks;
+    int result;
     
-    /* Build script path */
-    snprintf(script_path, sizeof(script_path), 
-             "%s/uploadSTBLogs.sh", config->rdk_path);
-    
-    /* Verify script exists and is executable */
-    if (access(script_path, X_OK) != 0) {
-        rrd_log_error("uploadSTBLogs.sh not found or not executable: %s", script_path);
+    if (config == NULL || archive_path == NULL) {
         return -1;
     }
     
-    rrd_log_info("Executing: %s %s 1 1 0 %s %s 0 1 %s",
-                 script_path, config->log_server, config->upload_protocol,
-                 config->http_upload_link, archive_filename);
+    // Setup callbacks
+    callbacks.on_progress = upload_progress_callback;
+    callbacks.on_status = upload_status_callback;
+    callbacks.on_error = upload_error_callback;
+    callbacks.user_data = NULL;
     
-    /* Fork and execute */
-    pid = fork();
-    if (pid < 0) {
-        rrd_log_error("Fork failed: %s", strerror(errno));
-        return -1;
-    }
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Calling logupload_upload() API\n",
+            __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+            "[%s:%d] Server: %s, Protocol: %s, Link: %s\n",
+            __FUNCTION__, __LINE__,
+            config->log_server, config->upload_protocol, config->http_upload_link);
     
-    if (pid == 0) {
-        /* Child process */
-        args[0] = script_path;
-        args[1] = (char *)config->log_server;
-        args[2] = "1";
-        args[3] = "1";
-        args[4] = "0";
-        args[5] = (char *)config->upload_protocol;
-        args[6] = (char *)config->http_upload_link;
-        args[7] = "0";
-        args[8] = "1";
-        args[9] = (char *)archive_filename;
-        args[10] = NULL;
-        
-        execv(script_path, args);
-        
-        /* If execv returns, it failed */
-        rrd_log_error("execv failed: %s", strerror(errno));
-        _exit(127);
-    }
+    // Call liblogupload API
+    result = logupload_upload(
+        config->log_server,
+        config->upload_protocol,
+        config->http_upload_link,
+        archive_path,
+        &callbacks
+    );
     
-    /* Parent process: wait for child */
-    if (waitpid(pid, &status, 0) < 0) {
-        rrd_log_error("waitpid failed: %s", strerror(errno));
-        return -1;
-    }
-    
-    if (WIFEXITED(status)) {
-        int exit_code = WEXITSTATUS(status);
-        if (exit_code != 0) {
-            rrd_log_error("uploadSTBLogs.sh exited with code: %d", exit_code);
+    if (result == LOGUPLOAD_SUCCESS) {
+        RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload completed successfully\n",
+                __FUNCTION__, __LINE__);
+        return 0;
+    } else {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+                "[%s:%d] Upload failed with error code: %d\n",
+                __FUNCTION__, __LINE__, result);
             return exit_code;
         }
     } else {
@@ -1278,99 +1384,75 @@ int rrd_upload_remove_directory_recursive(const char *dirpath) {
 #ifndef RRD_LOG_H
 #define RRD_LOG_H
 
-#include <stdarg.h>
+#include <rdk_debug.h>
 
-/* Log levels */
-typedef enum {
-    RRD_LOG_DEBUG,
-    RRD_LOG_INFO,
-    RRD_LOG_WARNING,
-    RRD_LOG_ERROR
-} rrd_log_level_t;
+/* Module name for rdklogger */
+#define LOG_UPLOADRRDLOGS "LOG.RDK.UPLOADRRDLOGS"
 
 /* Function prototypes */
-int rrd_log_init(void);
-void rrd_log_write(rrd_log_level_t level, const char *format, ...);
+int rrd_log_init(const char *debug_ini_file);
 void rrd_log_cleanup(void);
 
-/* Convenience macros */
-#define rrd_log_debug(...)   rrd_log_write(RRD_LOG_DEBUG, __VA_ARGS__)
-#define rrd_log_info(...)    rrd_log_write(RRD_LOG_INFO, __VA_ARGS__)
-#define rrd_log_warning(...) rrd_log_write(RRD_LOG_WARNING, __VA_ARGS__)
-#define rrd_log_error(...)   rrd_log_write(RRD_LOG_ERROR, __VA_ARGS__)
+/* Use RDK_LOG macro for all logging */
+/* RDK_LOG(level, module, format, ...) */
+/* Levels: RDK_LOG_TRACE1, RDK_LOG_DEBUG, RDK_LOG_INFO, RDK_LOG_WARN, RDK_LOG_ERROR */
 
 #endif /* RRD_LOG_H */
 ```
 
 #### 2.7.2 Implementation Details
 
-**Global State:**
-```c
-static FILE *log_file = NULL;
-static const char *log_level_strings[] = {
-    "[DEBUG]",
-    "[INFO]",
-    "[WARN]",
-    "[ERROR]"
-};
-```
-
 **Function: rrd_log_init**
 ```c
-int rrd_log_init(void) {
-    const char *log_path;
-    char log_file_path[MAX_PATH_LENGTH];
+int rrd_log_init(const char *debug_ini_file) {
+    // Initialize rdklogger with debug.ini configuration
+    // rdklogger handles log file opening, rotation, and formatting
     
-    /* Get log path from environment or use default */
-    log_path = getenv("LOG_PATH");
-    if (log_path == NULL) {
-        log_path = "/opt/logs";
+    if (debug_ini_file == NULL) {
+        debug_ini_file = "/etc/debug.ini";
     }
     
-    /* Build log file path */
-    snprintf(log_file_path, sizeof(log_file_path),
-             "%s/remote-debugger.log", log_path);
+    rdk_logger_init(debug_ini_file);
     
-    /* Open log file in append mode */
-    log_file = fopen(log_file_path, "a");
-    if (log_file == NULL) {
-        fprintf(stderr, "Failed to open log file: %s\n", log_file_path);
-        return -1;
-    }
-    
-    /* Set line buffering */
-    setvbuf(log_file, NULL, _IOLBF, 0);
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] uploadRRDLogs logging initialized\n",
+            __FUNCTION__, __LINE__);
     
     return 0;
 }
 ```
 
-**Function: rrd_log_write**
+**Function: rrd_log_cleanup**
 ```c
-void rrd_log_write(rrd_log_level_t level, const char *format, ...) {
-    va_list args;
-    char timestamp[32];
-    time_t now;
-    struct tm *tm_info;
-    
-    if (log_file == NULL) {
-        return; /* Logging not initialized */
-    }
-    
-    /* Generate timestamp */
-    time(&now);
-    tm_info = localtime(&now);
-    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d-%H-%M-%S", tm_info);
-    
-    /* Write log entry */
-    fprintf(log_file, "%s: uploadRRDLogs: %s ", 
-            timestamp, log_level_strings[level]);
-    
-    va_start(args, format);
-    vfprintf(log_file, format, args);
-    va_end(args);
-    
-    fprintf(log_file, "\n");
+void rrd_log_cleanup(void) {
+    // rdklogger handles cleanup automatically
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+            "[%s:%d] uploadRRDLogs shutting down\n",
+            __FUNCTION__, __LINE__);
+}
+```
+
+**Logging Usage Examples:**
+```c
+// Debug level
+RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS,
+        "[%s:%d] Configuration loaded from %s\n",
+        __FUNCTION__, __LINE__, config_file);
+
+// Info level
+RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS,
+        "[%s:%d] Archive created: %s\n",
+        __FUNCTION__, __LINE__, archive_filename);
+
+// Warning level
+RDK_LOG(RDK_LOG_WARN, LOG_UPLOADRRDLOGS,
+        "[%s:%d] Failed to remove temporary file: %s\n",
+        __FUNCTION__, __LINE__, strerror(errno));
+
+// Error level
+RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS,
+        "[%s:%d] Upload failed with code %d\n",
+        __FUNCTION__, __LINE__, error_code);
     
     /* Flush for critical messages */
     if (level >= RRD_LOG_WARNING) {
@@ -1433,9 +1515,92 @@ snprintf(dest, sizeof(dest), "%s", src);
 
 ---
 
-## 4. Error Handling Implementation
+## 4. Dependencies and Build Configuration
 
-### 4.1 Error Code Definitions
+### 4.1 Required Libraries
+
+```c
+/* Header includes */
+#include <rbus.h>              // RBus API for RFC parameters
+#include <archive.h>           // libarchive for tar.gz creation
+#include <archive_entry.h>     // libarchive entry management
+#include <logupload.h>         // liblogupload for upload operations
+#include <rdk_debug.h>         // rdklogger for logging
+
+/* External API declarations */
+// From libcommonutils
+extern size_t GetEstbMac(char *pEstbMac, size_t szBufSize);
+
+// From liblogupload
+extern int logupload_upload(
+    const char *server_url,
+    const char *protocol,
+    const char *upload_link,
+    const char *file_path,
+    logupload_callback_t *callbacks
+);
+
+typedef struct {
+    void (*on_progress)(int percent, void *user_data);
+    void (*on_status)(const char *message, void *user_data);
+    void (*on_error)(int error_code, const char *message, void *user_data);
+    void *user_data;
+} logupload_callback_t;
+```
+
+### 4.2 Build System Configuration
+
+**Makefile.am additions:**
+```makefile
+bin_PROGRAMS = uploadRRDLogs
+
+uploadRRDLogs_SOURCES = \
+    rrd_main.c \
+    rrd_config.c \
+    rrd_sysinfo.c \
+    rrd_logproc.c \
+    rrd_archive.c \
+    rrd_upload.c \
+    rrd_log.c
+
+uploadRRDLogs_CFLAGS = \
+    -Wall -Wextra -Werror \
+    -Os \
+    -std=c99 \
+    -D_LARGEFILE64_SOURCE
+
+uploadRRDLogs_LDFLAGS = \
+    -lrbus \
+    -larchive \
+    -llogupload \
+    -lrdkloggers \
+    -lcommonutils
+```
+
+**configure.ac checks:**
+```autoconf
+# Check for required libraries
+PKG_CHECK_MODULES([RBUS], [rbus])
+PKG_CHECK_MODULES([LIBARCHIVE], [libarchive])
+PKG_CHECK_MODULES([LOGUPLOAD], [logupload])
+PKG_CHECK_MODULES([RDKLOGGER], [rdklogger])
+PKG_CHECK_MODULES([COMMONUTILS], [commonutils])
+
+# All libraries are required - no fallbacks
+if test "x$RBUS_LIBS" = "x"; then
+    AC_MSG_ERROR([librbus is required])
+fi
+if test "x$LIBARCHIVE_LIBS" = "x"; then
+    AC_MSG_ERROR([libarchive is required])
+fi
+if test "x$LOGUPLOAD_LIBS" = "x"; then
+    AC_MSG_ERROR([liblogupload is required])
+fi
+```
+
+## 5. Error Handling Implementation
+
+### 5.1 Error Code Definitions
 
 ```c
 /* Module-specific error codes */
@@ -1448,7 +1613,7 @@ snprintf(dest, sizeof(dest), "%s", src);
 #define RRD_ERROR_TIMEOUT         -6
 ```
 
-### 4.2 Error Handling Pattern
+### 5.2 Error Handling Pattern
 
 ```c
 int function_with_error_handling(void) {
@@ -1759,4 +1924,5 @@ int create_secure_file(const char *filepath) {
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | December 1, 2025 | GitHub Copilot | Initial LLD document |
+| 1.0 | December 1, 2025 | Vismal | Initial LLD document |
+| 1.1 | December 4, 2025 | GitHub Copilot | Updated to reflect HLD changes: RBus API for RFC parameters, GetEstbMac() API for MAC retrieval, liblogupload library API for uploads, rdklogger framework for logging, CPU-aware priority management, removed tar command fallback, made libarchive required |
