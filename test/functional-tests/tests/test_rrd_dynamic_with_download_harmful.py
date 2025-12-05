@@ -45,13 +45,12 @@ def reset_issuetype_rfc():
     assert result.returncode == 0
 
 def test_remote_debugger_trigger_event():
-    TEST_STRING = "Test.TestRun5"
     reset_issuetype_rfc()
     sleep(10)
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', TEST_STRING
+        'string', DYNAMIC_HARMFUL_STRING
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
@@ -131,7 +130,7 @@ def test_rdm_rrd_trigger_event():
     assert result.returncode == 0
 
 def test_rdm_rrd_dwnld_status():
-    PACKAGE_FOUND = "Package found in Cache...Test.TestRun5"
+    PACKAGE_FOUND = "Package found in Cache...Test.TestRun3"
     assert PACKAGE_FOUND in grep_rrdlogs(PACKAGE_FOUND)
 
     PACKAGE_DETAIL = "Package Details jsonPath: /tmp/RDK-RRD-Test"
@@ -140,13 +139,13 @@ def test_rdm_rrd_dwnld_status():
     COPY_MSG = "Copying Message Received to the queue.."
     assert COPY_MSG in grep_rrdlogs(COPY_MSG)
 
-    SUCCESS_MSG_SEND = "Message sending Done, ID=0 MSG=Test.TestRun5 Size=13 Type=1 AppendMode=0!"
+    SUCCESS_MSG_SEND = "Message sending Done, ID=0 MSG=Test.TestRun3 Size=13 Type=1 AppendMode=0!"
     assert SUCCESS_MSG_SEND in grep_rrdlogs(SUCCESS_MSG_SEND)
 
-    SUCCESS_MSG_RECEIVE = "Message Reception Done for ID=0 MSG=Test.TestRun5 TYPE=1..."
+    SUCCESS_MSG_RECEIVE = "Message Reception Done for ID=0 MSG=Test.TestRun3 TYPE=1..."
     assert SUCCESS_MSG_RECEIVE in grep_rrdlogs(SUCCESS_MSG_RECEIVE)
 
-    ISSUE_CMD_INFO = "Getting Issue command Information for : Test.TestRun5"
+    ISSUE_CMD_INFO = "Getting Issue command Information for : Test.TestRun3"
     assert ISSUE_CMD_INFO in grep_rrdlogs(ISSUE_CMD_INFO)
 
     CHECK_IN_DYNAMIC = "Checking if Issue marked inDynamic..."
@@ -167,14 +166,23 @@ def test_rdm_rrd_dwnld_status():
     READ_ISSUE_CATEGORY = "Reading Issue Category:Test..."
     assert READ_ISSUE_CATEGORY in grep_rrdlogs(READ_ISSUE_CATEGORY)
 
-    RUN_DEBUG_CMD = "Run Debug Commands for Test:TestRun5"
+    RUN_DEBUG_CMD = "Run Debug Commands for Test:TestRun3"
     assert RUN_DEBUG_CMD in grep_rrdlogs(RUN_DEBUG_CMD)
 
-    EXEC_RUNTIME_SERVICE = "Executing Commands in Runtime Service..."
-    assert EXEC_RUNTIME_SERVICE in grep_rrdlogs(EXEC_RUNTIME_SERVICE)
+def test_remote_debugger_command_sanity():
+    VALID_COMMAND = "rm -rf"
+    assert VALID_COMMAND in grep_rrdlogs(VALID_COMMAND)
 
-    START_REMOTE_DEBUGGER = "Starting remote_debugger_Test.TestRun5 service success..."
-    assert START_REMOTE_DEBUGGER in grep_rrdlogs(START_REMOTE_DEBUGGER)
+    SANITY_CHECK = "Found harmful commands"
+    assert SANITY_CHECK in grep_rrdlogs(SANITY_CHECK)
+
+    sleep(5)
+    ABORT_MSG = "Aborting Command execution due to Harmful commands"
+    assert ABORT_MSG in grep_rrdlogs(ABORT_MSG)
+
+    UPLOAD_MSG = "Skip uploading Debug Report"
+    assert UPLOAD_MSG in grep_rrdlogs(UPLOAD_MSG)
+
 
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
