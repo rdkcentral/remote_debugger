@@ -28,8 +28,9 @@ mkdir -p "$OUTPUT_DIR"
 mkdir -p "$STATIC_PROFILE_DIR"
 mkdir -p "$LIB_DIR"
 mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
-
+mkdir -p /media/apps/RDK-RRD-DEEPSLEEP/etc/rrd
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
+touch /media/apps/RDK-RRD-DEEPSLEEP/etc/rrd/remote_debugger.json
 
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
@@ -58,6 +59,10 @@ ln -s /usr/local/bin/journalctl /usr/bin/journalctl
 rm -rf /tmp/rrd/*
 rm -rf /opt/logs/remotedebugger.log*
 
+cd ./test/functional-tests/tests
+make
+cd -
+
 # Run L2 Test cases
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_missing_report.json test/functional-tests/tests/test_rrd_dynamic_profile_missing_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/test_category.json test/functional-tests/tests/test_rrd_dynamic_subcategory_report.py
@@ -79,3 +84,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_st
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_static.json test/functional-tests/tests/test_rrd_deepsleep_static_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_dynamic.json test/functional-tests/tests/test_deepsleep_dynamic.py
