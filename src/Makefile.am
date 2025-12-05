@@ -19,7 +19,7 @@
 
 bin_PROGRAMS = remotedebugger
 
-remotedebuggerincludedir = $(includedir)/rrd
+remotedebuggerincludedir = $(includedir)/rrd  
 remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h
 
 remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdDynamic.c rrdExecuteScript.c rrdMsgPackDecoder.c rrdInterface.c
