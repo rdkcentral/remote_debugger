@@ -40,10 +40,6 @@ if [ ! -d iarmbus ]; then
     git clone https://github.com/rdkcentral/iarmbus.git
 fi
 
-if [ ! -d tr69hostif ]; then
-    git clone https://github.com/rdkcentral/tr69hostif.git
-fi
-
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
@@ -51,7 +47,7 @@ cd rfcapi
 make librfcapi_la_CPPFLAGS="-I/usr/include/cjson -I/usr/rfc/rfcMgr/gtest/mocks"
 make install
 cd /usr/rfc/tr181api
-g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c
+g++ -fPIC -shared -o libtr181api.so tr181api.cpp -I/usr/local/include/wdmp-c -L/usr/local/lib -lrfcapi
 mv ./libtr181api.so /usr/local/lib
 cp ./tr181api.h /usr/local/include
 
@@ -66,7 +62,7 @@ cp /usr/iarmbus/core/include/libIBus.h /usr/local/include
 cp /usr/iarmbus/core/libIARMCore.h /usr/local/include
 
 # Build and install stubs from tr69hostif
-
+git clone https://github.com/rdkcentral/tr69hostif.git
 cd tr69hostif
 cd ./src/unittest/stubs
 g++ -fPIC -shared -o libIARMBus.so iarm_stubs.cpp  -I/usr/tr69hostif/src/hostif/parodusClient/pal -I/usr/tr69hostif/src/unittest/stubs -I/usr/tr69hostif/src/hostif/parodusClient/waldb -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/tr69hostif/src/hostif/include -I/usr/tr69hostif/src/hostif/profiles/DeviceInfo -I/usr/tr69hostif/src/hostif/parodusClient/pal -fpermissive
