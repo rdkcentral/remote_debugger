@@ -1,0 +1,154 @@
+/*
+ * rrd_sysinfo.c - System Info Provider (skeleton)
+ */
+
+
+#include "rrd_sysinfo.h"
+#include "common_device_api.h" // For GetEstbMac
+
+#include <rdk_logger.h>
+
+
+
+int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Entry\n", __FUNCTION__);
+    if (!mac_addr || size < 18) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Invalid MAC buffer or size\n", __FUNCTION__);
+        return -1;
+    }
+    memset(mac_addr, 0, size);
+    size_t copied = GetEstbMac(mac_addr, size);
+    if (copied == 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Failed to get MAC address\n", __FUNCTION__);
+        return -1;
+    }
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS, "%s: MAC address obtained: %s\n", __FUNCTION__, mac_addr);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+    return 0;
+}
+
+
+int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Entry\n", __FUNCTION__);
+    if (!timestamp || size < 20) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Invalid timestamp buffer or size\n", __FUNCTION__);
+        return -1;
+    }
+    memset(timestamp, 0, size);
+    time_t now = time(NULL);
+    struct tm *tm_info = localtime(&now);
+    if (!tm_info) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Failed to get local time\n", __FUNCTION__);
+        return -1;
+    }
+    char ampm[3] = "AM";
+    int hour = tm_info->tm_hour;
+    if (hour >= 12) {
+        strcpy(ampm, "PM");
+        if (hour > 12) hour -= 12;
+    } else if (hour == 0) {
+        hour = 12;
+    }
+    char buf[32] = {0};
+    snprintf(buf, sizeof(buf), "%04d-%02d-%02d-%02d-%02d-%02d%s",
+        tm_info->tm_year + 1900,
+        tm_info->tm_mon + 1,
+        tm_info->tm_mday,
+        hour,
+        tm_info->tm_min,
+        tm_info->tm_sec,
+        ampm);
+    strncpy(timestamp, buf, size - 1);
+    timestamp[size - 1] = '\0';
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS, "%s: Timestamp generated: %s\n", __FUNCTION__, timestamp);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+    return 0;
+}
+
+bool rrd_sysinfo_file_exists(const char *filepath) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Entry\n", __FUNCTION__);
+    if (!filepath) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Invalid filepath\n", __FUNCTION__);
+        return false;
+    }
+    bool exists = access(filepath, F_OK) == 0;
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: File %s exists: %d\n", __FUNCTION__, filepath, exists);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+    return exists;
+}
+
+bool rrd_sysinfo_dir_exists(const char *dirpath) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Entry\n", __FUNCTION__);
+    if (!dirpath) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Invalid dirpath\n", __FUNCTION__);
+        return false;
+    }
+    struct stat st;
+    bool exists = (stat(dirpath, &st) == 0 && S_ISDIR(st.st_mode));
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Directory %s exists: %d\n", __FUNCTION__, dirpath, exists);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+    return exists;
+}
+
+bool rrd_sysinfo_dir_is_empty(const char *dirpath) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Entry\n", __FUNCTION__);
+    if (!dirpath) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Invalid dirpath\n", __FUNCTION__);
+        return false;
+    }
+    DIR *dir = opendir(dirpath);
+    if (!dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Failed to open directory %s\n", __FUNCTION__, dirpath);
+        return false;
+    }
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        // Skip . and ..
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            closedir(dir);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Directory %s is not empty\n", __FUNCTION__, dirpath);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+            return false; // Found a file/dir
+        }
+    }
+    closedir(dir);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Directory %s is empty\n", __FUNCTION__, dirpath);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+    return true; // No files/dirs found
+}
+
+int rrd_sysinfo_get_dir_size(const char *dirpath, size_t *size) {
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Entry\n", __FUNCTION__);
+    if (!dirpath || !size) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Invalid dirpath or size pointer\n", __FUNCTION__);
+        return -1;
+    }
+    *size = 0;
+    DIR *dir = opendir(dirpath);
+    if (!dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_UPLOADRRDLOGS, "%s: Failed to open directory %s\n", __FUNCTION__, dirpath);
+        return -1;
+    }
+    struct dirent *entry;
+    char filepath[1024] = {0};
+    struct stat st;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+        snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
+        if (stat(filepath, &st) == 0) {
+            if (S_ISREG(st.st_mode)) {
+                *size += st.st_size;
+            } else if (S_ISDIR(st.st_mode)) {
+                size_t subdir_size = 0;
+                if (rrd_sysinfo_get_dir_size(filepath, &subdir_size) == 0) {
+                    *size += subdir_size;
+                }
+            }
+        }
+    }
+    closedir(dir);
+    RDK_LOG(RDK_LOG_INFO, LOG_UPLOADRRDLOGS, "%s: Directory %s total size: %zu bytes\n", __FUNCTION__, dirpath, *size);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_UPLOADRRDLOGS, "%s: Exit\n", __FUNCTION__);
+    return 0;
+}
