@@ -5,6 +5,7 @@
 #define RRD_UPLOAD_H
 
 #include <stdbool.h>
+#include "rrdCommon.h"
 
 int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename);
 int rrd_upload_check_lock(bool *is_locked);

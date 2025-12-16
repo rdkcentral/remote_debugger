@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include "rrdCommon.h"
 #include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
