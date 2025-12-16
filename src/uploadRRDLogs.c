@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <rdk_logger.h>
+#include <rdk_debug.h>
 
 /* Use repository logging macro */
 

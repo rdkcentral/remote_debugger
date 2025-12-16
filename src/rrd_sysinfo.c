@@ -6,7 +6,7 @@
 #include "rrd_sysinfo.h"
 #include "common_device_api.h" // For GetEstbMac
 
-#include <rdk_logger.h>
+#include <rdk_debug.h>
 
 /* Use repository logging macro */
 
