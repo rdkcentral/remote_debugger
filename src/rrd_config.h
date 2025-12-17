@@ -5,6 +5,9 @@
 #define RRD_CONFIG_H
 
 #include <stdbool.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdio.h>
 
 // Configuration structure
 typedef struct {
