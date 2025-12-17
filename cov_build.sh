@@ -43,7 +43,11 @@ fi
 if [ ! -d tr69hostif ]; then
     git clone https://github.com/rdkcentral/tr69hostif.git
 fi
+git clone https://github.com/rdkcentral/dcm-agent.git -b feature/logupload_copilot_lib
 
+cd dcm-agent
+sh cov_build.sh
+cd -
 cd rfc
 autoreconf -i
 ./configure --enable-rfctool=yes --enable-tr181set=yes
