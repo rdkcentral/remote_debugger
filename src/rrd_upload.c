@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#include "uploadstblogs.h" // For UploadSTBLogsParams and uploadstblogs_run
 
 
 int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename) {
