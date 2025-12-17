@@ -6,7 +6,7 @@
 
 #include <stdbool.h>
 #include "rrdCommon.h"
-#include "uploadstblogs.h" 
+#include <uploadstblogs.h>
 
 
 int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename);
