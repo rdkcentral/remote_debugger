@@ -47,6 +47,9 @@ git clone https://github.com/rdkcentral/dcm-agent.git -b feature/logupload_copil
 
 cd dcm-agent
 sh cov_build.sh
+autoreconf -i
+./configure
+make && make install
 cd -
 cd rfc
 autoreconf -i
