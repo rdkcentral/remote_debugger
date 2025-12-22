@@ -50,6 +50,7 @@ sh cov_build.sh
 autoreconf -i
 ./configure
 make && make install
+cp uploadstblogs/include/uploadstblogs.h /usr/local/include 
 cd -
 cd rfc
 autoreconf -i
