@@ -6,9 +6,9 @@
 
 #include <stdbool.h>
 #include "rrdCommon.h"
-ifndef GTEST_ENABLE
+#ifndef GTEST_ENABLE
 #include <uploadstblogs.h>
-endif
+#endif
 
 
 
