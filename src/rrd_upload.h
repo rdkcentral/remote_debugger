@@ -6,7 +6,10 @@
 
 #include <stdbool.h>
 #include "rrdCommon.h"
+ifndef GTEST_ENABLE
 #include <uploadstblogs.h>
+endif
+
 
 
 int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename);
