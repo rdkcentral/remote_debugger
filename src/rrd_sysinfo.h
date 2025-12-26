@@ -12,7 +12,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#ifndef GTEST_ENABLE
 #include <common_device_api.h>
+#endif
 
 /* Get the device MAC address.
  * @param mac_addr Buffer to store MAC address (min 18 bytes)
