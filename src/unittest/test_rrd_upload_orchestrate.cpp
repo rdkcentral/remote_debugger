@@ -24,10 +24,15 @@
 
 extern "C" {
 #include "rrd_config.h"
+#include "rrd_config.c"
 #include "rrd_sysinfo.h"
+#include "rrd_sysinfo.c"
 #include "rrd_logproc.h"
+#include "rrd_logproc.c"
 #include "rrd_archive.h"
+#include "rrd_archive.c"
 #include "rrd_upload.h"
+#include "rrd_upload.c"
 #include "uploadRRDLogs.c"
 }
 
