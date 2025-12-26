@@ -36,16 +36,7 @@ extern "C" {
 #include "uploadRRDLogs.c"
 }
 
-// Mock declarations
-extern "C" {
-    // Mock GetEstbMac function
-    size_t __attribute__((weak)) GetEstbMac(char *mac_addr, size_t size) {
-        const char *mock_mac = "00:11:22:33:44:55";
-        if (size < strlen(mock_mac) + 1) return 0;
-        strcpy(mac_addr, mock_mac);
-        return strlen(mock_mac);
-    }
-}
+
 
 // Test Fixture for Upload Orchestration
 class RRDUploadOrchestrationTest : public ::testing::Test {
