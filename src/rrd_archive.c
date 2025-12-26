@@ -110,7 +110,7 @@ static int write_tar_header(gzFile out, const char *name, const struct stat *st,
 
     /* calculate checksum over the 512-byte header */
     unsigned int csum = calculate_checksum((const unsigned char *)&hdr, sizeof(hdr));
-    snprintf(hdr.chksum, sizeof(hdr.chksum), "%06o\0 ", csum);
+    snprintf(hdr.chksum, sizeof(hdr.chksum), "%06o ", csum);
 
     if (write_block(out, &hdr, sizeof(hdr)) != 0) return -1;
     return 0;
@@ -120,7 +120,7 @@ static int write_file_contents(gzFile out, const char *path, const struct stat *
     int fd = open(path, O_RDONLY);
     if (fd < 0) return -1;
     const size_t bufsize = 8192;
-    char *buf = malloc(bufsize);
+    char *buf = (char *)malloc(bufsize);
     if (!buf) { close(fd); return -1; }
     ssize_t r;
     unsigned long long remaining = st->st_size;
