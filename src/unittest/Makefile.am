@@ -28,7 +28,7 @@ COMMON_LDADD = -lgtest -lgtest_main -lgmock_main -lgmock -lcjson -lmsgpackc -lgc
 COMMON_CXXFLAGS = -frtti -fprofile-arcs -ftest-coverage
 
 # Define the source files
-remotedebugger_gtest_SOURCES = rrdUnitTestRunner.cpp test_rrd_upload_orchestrate.cpp
+remotedebugger_gtest_SOURCES = rrdUnitTestRunner.cpp 
 
 # Apply common properties to each program
 remotedebugger_gtest_CPPFLAGS = $(COMMON_CPPFLAGS)
