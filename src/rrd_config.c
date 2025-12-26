@@ -2,6 +2,9 @@
  * rrd_config.c - Configuration Manager (skeleton)
  */
 #include "rrd_config.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 // Helper: trim whitespace
