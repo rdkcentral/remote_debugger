@@ -179,7 +179,7 @@ def test_check_issue_in_dynamic_profile():
     result = check_output_dir()
     print(result)
 
-    UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
+    UPLOAD_LOGS = "Starting Upload Debug output via API"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
 def test_remotedebugger_upload_report():
