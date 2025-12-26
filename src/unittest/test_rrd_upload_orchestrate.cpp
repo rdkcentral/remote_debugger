@@ -20,7 +20,7 @@
 #include <fstream>
 
 #include "Client_Mock.h"
-#include "Client_Mock.cpp"
+
 
 extern "C" {
 #include "rrd_config.h"
