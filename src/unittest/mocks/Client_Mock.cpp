@@ -274,6 +274,24 @@ extern "C"
         }
         return 0; // Default success
     }
+
+size_t GetEstbMac(char *pEstbMac, size_t szBufSize)
+    {
+        if (!pEstbMac || szBufSize == 0)
+        {
+            return 0;
+        }
+        // Return a mock MAC address for testing
+        const char* mock_mac = "AA:BB:CC:DD:EE:FF";
+        size_t len = strlen(mock_mac);
+        if (len >= szBufSize)
+        {
+            len = szBufSize - 1;
+        }
+        strncpy(pEstbMac, mock_mac, len);
+        pEstbMac[len] = '\0';
+        return len;
+    }
 }
 
 
