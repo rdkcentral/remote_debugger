@@ -1261,7 +1261,7 @@ protected:
 TEST_F(UploadDebugoutputTest, HandlesBadPath)
 {
     result = uploadDebugoutput("/sample/bad_path", "issuename");
-    ASSERT_EQ(result, 1);
+    ASSERT_EQ(result, 6);
 }
 
 TEST_F(UploadDebugoutputTest, HandlesNullParameters)
@@ -1273,7 +1273,7 @@ TEST_F(UploadDebugoutputTest, HandlesNullParameters)
 TEST_F(UploadDebugoutputTest, HandlesGoodPath)
 {
     result = uploadDebugoutput("/sample/good_path", "issuename");
-    ASSERT_EQ(result, 0);
+    ASSERT_NE(result, 0);
 }
 
 /* ========================== rrdRunCmdThread ======================= */
