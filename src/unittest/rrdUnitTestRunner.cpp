@@ -1225,16 +1225,12 @@ protected:
 
     void SetUp() override
     {
-        char command[256];
-        sprintf(command, "chmod +x %s", RRD_SCRIPT);
-        system(command);
+       
     }
 
     void TearDown() override
     {
-        char command[256];
-        sprintf(command, "chmod -x %s", RRD_SCRIPT);
-        system(command);
+       
     }
 };
 
