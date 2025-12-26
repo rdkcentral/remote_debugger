@@ -246,13 +246,20 @@ extern "C"
     }
 }
 
-
 /* ---------- UploadSTBLogs Mock ----------- */
 MockUploadSTBLogs *g_mockUploadSTBLogs = nullptr;
 
 void setUploadSTBLogsMock(MockUploadSTBLogs *mock)
 {
     g_mockUploadSTBLogs = mock;
+}
+
+/* ---------- Common Device API Mock ----------- */
+MockCommonDeviceAPI *g_mockCommonDeviceAPI = nullptr;
+
+void setCommonDeviceAPIMock(MockCommonDeviceAPI *mock)
+{
+    g_mockCommonDeviceAPI = mock;
 }
 
 extern "C"
@@ -275,13 +282,17 @@ extern "C"
         return 0; // Default success
     }
 
-size_t GetEstbMac(char *pEstbMac, size_t szBufSize)
+    size_t GetEstbMac(char *pEstbMac, size_t szBufSize)
     {
+        if (g_mockCommonDeviceAPI)
+        {
+            return g_mockCommonDeviceAPI->GetEstbMac(pEstbMac, szBufSize);
+        }
+        // Default implementation
         if (!pEstbMac || szBufSize == 0)
         {
             return 0;
         }
-        // Return a mock MAC address for testing
         const char* mock_mac = "AA:BB:CC:DD:EE:FF";
         size_t len = strlen(mock_mac);
         if (len >= szBufSize)
@@ -293,6 +304,3 @@ size_t GetEstbMac(char *pEstbMac, size_t szBufSize)
         return len;
     }
 }
-
-
-
