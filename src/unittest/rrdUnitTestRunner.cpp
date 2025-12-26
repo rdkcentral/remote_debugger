@@ -18,6 +18,12 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <cstring>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <fstream>
 
 #include "cJSON.h"
 
