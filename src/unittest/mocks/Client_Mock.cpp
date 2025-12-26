@@ -246,3 +246,35 @@ extern "C"
     }
 }
 
+
+/* ---------- UploadSTBLogs Mock ----------- */
+MockUploadSTBLogs *g_mockUploadSTBLogs = nullptr;
+
+void setUploadSTBLogsMock(MockUploadSTBLogs *mock)
+{
+    g_mockUploadSTBLogs = mock;
+}
+
+extern "C"
+{
+    int uploadstblogs_run(const UploadSTBLogsParams* params)
+    {
+        if (g_mockUploadSTBLogs)
+        {
+            return g_mockUploadSTBLogs->uploadstblogs_run(params);
+        }
+        return 0; // Default success
+    }
+
+    int uploadstblogs_execute(int argc, char** argv)
+    {
+        if (g_mockUploadSTBLogs)
+        {
+            return g_mockUploadSTBLogs->uploadstblogs_execute(argc, argv);
+        }
+        return 0; // Default success
+    }
+}
+
+
+
