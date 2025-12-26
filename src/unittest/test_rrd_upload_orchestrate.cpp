@@ -37,11 +37,6 @@ extern "C" {
         strcpy(mac_addr, mock_mac);
         return strlen(mock_mac);
     }
-
-    // Mock uploadstblogs_run function
-    int __attribute__((weak)) uploadstblogs_run(const UploadSTBLogsParams* params) {
-        return 0; // Success
-    }
 }
 
 // Test Fixture for Upload Orchestration
