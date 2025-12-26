@@ -395,3 +395,27 @@ public:
     MOCK_METHOD(int, uploadstblogs_run, (const UploadSTBLogsParams* params), ());
     MOCK_METHOD(int, uploadstblogs_execute, (int argc, char** argv), ());
 };
+
+void setUploadSTBLogsMock(MockUploadSTBLogs *mock);
+
+/* ---------- Common Device API Mock ----------- */
+class MockCommonDeviceAPI
+{
+public:
+    MOCK_METHOD(size_t, GetEstbMac, (char *pEstbMac, size_t szBufSize), ());
+};
+
+void setCommonDeviceAPIMock(MockCommonDeviceAPI *mock);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int uploadstblogs_run(const UploadSTBLogsParams* params);
+int uploadstblogs_execute(int argc, char** argv);
+size_t GetEstbMac(char *pEstbMac, size_t szBufSize);
+
+#ifdef __cplusplus
+}
+#endif
+
