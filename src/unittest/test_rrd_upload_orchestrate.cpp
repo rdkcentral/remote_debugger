@@ -68,7 +68,7 @@ protected:
 
     void TearDown() override {
         // Cleanup test directory
-        system("rm -rf /tmp/rrd_test_upload*");
+        (void)system("rm -rf /tmp/rrd_test_upload*");
         unsetenv("RFC_LOG_SERVER");
         unsetenv("RFC_HTTP_UPLOAD_LINK");
         unsetenv("RFC_UPLOAD_PROTOCOL");
