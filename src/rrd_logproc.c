@@ -42,11 +42,13 @@ int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
 // Convert issue type to uppercase and sanitize (alnum/underscore only)
 int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size) {
     if (!input || !output || size == 0) return -1;
+    size_t len = strlen(input);
+    if (len >= size) return -1;
     size_t j = 0;
     for (size_t i = 0; input[i] && j < size-1; ++i) {
         char c = input[i];
         if (isalnum((unsigned char)c)) output[j++] = toupper((unsigned char)c);
-        else if (c == '_' || c == '-') output[j++] = '_';
+        else if (c == '_' || c == '-' || c == '.') output[j++] = '_';
         // skip other chars
     }
     output[j] = 0;
