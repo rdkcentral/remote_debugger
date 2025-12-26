@@ -19,6 +19,9 @@
 #include <fcntl.h>
 #include <fstream>
 
+#include "Client_Mock.h"
+#include "Client_Mock.cpp"
+
 extern "C" {
 #include "rrd_config.h"
 #include "rrd_sysinfo.h"
