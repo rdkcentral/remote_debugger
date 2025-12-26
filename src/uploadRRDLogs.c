@@ -15,6 +15,7 @@
 /* Use repository logging macro */
 
 // --- Module headers (to be implemented) ---
+#include "rrdCommon.h" 
 #include "rrd_config.h"    // Configuration Manager
 #include "rrd_sysinfo.h"   // System Info Provider
 #include "rrd_logproc.h"   // Log Processing Engine
