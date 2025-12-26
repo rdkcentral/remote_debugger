@@ -18,7 +18,6 @@
 */
 
 #include "rrdExecuteScript.h"
-#include "rrd_upload.h"
 #if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
 #endif
