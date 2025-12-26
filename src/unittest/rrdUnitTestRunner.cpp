@@ -1243,11 +1243,17 @@ protected:
 
     void SetUp() override
     {
+        setenv("RFC_LOG_SERVER", "logs.example.com", 1);
+        setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
+        setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
        
     }
 
     void TearDown() override
     {
+        unsetenv("RFC_LOG_SERVER");
+        unsetenv("RFC_HTTP_UPLOAD_LINK");
+        unsetenv("RFC_UPLOAD_PROTOCOL");
        
     }
 };
