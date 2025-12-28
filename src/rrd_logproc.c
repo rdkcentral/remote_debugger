@@ -62,7 +62,11 @@ int rrd_logproc_validate_source(const char *source_dir) {
 int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Entry - source: %s, issue_type: %s\n", 
             __FUNCTION__, source_dir ? source_dir : "NULL", issue_type ? issue_type : "NULL");
-    
+
+    if (!source_dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
+        return -1;
+    }
     // Validate parameters
     if (!issue_type) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL issue_type\n", __FUNCTION__);
