@@ -4224,3 +4224,160 @@ TEST_F(RRDUploadOrchestrationTest, LargeDirectoryHandling) {
     EXPECT_GT(size, 50 * 100);  // Should accumulate all file sizes
 }
 
+// Error path: Configuration load failure
+TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
+    // Unset all environment variables to force config load failure
+    unsetenv("RFC_LOG_SERVER");
+    unsetenv("RFC_HTTP_UPLOAD_LINK");
+    unsetenv("RFC_UPLOAD_PROTOCOL");
+    
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    EXPECT_EQ(result, 3);  // Expected error code for config load failure
+    
+    // Restore environment variables
+    setenv("RFC_LOG_SERVER", "logs.example.com", 1);
+    setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
+    setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
+}
+
+// Error path: MAC address retrieval failure
+TEST_F(RRDUploadOrchestrationTest, MacAddressRetrievalFailure) {
+    // Create a test to trigger MAC address failure by mocking sys info
+    // This requires modifying the sysinfo module to fail in controlled way
+    // For now, we'll test the rrd_sysinfo_get_mac_address directly with invalid params
+    char mac_addr[32] = {0};
+    
+    // Test with NULL buffer
+    int result = rrd_sysinfo_get_mac_address(NULL, 32);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size
+    result = rrd_sysinfo_get_mac_address(mac_addr, 0);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_sysinfo_get_mac_address(mac_addr, 5);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Timestamp retrieval failure
+TEST_F(RRDUploadOrchestrationTest, TimestampRetrievalFailure) {
+    char timestamp[32] = {0};
+    
+    // Test with NULL buffer
+    int result = rrd_sysinfo_get_timestamp(NULL, 32);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size
+    result = rrd_sysinfo_get_timestamp(timestamp, 0);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_sysinfo_get_timestamp(timestamp, 5);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Log preparation failure
+TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
+    // Test with non-existent directory
+    int result = rrd_logproc_prepare_logs("/nonexistent/directory", test_issue_type);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL issue type
+    result = rrd_logproc_prepare_logs(test_dir, NULL);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Issue type sanitization failure
+TEST_F(RRDUploadOrchestrationTest, IssueTypeSanitizationFailure) {
+    char sanitized[64];
+    
+    // Test with NULL issue type
+    int result = rrd_logproc_convert_issue_type(NULL, sanitized, sizeof(sanitized));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL output buffer
+    result = rrd_logproc_convert_issue_type("test", NULL, 64);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size buffer
+    result = rrd_logproc_convert_issue_type("test", sanitized, 0);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Archive filename generation failure
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
+    char filename[256];
+    
+    // Test with NULL MAC address
+    int result = rrd_archive_generate_filename(NULL, "ISSUE", "timestamp", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL issue type
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", NULL, "timestamp", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL timestamp
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", NULL, filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL output buffer
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, 256);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", filename, 10);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Archive creation failure
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
+    char archive_filename[256] = "/tmp/rrd_test_archive_fail.tar.gz";
+    
+    // Test with non-existent source directory
+    int result = rrd_archive_create("/nonexistent/directory", NULL, archive_filename);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL archive filename
+    result = rrd_archive_create(test_dir, NULL, NULL);
+    EXPECT_NE(result, 0);
+    
+    // Test with invalid archive path (directory doesn't exist)
+    result = rrd_archive_create(test_dir, NULL, "/nonexistent/path/archive.tar.gz");
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Upload execution failure
+TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
+    // Create a test archive first
+    char archive_filename[256] = "/tmp/rrd_test_upload_fail.tar.gz";
+    std::ofstream f(archive_filename);
+    f << "dummy archive content\n";
+    f.close();
+    
+    // Test with invalid server
+    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload", "/tmp", archive_filename);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL parameters
+    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload", "/tmp", archive_filename);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", NULL, "http://server/upload", "/tmp", archive_filename);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", NULL, "/tmp", archive_filename);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", NULL, archive_filename);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", "/tmp", NULL);
+    EXPECT_NE(result, 0);
+    
+    // Cleanup
+    remove(archive_filename);
+}
+
+
+
