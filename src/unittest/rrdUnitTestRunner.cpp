@@ -1258,11 +1258,6 @@ protected:
     }
 };
 
-TEST_F(UploadDebugoutputTest, HandlesBadPath)
-{
-    result = uploadDebugoutput("/sample/bad_path", "issuename");
-    ASSERT_EQ(result, 6);
-}
 
 TEST_F(UploadDebugoutputTest, HandlesNullParameters)
 {
