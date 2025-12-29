@@ -49,7 +49,7 @@ int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
     } else if (hour == 0) {
         hour = 12;
     }
-    char buf[32] = {0};
+    char buf[64] = {0};
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d-%02d-%02d-%02d%s",
         tm_info->tm_year + 1900,
         tm_info->tm_mon + 1,
