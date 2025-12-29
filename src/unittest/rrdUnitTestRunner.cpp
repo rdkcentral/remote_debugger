@@ -3938,6 +3938,7 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
 
 
 // Test Fixture for Upload Orchestration
+// Test Fixture for Upload Orchestration
 class RRDUploadOrchestrationTest : public ::testing::Test {
 protected:
     const char *test_dir = "/tmp/rrd_test_upload";
@@ -3959,21 +3960,34 @@ protected:
         f2 << "Test log content 2\n";
         f2.close();
 
-        // Set environment variables for config
-        setenv("RFC_LOG_SERVER", "logs.example.com", 1);
-        setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
-        setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
+        // Create test configuration files
+        std::ofstream include_props("/tmp/test_include.properties");
+        include_props << "LOG_SERVER=logs.example.com\n";
+        include_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        include_props << "UPLOAD_PROTOCOL=HTTP\n";
+        include_props << "RDK_PATH=/lib/rdk\n";
+        include_props << "LOG_PATH=/opt/logs\n";
+        include_props << "BUILD_TYPE=dev\n";
+        include_props.close();
+
+        std::ofstream dcm_props("/tmp/test_dcm.properties");
+        dcm_props << "LOG_SERVER=logs.example.com\n";
+        dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
+        dcm_props.close();
     }
 
     void TearDown() override {
         // Cleanup test directory
         int ret = system("rm -rf /tmp/rrd_test_upload*");
         (void)ret;  // Explicitly ignore return value
-        unsetenv("RFC_LOG_SERVER");
-        unsetenv("RFC_HTTP_UPLOAD_LINK");
-        unsetenv("RFC_UPLOAD_PROTOCOL");
+        
+        // Cleanup test config files
+        unlink("/tmp/test_include.properties");
+        unlink("/tmp/test_dcm.properties");
     }
 };
+
 
 // Test: Invalid parameters
 TEST_F(RRDUploadOrchestrationTest, InvalidParametersNull) {
@@ -3997,14 +4011,21 @@ TEST_F(RRDUploadOrchestrationTest, ValidOrchestrationFlow) {
 // Test: Configuration loading
 TEST_F(RRDUploadOrchestrationTest, ConfigurationLoading) {
     rrd_config_t config;
-    int result = rrd_config_load(&config);
+    memset(&config, 0, sizeof(config));
     
+    // Since config files don't exist in test environment, manually load test config
+    // Parse test properties file directly
+    int result = rrd_config_parse_properties("/tmp/test_include.properties", &config);
     EXPECT_EQ(result, 0);
+    
+    // Verify configuration was loaded
     EXPECT_STRNE(config.log_server, "");
+    EXPECT_STREQ(config.log_server, "logs.example.com");
     EXPECT_STRNE(config.http_upload_link, "");
+    EXPECT_STREQ(config.http_upload_link, "http://logs.example.com/upload");
     EXPECT_STRNE(config.upload_protocol, "");
+    EXPECT_STREQ(config.upload_protocol, "HTTP");
 }
-
 // Test: System information retrieval
 TEST_F(RRDUploadOrchestrationTest, SystemInfoRetrieval) {
     char mac_addr[32] = {0};
