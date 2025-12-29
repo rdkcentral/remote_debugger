@@ -180,7 +180,7 @@ static int write_file_contents(gzFile out, const char *path, const struct stat *
 }
 
 static int archive_path_recursive(gzFile out, const char *source_root, const char *current_relpath) {
-    char fullpath[4096];
+    char fullpath[8192];
     if (strlen(source_root) + 1 + strlen(current_relpath) + 1 >= sizeof(fullpath)) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Path too long: %s/%s\n",
                 __FUNCTION__, source_root, current_relpath);
@@ -211,11 +211,11 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
     struct dirent *entry;
     while ((entry = readdir(d)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-        char relname[4096];
+        char relname[8192];
         if (current_relpath[0]) snprintf(relname, sizeof(relname), "%s/%s", current_relpath, entry->d_name);
         else snprintf(relname, sizeof(relname), "%s", entry->d_name);
 
-        char childpath[8192];
+        char childpath[16384];
         snprintf(childpath, sizeof(childpath), "%s/%s", source_root, relname);
         struct stat st;
         if (lstat(childpath, &st) != 0) {
@@ -227,7 +227,7 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
 
         if (S_ISDIR(st.st_mode)) {
             /* write directory header (name should end with '/') */
-            char dirtarname[4098];
+            char dirtarname[8200];
             snprintf(dirtarname, sizeof(dirtarname), "%s/", relname);
             if (write_tar_header(out, dirtarname, &st, '5') != 0) { closedir(d); return -1; }
             /* recurse into directory */
@@ -253,7 +253,7 @@ int rrd_archive_create(const char *source_dir, const char *working_dir, const ch
         return -1;
     }
 
-    char outpath[4096];
+    char outpath[8192];
     if (working_dir && strlen(working_dir) > 0) {
         snprintf(outpath, sizeof(outpath), "%s/%s", working_dir, archive_filename);
     } else {
@@ -320,11 +320,15 @@ int rrd_archive_create(const char *source_dir, const char *working_dir, const ch
 
 // Generate archive filename: <mac>_<issue_type>_<timestamp>.tar.gz
 int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, char *filename, size_t size) {
-    if (!mac || !issue_type || !timestamp || !filename || size < 16) {
+    if (!mac || !issue_type || !timestamp || !filename || size < 128) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Invalid parameters\n", __FUNCTION__);
         return -1;
     }
-    snprintf(filename, size, "%s_%s_%s.tar.gz", mac, issue_type, timestamp);
+    int ret = snprintf(filename, size, "%s_%s_%s.tar.gz", mac, issue_type, timestamp);
+    if (ret < 0 || (size_t)ret >= size) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Filename truncated\n", __FUNCTION__);
+        return -1;
+    }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s] Generated filename: %s\n", __FUNCTION__, filename);
     return 0;
 }
