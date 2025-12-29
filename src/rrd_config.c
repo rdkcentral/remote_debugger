@@ -263,7 +263,8 @@ int rrd_config_query_rfc(rrd_config_t *config) {
             trim(output);
             if (strlen(output) > 0 && strcmp(output, "null") != 0) {
                 // Append /cgi-bin/S3.cgi to the URL (matching shell script line 93)
-                char full_url[512];
+                // Use larger buffer to avoid truncation warning (512 + 16 for "/cgi-bin/S3.cgi\0")
+                char full_url[600];
                 snprintf(full_url, sizeof(full_url), "%s/cgi-bin/S3.cgi", output);
                 strncpy(config->http_upload_link, full_url, sizeof(config->http_upload_link)-1);
                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Using Upload HttpLink from RFC: %s\n", __FUNCTION__, full_url);
