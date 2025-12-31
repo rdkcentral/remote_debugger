@@ -60,8 +60,8 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
         .flag = 1,
         .dcm_flag = 0, // Not a DCM-triggered upload
         .upload_on_reboot = false,
-        .upload_protocol = protocol ? protocol : "HTTP",
-        .upload_http_link = http_link ? http_link : "",
+        .upload_protocol = protocol,
+        .upload_http_link = http_link,
         .trigger_type = TRIGGER_ONDEMAND,
         .rrd_flag = true,
         .rrd_file = archive_filename
