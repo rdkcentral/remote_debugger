@@ -84,7 +84,8 @@ static int write_tar_header(gzFile out, const char *name, const struct stat *st,
 
     size_t name_len = strlen(name);
     if (name_len <= 100) {
-        strncpy(hdr.name, name, sizeof(hdr.name));
+        strncpy(hdr.name, name, sizeof(hdr.name) - 1);
+        hdr.name[sizeof(hdr.name) - 1] = '\0';
     } else if (name_len <= 255) {
         /* split into prefix and name */
         size_t prefix_len = name_len - 100 - 1; /* leave room for null */
@@ -94,7 +95,9 @@ static int write_tar_header(gzFile out, const char *name, const struct stat *st,
             return -1;
         }
         strncpy(hdr.prefix, name, prefix_len);
-        strncpy(hdr.name, name + prefix_len + 1, sizeof(hdr.name));
+        hdr.prefix[prefix_len < sizeof(hdr.prefix) ? prefix_len : sizeof(hdr.prefix) - 1] = '\0';
+        strncpy(hdr.name, name + prefix_len + 1, sizeof(hdr.name) - 1);
+        hdr.name[sizeof(hdr.name) - 1] = '\0';
     } else {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] File name too long: %s (length %zu)\n",
                 __FUNCTION__, name, name_len);
@@ -112,8 +115,14 @@ static int write_tar_header(gzFile out, const char *name, const struct stat *st,
 
     struct passwd *pw = getpwuid(st->st_uid);
     struct group  *gr = getgrgid(st->st_gid);
-    if (pw) strncpy(hdr.uname, pw->pw_name, sizeof(hdr.uname)-1);
-    if (gr) strncpy(hdr.gname, gr->gr_name, sizeof(hdr.gname)-1);
+    if (pw) {
+        strncpy(hdr.uname, pw->pw_name, sizeof(hdr.uname) - 1);
+        hdr.uname[sizeof(hdr.uname) - 1] = '\0';
+    }
+    if (gr) {
+        strncpy(hdr.gname, gr->gr_name, sizeof(hdr.gname) - 1);
+        hdr.gname[sizeof(hdr.gname) - 1] = '\0';
+    }
 
     /* checksum: set to spaces for calculation */
     memset(hdr.chksum, ' ', sizeof(hdr.chksum));
@@ -211,16 +220,28 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
     struct dirent *entry;
     while ((entry = readdir(d)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-        char relname[8192];
-        if (current_relpath[0]) snprintf(relname, sizeof(relname), "%s/%s", current_relpath, entry->d_name);
-        else snprintf(relname, sizeof(relname), "%s", entry->d_name);
+        
+        /* Allocate buffers on heap to avoid large stack usage (CWE-400) */
+        char *relname = (char *)malloc(8192);
+        char *childpath = (char *)malloc(16384);
+        if (!relname || !childpath) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to allocate memory\n", __FUNCTION__);
+            free(relname);
+            free(childpath);
+            closedir(d);
+            return -1;
+        }
+        
+        if (current_relpath[0]) snprintf(relname, 8192, "%s/%s", current_relpath, entry->d_name);
+        else snprintf(relname, 8192, "%s", entry->d_name);
 
-        char childpath[16384];
-        snprintf(childpath, sizeof(childpath), "%s/%s", source_root, relname);
+        snprintf(childpath, 16384, "%s/%s", source_root, relname);
         struct stat st;
         if (lstat(childpath, &st) != 0) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to stat child: %s (error: %s)\n",
                     __FUNCTION__, childpath, strerror(errno));
+            free(relname);
+            free(childpath);
             closedir(d);
             return -1;
         }
@@ -229,16 +250,41 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
             /* write directory header (name should end with '/') */
             char dirtarname[8200];
             snprintf(dirtarname, sizeof(dirtarname), "%s/", relname);
-            if (write_tar_header(out, dirtarname, &st, '5') != 0) { closedir(d); return -1; }
+            if (write_tar_header(out, dirtarname, &st, '5') != 0) { 
+                free(relname);
+                free(childpath);
+                closedir(d); 
+                return -1; 
+            }
             /* recurse into directory */
-            if (archive_path_recursive(out, source_root, relname) != 0) { closedir(d); return -1; }
+            if (archive_path_recursive(out, source_root, relname) != 0) { 
+                free(relname);
+                free(childpath);
+                closedir(d); 
+                return -1; 
+            }
         } else if (S_ISREG(st.st_mode)) {
-            if (write_tar_header(out, relname, &st, '0') != 0) { closedir(d); return -1; }
-            if (write_file_contents(out, childpath, &st) != 0) { closedir(d); return -1; }
+            if (write_tar_header(out, relname, &st, '0') != 0) { 
+                free(relname);
+                free(childpath);
+                closedir(d); 
+                return -1; 
+            }
+            if (write_file_contents(out, childpath, &st) != 0) { 
+                free(relname);
+                free(childpath);
+                closedir(d); 
+                return -1; 
+            }
         } else {
             /* ignore symlinks and special files for this minimal impl */
+            free(relname);
+            free(childpath);
             continue;
         }
+        
+        free(relname);
+        free(childpath);
     }
     closedir(d);
     return 0;
