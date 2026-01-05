@@ -78,8 +78,17 @@ int rrd_config_load(rrd_config_t *config) {
     memset(config, 0, sizeof(*config));
     config->use_rfc_config = false;
     
+    // Explicitly null-terminate all string fields after memset for safety (CWE-170)
+    config->log_server[0] = '\0';
+    config->http_upload_link[0] = '\0';
+    config->upload_protocol[0] = '\0';
+    config->rdk_path[0] = '\0';
+    config->log_path[0] = '\0';
+    config->build_type[0] = '\0';
+    
     // Set default protocol
     strncpy(config->upload_protocol, "HTTP", sizeof(config->upload_protocol)-1);
+    config->upload_protocol[sizeof(config->upload_protocol)-1] = '\0';
     
     // 1. Parse /etc/include.properties and /etc/device.properties
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Parsing /etc/include.properties\n", __FUNCTION__);
@@ -116,6 +125,9 @@ int rrd_config_load(rrd_config_t *config) {
     
     // 4. Final fallback: if LOG_SERVER or HTTP_UPLOAD_LINK is still empty, try dcm.properties
     //    (matching shell script lines 115-122)
+    // Ensure null-termination before strlen() check (CWE-170)
+    config->log_server[sizeof(config->log_server)-1] = '\0';
+    config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
     if (strlen(config->log_server) == 0 || strlen(config->http_upload_link) == 0) {
         RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
                 "%s: DCM params read using RFC/tr181 is empty, trying dcm.properties fallback\n", 
@@ -141,12 +153,15 @@ int rrd_config_load(rrd_config_t *config) {
             config->upload_protocol[0] ? config->upload_protocol : "(empty)",
             config->http_upload_link[0] ? config->http_upload_link : "(empty)");
     
-    // Validate essential fields
+    // Validate essential fields - ensure null-termination before strlen() (CWE-170)
+    config->log_server[sizeof(config->log_server)-1] = '\0';
+    config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
     if (strlen(config->log_server) == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: LOG_SERVER is empty after all config attempts!\n", __FUNCTION__);
         return -2;
     }
     
+    config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
     if (strlen(config->http_upload_link) == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: HTTP_UPLOAD_LINK is empty after all config attempts!\n", __FUNCTION__);
         return -3;
@@ -183,31 +198,37 @@ int rrd_config_parse_properties(const char *filepath, rrd_config_t *config) {
         
         if (strcmp(key, "LOG_SERVER") == 0) {
             strncpy(config->log_server, val, sizeof(config->log_server)-1);
+            config->log_server[sizeof(config->log_server)-1] = '\0';
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set LOG_SERVER=%s\n", __FUNCTION__, val);
             lines_parsed++;
         }
         else if (strcmp(key, "HTTP_UPLOAD_LINK") == 0) {
             strncpy(config->http_upload_link, val, sizeof(config->http_upload_link)-1);
+            config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set HTTP_UPLOAD_LINK=%s\n", __FUNCTION__, val);
             lines_parsed++;
         }
         else if (strcmp(key, "UPLOAD_PROTOCOL") == 0) {
             strncpy(config->upload_protocol, val, sizeof(config->upload_protocol)-1);
+            config->upload_protocol[sizeof(config->upload_protocol)-1] = '\0';
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set UPLOAD_PROTOCOL=%s\n", __FUNCTION__, val);
             lines_parsed++;
         }
         else if (strcmp(key, "RDK_PATH") == 0) {
             strncpy(config->rdk_path, val, sizeof(config->rdk_path)-1);
+            config->rdk_path[sizeof(config->rdk_path)-1] = '\0';
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set RDK_PATH=%s\n", __FUNCTION__, val);
             lines_parsed++;
         }
         else if (strcmp(key, "LOG_PATH") == 0) {
             strncpy(config->log_path, val, sizeof(config->log_path)-1);
+            config->log_path[sizeof(config->log_path)-1] = '\0';
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set LOG_PATH=%s\n", __FUNCTION__, val);
             lines_parsed++;
         }
         else if (strcmp(key, "BUILD_TYPE") == 0) {
             strncpy(config->build_type, val, sizeof(config->build_type)-1);
+            config->build_type[sizeof(config->build_type)-1] = '\0';
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set BUILD_TYPE=%s\n", __FUNCTION__, val);
             lines_parsed++;
         }
@@ -246,6 +267,7 @@ int rrd_config_query_rfc(rrd_config_t *config) {
         trim(output);
         if (strlen(output) > 0 && strcmp(output, "null") != 0) {
             strncpy(config->log_server, output, sizeof(config->log_server)-1);
+            config->log_server[sizeof(config->log_server)-1] = '\0';
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Using Log Server URL from RFC: %s\n", __FUNCTION__, output);
             found_any = true;
         } else {
@@ -263,10 +285,10 @@ int rrd_config_query_rfc(rrd_config_t *config) {
             trim(output);
             if (strlen(output) > 0 && strcmp(output, "null") != 0) {
                 // Append /cgi-bin/S3.cgi to the URL (matching shell script line 93)
-                // Use larger buffer to avoid truncation warning (512 + 16 for "/cgi-bin/S3.cgi\0")
-                char full_url[600];
+                char full_url[512];
                 snprintf(full_url, sizeof(full_url), "%s/cgi-bin/S3.cgi", output);
                 strncpy(config->http_upload_link, full_url, sizeof(config->http_upload_link)-1);
+                config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Using Upload HttpLink from RFC: %s\n", __FUNCTION__, full_url);
                 found_any = true;
             } else {
@@ -317,36 +339,45 @@ int rrd_config_parse_dcm_settings(const char *filepath, rrd_config_t *config) {
         if (strcmp(key, "LogUploadSettings:UploadRepository:URL") == 0) {
             if (strlen(val) > 0) {
                 strncpy(config->http_upload_link, val, sizeof(config->http_upload_link)-1);
+                config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set HTTP_UPLOAD_LINK from DCM: %s\n", __FUNCTION__, val);
             }
         }
         else if (strcmp(key, "LogUploadSettings:UploadRepository:uploadProtocol") == 0) {
             if (strlen(val) > 0) {
                 strncpy(config->upload_protocol, val, sizeof(config->upload_protocol)-1);
+                config->upload_protocol[sizeof(config->upload_protocol)-1] = '\0';
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Set UPLOAD_PROTOCOL from DCM: %s\n", __FUNCTION__, val);
             } else {
                 // Default to HTTP if not found (matching shell script lines 111-113)
                 strncpy(config->upload_protocol, "HTTP", sizeof(config->upload_protocol)-1);
+                config->upload_protocol[sizeof(config->upload_protocol)-1] = '\0';
             }
         }
         // Also handle simple key names for backwards compatibility
         else if (strcmp(key, "LOG_SERVER") == 0 && strlen(val) > 0) {
             strncpy(config->log_server, val, sizeof(config->log_server)-1);
+            config->log_server[sizeof(config->log_server)-1] = '\0';
         }
         else if (strcmp(key, "HTTP_UPLOAD_LINK") == 0 && strlen(val) > 0) {
             strncpy(config->http_upload_link, val, sizeof(config->http_upload_link)-1);
+            config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
         }
         else if (strcmp(key, "UPLOAD_PROTOCOL") == 0 && strlen(val) > 0) {
             strncpy(config->upload_protocol, val, sizeof(config->upload_protocol)-1);
+            config->upload_protocol[sizeof(config->upload_protocol)-1] = '\0';
         }
         else if (strcmp(key, "RDK_PATH") == 0 && strlen(val) > 0) {
             strncpy(config->rdk_path, val, sizeof(config->rdk_path)-1);
+            config->rdk_path[sizeof(config->rdk_path)-1] = '\0';
         }
         else if (strcmp(key, "LOG_PATH") == 0 && strlen(val) > 0) {
             strncpy(config->log_path, val, sizeof(config->log_path)-1);
+            config->log_path[sizeof(config->log_path)-1] = '\0';
         }
         else if (strcmp(key, "BUILD_TYPE") == 0 && strlen(val) > 0) {
             strncpy(config->build_type, val, sizeof(config->build_type)-1);
+            config->build_type[sizeof(config->build_type)-1] = '\0';
         }
     }
     fclose(f);
