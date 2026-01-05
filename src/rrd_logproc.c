@@ -35,7 +35,6 @@ int rrd_logproc_validate_source(const char *source_dir) {
             found = 1; break;
         }
     }
-    closedir(d);
     
     if (!found) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory is empty: %s\n", __FUNCTION__, source_dir);
@@ -43,6 +42,7 @@ int rrd_logproc_validate_source(const char *source_dir) {
         return -3;
     }
     
+    closedir(d);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Source directory validated successfully: %s\n", 
             __FUNCTION__, source_dir);
     return 0;
