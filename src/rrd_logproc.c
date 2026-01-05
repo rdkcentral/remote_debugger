@@ -20,23 +20,12 @@ int rrd_logproc_validate_source(const char *source_dir) {
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Validating source: %s\n", __FUNCTION__, source_dir);
     
-    struct stat st;
-    if (stat(source_dir, &st) != 0) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory does not exist: %s (errno: %d)\n", 
-                __FUNCTION__, source_dir, errno);
-        return -2;
-    }
-    
-    if (!S_ISDIR(st.st_mode)) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Path is not a directory: %s\n", __FUNCTION__, source_dir);
-        return -3;
-    }
-    
+    /* Open directory directly to avoid TOCTOU (Time of Check Time of Use) race condition */
     DIR *d = opendir(source_dir);
     if (!d) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot open directory: %s (errno: %d)\n", 
                 __FUNCTION__, source_dir, errno);
-        return -4;
+        return -2;
     }
     
     struct dirent *ent;
@@ -50,7 +39,8 @@ int rrd_logproc_validate_source(const char *source_dir) {
     
     if (!found) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory is empty: %s\n", __FUNCTION__, source_dir);
-        return -5;
+        closedir(d);
+        return -3;
     }
     
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Source directory validated successfully: %s\n", 
@@ -64,6 +54,10 @@ int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
             __FUNCTION__, source_dir ? source_dir : "NULL", issue_type ? issue_type : "NULL");
     
     // Validate parameters
+    if (!source_dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
+        return -1;
+    }
     if (!issue_type) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL issue_type\n", __FUNCTION__);
         return -1;
@@ -124,6 +118,11 @@ int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size)
 int rrd_logproc_handle_live_logs(const char *source_dir) {
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Entry - source: %s\n", 
             __FUNCTION__, source_dir ? source_dir : "NULL");
+    
+    if (!source_dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
+        return -1;
+    }
     
     // For now, just validate source
     int valid = rrd_logproc_validate_source(source_dir);
