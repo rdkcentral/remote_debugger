@@ -48,7 +48,7 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
     }
     if (locked) {
         RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Upload lock detected, waiting...\n", __FUNCTION__);
-        if (rrd_upload_wait_for_lock(10, 2) != 0) {
+        if (rrd_upload_wait_for_lock(10, 60) != 0) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Upload lock timeout\n", __FUNCTION__);
             return -2;
         }
@@ -60,8 +60,8 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
         .flag = 1,
         .dcm_flag = 0, // Not a DCM-triggered upload
         .upload_on_reboot = false,
-        .upload_protocol = protocol ? protocol : "HTTP",
-        .upload_http_link = http_link ? http_link : "",
+        .upload_protocol = protocol,
+        .upload_http_link = http_link,
         .trigger_type = TRIGGER_ONDEMAND,
         .rrd_flag = true,
         .rrd_file = archive_filename
@@ -91,7 +91,7 @@ int rrd_upload_check_lock(bool *is_locked) {
         return -1;
     }
     struct stat st;
-    int ret = stat("/tmp/rrd_upload.lock", &st);
+    int ret = stat("/tmp/.log-upload.pid", &st);
     *is_locked = (ret == 0);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: %s\n", __FUNCTION__, *is_locked ? "locked" : "free");
     return 0;
@@ -104,7 +104,7 @@ int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
     
     for (int i = 0; i < max_attempts; ++i) {
         struct stat st;
-        if (stat("/tmp/rrd_upload.lock", &st) != 0) {
+        if (stat("/tmp/.log-upload.pid", &st) != 0) {
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock cleared after %d attempt(s)\n", __FUNCTION__, i + 1);
             return 0; // lock gone
         }
