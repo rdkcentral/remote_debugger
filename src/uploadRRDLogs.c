@@ -79,6 +79,14 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Issue type sanitized: %s\n", __FUNCTION__, issue_type_sanitized);
 
+    // 6.5. Handle LOGUPLOAD_ENABLE special case (matching shell script lines 128-131)
+    if (strcmp(issue_type_sanitized, "LOGUPLOAD_ENABLE") == 0) {
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Handling LOGUPLOAD_ENABLE - checking for live logs\n", __FUNCTION__);
+        if (rrd_logproc_handle_live_logs(upload_dir) != 0) {
+            RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Failed to handle live logs for LOGUPLOAD_ENABLE\n", __FUNCTION__);
+        }
+    }
+
     // 7. Generate archive filename
     char archive_filename[256] = {0};
     if (rrd_archive_generate_filename(mac_addr, issue_type_sanitized, timestamp, archive_filename, sizeof(archive_filename)) != 0) {
@@ -87,24 +95,31 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Archive filename: %s\n", __FUNCTION__, archive_filename);
 
-    // 8. Create archive
-    if (rrd_archive_create(upload_dir, NULL, archive_filename) != 0) {
+    // 8. Create archive in /tmp/rrd/ directory (matching shell script line 127)
+    const char *rrd_log_dir = "/tmp/rrd/";
+    if (rrd_archive_create(upload_dir, rrd_log_dir, archive_filename) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to create archive %s\n", __FUNCTION__, archive_filename);
         return 10;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Archive created: %s\n", __FUNCTION__, archive_filename);
 
-    // 9. Upload archive
-    if (rrd_upload_execute(config.log_server, config.upload_protocol, config.http_upload_link, upload_dir, archive_filename) != 0) {
+    // 9. Upload archive from /tmp/rrd/ directory
+    if (rrd_upload_execute(config.log_server, config.upload_protocol, config.http_upload_link, rrd_log_dir, archive_filename, upload_dir) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to upload archive\n", __FUNCTION__);
-        rrd_archive_cleanup(archive_filename);
+        // Cleanup on failure (matching shell script lines 139-140)
+        char archive_fullpath[512];
+        snprintf(archive_fullpath, sizeof(archive_fullpath), "%s%s", rrd_log_dir, archive_filename);
+        rrd_archive_cleanup(archive_fullpath);
+        rrd_upload_cleanup_source_dir(upload_dir);
         return 11;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Archive uploaded successfully\n", __FUNCTION__);
 
-    // 10. Cleanup
-    rrd_archive_cleanup(archive_filename);
-    rrd_upload_cleanup();
+    // 10. Cleanup archive and source directory (matching shell script line 143)
+    char archive_fullpath[512];
+    snprintf(archive_fullpath, sizeof(archive_fullpath), "%s%s", rrd_log_dir, archive_filename);
+    rrd_archive_cleanup(archive_fullpath);
+    rrd_upload_cleanup_source_dir(upload_dir);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Cleanup complete\n", __FUNCTION__);
 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Exit\n", __FUNCTION__);
