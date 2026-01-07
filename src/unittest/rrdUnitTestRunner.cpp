@@ -4284,7 +4284,7 @@ TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
     EXPECT_EQ(result, 0);
     
     // Create lock file to test detection
-    const char *lock_file = "/tmp/.log-upload.lock";
+    const char *lock_file = "/tmp/.log-upload.pid";
     std::ofstream f(lock_file);
     f << "locked\n";
     f.close();
@@ -4505,7 +4505,7 @@ TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
 
 // Test: Lock wait behavior
 TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
-    const char *lock_file = "/tmp/.log-upload.lock";
+    const char *lock_file = "/tmp/.log-upload.pid";
     
     // Create lock file
     std::ofstream f(lock_file);
