@@ -114,11 +114,8 @@ int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size)
     return 0;
 }
 
+// Handle live logs for LOGUPLOAD_ENABLE: move RRD_LIVE_LOGS.tar.gz to source directory
 int rrd_logproc_handle_live_logs(const char *source_dir) {
-    const char *live_logs_file = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
-    struct stat st;
-    char dest_path[1024];
-    
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Entry - source: %s\n", 
             __FUNCTION__, source_dir ? source_dir : "NULL");
     
@@ -127,23 +124,25 @@ int rrd_logproc_handle_live_logs(const char *source_dir) {
         return -1;
     }
     
-    // Check if RRD_LIVE_LOGS.tar.gz exists in /tmp/rrd/ (matching shell script line 130)
-    if (stat(live_logs_file, &st) == 0) {
-        // Move to source directory
-        snprintf(dest_path, sizeof(dest_path), "%s/RRD_LIVE_LOGS.tar.gz", source_dir);
-        
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Moving %s to %s\n", 
-                __FUNCTION__, live_logs_file, dest_path);
-        
-        if (rename(live_logs_file, dest_path) != 0) {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to move live logs: %s\n", 
+    // Attempt to move RRD_LIVE_LOGS.tar.gz from /tmp/rrd/ (matching shell script line 130)
+  // Build destination path
+    char dest_path[1024];
+    snprintf(dest_path, sizeof(dest_path), "%s/RRD_LIVE_LOGS.tar.gz", source_dir);
+
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Moving %s to %s\n",
+            __FUNCTION__, live_logs_file, dest_path);
+
+    if (rename(live_logs_file, dest_path) != 0) {
+        if (errno == ENOENT) {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: No live logs file found at %s\n",
+                    __FUNCTION__, live_logs_file);
+        } else {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to move live logs: %s\n",
                     __FUNCTION__, strerror(errno));
             return -2;
         }
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Live logs moved successfully\n", __FUNCTION__);
     } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: No live logs file found at %s\n", 
-                __FUNCTION__, live_logs_file);
+         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Live logs moved successfully\n", __FUNCTION__);
     }
     
     return 0;
