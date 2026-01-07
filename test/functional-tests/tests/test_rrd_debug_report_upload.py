@@ -34,7 +34,8 @@ def reset_issuetype_rfc():
 
 def get_rrd_tarfile():
     logfile = '/opt/logs/remotedebugger.log.0'
-    command = f"grep 'uploadSTBLogs.sh' {logfile} | grep -oP '\\S+\\.tgz'"
+    # Look for the archive creation log message from C code instead of shell script
+    command = f"grep 'Archive created successfully' {logfile} | grep -oP '/\\S+\\.tgz'"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         return result.stdout.strip()
@@ -141,7 +142,7 @@ def test_remote_debugger_trigger_event():
     result = check_output_dir()
     print(result)
 
-    UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
+    UPLOAD_LOGS = "Starting Upload Debug output via API"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
 
@@ -150,23 +151,32 @@ def test_remotedebugger_upload_report():
     assert tgz_file is not None, "No .tgz files found in the directory"
     print(f"Found .tgz file: {tgz_file}")
 
-    UPLOAD_SUCCESS = "RRD Upload Script Execution Success"
-    UPLOAD_FAILURE = "RRD Upload Script Execution Failure"
+    # Check for C code upload log messages
+    ARCHIVE_CREATED = "Archive created successfully"
+    UPLOAD_START = "Starting upload - server:"
+    UPLOAD_SUCCESS = "Upload completed successfully"
+    UPLOAD_FAILURE = "Log upload failed with error code"
+    CLEANUP_DONE = "Cleanup completed"
+    
+    # Verify archive was created
+    assert ARCHIVE_CREATED in grep_rrdlogs(ARCHIVE_CREATED), "Archive creation not found in logs"
+    print("Archive created successfully")
+    
+    # Check upload status
     if UPLOAD_SUCCESS in grep_rrdlogs(UPLOAD_SUCCESS):
-        print("Upload success")
+        print("Upload completed successfully")
+        # Verify cleanup was performed
+        if CLEANUP_DONE in grep_rrdlogs(CLEANUP_DONE):
+            print("Cleanup completed")
     elif UPLOAD_FAILURE in grep_rrdlogs(UPLOAD_FAILURE):
         print("Upload failed")
+        assert False, "Upload failed - check logs for error details"
+    elif UPLOAD_START in grep_rrdlogs(UPLOAD_START):
+        print("Upload started but completion status unclear")
+        assert False, "Upload did not complete - check logs"
     else:
-        print("Upload status not found in logs")
-
-    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
-    SCRIPT_FAILURE = "Debug Information Report upload Success"
-    if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
-        print("Script execution success")
-    elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
-        print("Script execution failed")
-    else:
-        print("Script execution not found in logs")
+        print("Upload not started - check logs")
+        assert False, "Upload was not initiated"
 
 def test_remotedebugger_download_report():
     tgz_file = get_rrd_tarfile()

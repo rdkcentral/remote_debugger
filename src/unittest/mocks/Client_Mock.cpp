@@ -246,3 +246,61 @@ extern "C"
     }
 }
 
+/* ---------- UploadSTBLogs Mock ----------- */
+MockUploadSTBLogs *g_mockUploadSTBLogs = nullptr;
+
+void setUploadSTBLogsMock(MockUploadSTBLogs *mock)
+{
+    g_mockUploadSTBLogs = mock;
+}
+
+/* ---------- Common Device API Mock ----------- */
+MockCommonDeviceAPI *g_mockCommonDeviceAPI = nullptr;
+
+void setCommonDeviceAPIMock(MockCommonDeviceAPI *mock)
+{
+    g_mockCommonDeviceAPI = mock;
+}
+
+extern "C"
+{
+    int uploadstblogs_run(const UploadSTBLogsParams* params)
+    {
+        if (g_mockUploadSTBLogs)
+        {
+            return g_mockUploadSTBLogs->uploadstblogs_run(params);
+        }
+        return 0; // Default success
+    }
+
+    int uploadstblogs_execute(int argc, char** argv)
+    {
+        if (g_mockUploadSTBLogs)
+        {
+            return g_mockUploadSTBLogs->uploadstblogs_execute(argc, argv);
+        }
+        return 0; // Default success
+    }
+
+    size_t GetEstbMac(char *pEstbMac, size_t szBufSize)
+    {
+        if (g_mockCommonDeviceAPI)
+        {
+            return g_mockCommonDeviceAPI->GetEstbMac(pEstbMac, szBufSize);
+        }
+        // Default implementation
+        if (!pEstbMac || szBufSize == 0)
+        {
+            return 0;
+        }
+        const char* mock_mac = "AA:BB:CC:DD:EE:FF";
+        size_t len = strlen(mock_mac);
+        if (len >= szBufSize)
+        {
+            len = szBufSize - 1;
+        }
+        strncpy(pEstbMac, mock_mac, len);
+        pEstbMac[len] = '\0';
+        return len;
+    }
+}
