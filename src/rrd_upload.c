@@ -14,7 +14,7 @@
 
 
 
-int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename) {
+int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename, const char *source_dir) {
     // Validate required parameters
     if (!log_server || strlen(log_server) == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid or empty log_server\n", __FUNCTION__);
@@ -40,7 +40,7 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Starting upload - server: %s, protocol: %s, file: %s\n", 
             __FUNCTION__, log_server, protocol, archive_filename);
     
-    // 1. Check for upload lock
+    // 1. Check for upload lock (matching shell script line 67)
     bool locked = false;
     if (rrd_upload_check_lock(&locked) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to check upload lock\n", __FUNCTION__);
@@ -55,7 +55,11 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Upload lock cleared\n", __FUNCTION__);
     }
 
-    // 2. Prepare parameters for uploadstblogs_run
+    // 2. Prepare full path to archive file
+    char archive_fullpath[512];
+    snprintf(archive_fullpath, sizeof(archive_fullpath), "%s%s", working_dir, archive_filename);
+    
+    // 3. Prepare parameters for uploadstblogs_run
     UploadSTBLogsParams params = {
         .flag = 1,
         .dcm_flag = 0, // Not a DCM-triggered upload
@@ -64,7 +68,7 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
         .upload_http_link = http_link,
         .trigger_type = TRIGGER_ONDEMAND,
         .rrd_flag = true,
-        .rrd_file = archive_filename
+        .rrd_file = archive_fullpath
     };
 
     int result = uploadstblogs_run(&params);
@@ -75,8 +79,8 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Upload completed successfully\n", __FUNCTION__);
 
-    // 3. Cleanup files
-    if (rrd_upload_cleanup_files(archive_filename, working_dir) != 0) {
+    // 4. Cleanup files - archive and source directory (matching shell script line 143)
+    if (rrd_upload_cleanup_files(archive_fullpath, source_dir) != 0) {
         RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Failed to cleanup files\n", __FUNCTION__);
         return -4;
     }
@@ -84,27 +88,27 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
     return 0;
 }
 
-// Check for concurrent upload lock file
+// Check for concurrent upload lock file (matching uploadstblogs binary)
 int rrd_upload_check_lock(bool *is_locked) {
     if (!is_locked) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid is_locked pointer\n", __FUNCTION__);
         return -1;
     }
     struct stat st;
-    int ret = stat("/tmp/.log-upload.pid", &st);
+    int ret = stat("/tmp/.log-upload.lock", &st);
     *is_locked = (ret == 0);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: %s\n", __FUNCTION__, *is_locked ? "locked" : "free");
     return 0;
 }
 
-// Wait for lock file to clear
+// Wait for lock file to clear (matching uploadstblogs binary lock)
 int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Waiting for upload lock to clear (max attempts: %d, wait: %ds)\n", 
             __FUNCTION__, max_attempts, wait_seconds);
     
     for (int i = 0; i < max_attempts; ++i) {
         struct stat st;
-        if (stat("/tmp/.log-upload.pid", &st) != 0) {
+        if (stat("/tmp/.log-upload.lock", &st) != 0) {
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock cleared after %d attempt(s)\n", __FUNCTION__, i + 1);
             return 0; // lock gone
         }
@@ -119,9 +123,11 @@ int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
 
 // All log upload is now handled via dcm-agent's uploadstblogs_run API.
 
-// Cleanup files after upload
+// Cleanup files after upload (matching shell script line 139 and 143)
 int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir) {
     int ret = 0;
+    
+    // Remove archive file
     if (archive_path) {
         ret = remove(archive_path);
         if (ret == 0) {
@@ -131,7 +137,32 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir) {
                     __FUNCTION__, archive_path, errno);
         }
     }
-    // Optionally, could clean up working dir or temp files in source_dir
-    (void)source_dir;
+    
+    // Remove source directory (matching shell script rm -rf $RRD_LOG_PATH)
+    if (source_dir) {
+        rrd_upload_cleanup_source_dir(source_dir);
+    }
+    
     return (ret == 0 || !archive_path) ? 0 : -1;
+}
+
+// Recursively remove source directory
+int rrd_upload_cleanup_source_dir(const char *dir_path) {
+    if (!dir_path) return -1;
+    
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Removing source directory: %s\n", __FUNCTION__, dir_path);
+    
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "rm -rf %s", dir_path);
+    
+    int ret = system(cmd);
+    if (ret == 0) {
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Successfully removed source directory: %s\n", 
+                __FUNCTION__, dir_path);
+        return 0;
+    } else {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to remove source directory: %s (ret: %d)\n", 
+                __FUNCTION__, dir_path, ret);
+        return -1;
+    }
 }
