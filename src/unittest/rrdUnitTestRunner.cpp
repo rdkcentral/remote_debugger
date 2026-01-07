@@ -3932,16 +3932,18 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
 
 
 
-// Test Fixture for Upload Orchestration
+
 // Test Fixture for Upload Orchestration
 class RRDUploadOrchestrationTest : public ::testing::Test {
 protected:
     const char *test_dir = "/tmp/rrd_test_upload";
     const char *test_issue_type = "cpu.high";
+    const char *rrd_log_dir = "/tmp/rrd/";
 
     void SetUp() override {
         // Create test directory with some log files
         mkdir(test_dir, 0755);
+        mkdir(rrd_log_dir, 0755);
         
         // Create dummy log files
         std::string log1 = std::string(test_dir) + "/test.log";
@@ -3973,9 +3975,12 @@ protected:
     }
 
     void TearDown() override {
-        // Cleanup test directory
+        // Cleanup test directories
         int ret = system("rm -rf /tmp/rrd_test_upload*");
         (void)ret;  // Explicitly ignore return value
+        
+        ret = system("rm -rf /tmp/rrd/*.tgz");
+        (void)ret;
         
         // Cleanup test config files
         unlink("/tmp/test_include.properties");
@@ -4008,7 +4013,6 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationLoading) {
     rrd_config_t config;
     memset(&config, 0, sizeof(config));
     
-    // Since config files don't exist in test environment, manually load test config
     // Parse test properties file directly
     int result = rrd_config_parse_properties("/tmp/test_include.properties", &config);
     EXPECT_EQ(result, 0);
@@ -4021,6 +4025,7 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationLoading) {
     EXPECT_STRNE(config.upload_protocol, "");
     EXPECT_STREQ(config.upload_protocol, "HTTP");
 }
+
 // Test: System information retrieval
 TEST_F(RRDUploadOrchestrationTest, SystemInfoRetrieval) {
     char mac_addr[32] = {0};
@@ -4085,7 +4090,7 @@ TEST_F(RRDUploadOrchestrationTest, IssueTypeConversion) {
     EXPECT_NE(result, 0);
 }
 
-// Test: Archive filename generation
+// Test: Archive filename generation (NEW FORMAT)
 TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
     char filename[256];
     const char *mac = "00:11:22:33:44:55";
@@ -4095,27 +4100,63 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
     int result = rrd_archive_generate_filename(mac, issue, timestamp, filename, sizeof(filename));
     EXPECT_EQ(result, 0);
     EXPECT_STRNE(filename, "");
+    
+    // Verify new format: MAC_ISSUE_TIMESTAMP_RRD_DEBUG_LOGS.tgz
     EXPECT_NE(strstr(filename, mac), nullptr);
     EXPECT_NE(strstr(filename, issue), nullptr);
     EXPECT_NE(strstr(filename, timestamp), nullptr);
-    EXPECT_NE(strstr(filename, ".tar.gz"), nullptr);
+    EXPECT_NE(strstr(filename, "_RRD_DEBUG_LOGS.tgz"), nullptr);
+    
+    // Verify it ends with .tgz, not .tar.gz
+    const char *ext = strrchr(filename, '.');
+    EXPECT_STREQ(ext, ".tgz");
 }
 
-// Test: Archive creation
+// Test: Archive creation in /tmp/rrd/
 TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
-    char archive_filename[256] = "/tmp/rrd_test_archive.tar.gz";
+    char archive_filename[256];
+    snprintf(archive_filename, sizeof(archive_filename), "test_archive_%d.tgz", getpid());
     
-    int result = rrd_archive_create(test_dir, NULL, archive_filename);
+    // Create archive in /tmp/rrd/ directory
+    int result = rrd_archive_create(test_dir, rrd_log_dir, archive_filename);
     EXPECT_EQ(result, 0);
 
-    // Verify archive file exists and has content
+    // Verify archive file exists in /tmp/rrd/ and has content
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
+    
     struct stat st;
-    result = stat(archive_filename, &st);
+    result = stat(full_path, &st);
     EXPECT_EQ(result, 0);
     EXPECT_GT(st.st_size, 0);
 
     // Cleanup
-    remove(archive_filename);
+    remove(full_path);
+}
+
+// Test: LOGUPLOAD_ENABLE special handling
+TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
+    // Create a dummy RRD_LIVE_LOGS.tar.gz file
+    const char *live_logs = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
+    std::ofstream f(live_logs);
+    f << "Live logs content\n";
+    f.close();
+    
+    // Test live logs handling
+    int result = rrd_logproc_handle_live_logs(test_dir);
+    EXPECT_EQ(result, 0);
+    
+    // Verify file was moved to test_dir
+    char moved_path[512];
+    snprintf(moved_path, sizeof(moved_path), "%s/RRD_LIVE_LOGS.tar.gz", test_dir);
+    struct stat st;
+    EXPECT_EQ(stat(moved_path, &st), 0);
+    
+    // Original should be gone
+    EXPECT_NE(stat(live_logs, &st), 0);
+    
+    // Cleanup
+    remove(moved_path);
 }
 
 // Test: File operations
@@ -4162,7 +4203,8 @@ TEST_F(RRDUploadOrchestrationTest, DirectorySizeCalculation) {
 
 // Test: Archive cleanup
 TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
-    char archive_file[256] = "/tmp/rrd_test_cleanup.tar.gz";
+    char archive_file[256];
+    snprintf(archive_file, sizeof(archive_file), "%stest_cleanup.tgz", rrd_log_dir);
     
     // Create a dummy archive file
     std::ofstream f(archive_file);
@@ -4181,6 +4223,29 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
     EXPECT_NE(stat(archive_file, &st), 0);
 }
 
+// Test: Source directory cleanup
+TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanup) {
+    const char *temp_source = "/tmp/rrd_test_source_cleanup";
+    mkdir(temp_source, 0755);
+    
+    // Create some files in it
+    std::string file1 = std::string(temp_source) + "/file1.txt";
+    std::ofstream f1(file1);
+    f1 << "content\n";
+    f1.close();
+    
+    // Verify directory exists
+    struct stat st;
+    EXPECT_EQ(stat(temp_source, &st), 0);
+    
+    // Cleanup
+    int result = rrd_upload_cleanup_source_dir(temp_source);
+    EXPECT_EQ(result, 0);
+    
+    // Verify directory is gone
+    EXPECT_NE(stat(temp_source, &st), 0);
+}
+
 // Test: Configuration cleanup
 TEST_F(RRDUploadOrchestrationTest, ConfigurationCleanup) {
     rrd_config_t config;
@@ -4192,6 +4257,29 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationCleanup) {
     EXPECT_EQ(config.log_server[0], 0);
     EXPECT_EQ(config.http_upload_link[0], 0);
     EXPECT_EQ(config.upload_protocol[0], 0);
+}
+
+// Test: Upload lock check
+TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
+    bool is_locked = false;
+    
+    // Initially should not be locked
+    int result = rrd_upload_check_lock(&is_locked);
+    EXPECT_EQ(result, 0);
+    
+    // Create lock file to test detection
+    const char *lock_file = "/tmp/.log-upload.lock";
+    std::ofstream f(lock_file);
+    f << "locked\n";
+    f.close();
+    
+    // Should detect lock
+    result = rrd_upload_check_lock(&is_locked);
+    EXPECT_EQ(result, 0);
+    EXPECT_TRUE(is_locked);
+    
+    // Cleanup
+    remove(lock_file);
 }
 
 // Integration test: End-to-end orchestration
@@ -4242,25 +4330,18 @@ TEST_F(RRDUploadOrchestrationTest, LargeDirectoryHandling) {
 
 // Error path: Configuration load failure
 TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
-    // Unset all environment variables to force config load failure
-    unsetenv("RFC_LOG_SERVER");
-    unsetenv("RFC_HTTP_UPLOAD_LINK");
-    unsetenv("RFC_UPLOAD_PROTOCOL");
+    // Test with missing configuration files
+    unlink("/etc/include.properties");
+    unlink("/etc/device.properties");
+    unlink("/etc/dcm.properties");
+    unlink("/opt/dcm.properties");
     
     int result = rrd_upload_orchestrate(test_dir, test_issue_type);
     EXPECT_EQ(result, 3);  // Expected error code for config load failure
-    
-    // Restore environment variables
-    setenv("RFC_LOG_SERVER", "logs.example.com", 1);
-    setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
-    setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
 }
 
 // Error path: MAC address retrieval failure
 TEST_F(RRDUploadOrchestrationTest, MacAddressRetrievalFailure) {
-    // Create a test to trigger MAC address failure by mocking sys info
-    // This requires modifying the sysinfo module to fail in controlled way
-    // For now, we'll test the rrd_sysinfo_get_mac_address directly with invalid params
     char mac_addr[32] = {0};
     
     // Test with NULL buffer
@@ -4348,52 +4429,96 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
 
 // Error path: Archive creation failure
 TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
-    char archive_filename[256] = "/tmp/rrd_test_archive_fail.tar.gz";
+    char archive_filename[256] = "test_archive_fail.tgz";
     
     // Test with non-existent source directory
-    int result = rrd_archive_create("/nonexistent/directory", NULL, archive_filename);
+    int result = rrd_archive_create("/nonexistent/directory", rrd_log_dir, archive_filename);
     EXPECT_NE(result, 0);
     
     // Test with NULL archive filename
-    result = rrd_archive_create(test_dir, NULL, NULL);
+    result = rrd_archive_create(test_dir, rrd_log_dir, NULL);
     EXPECT_NE(result, 0);
     
-    // Test with invalid archive path (directory doesn't exist)
-    result = rrd_archive_create(test_dir, NULL, "/nonexistent/path/archive.tar.gz");
+    // Test with invalid working directory
+    result = rrd_archive_create(test_dir, "/nonexistent/path/", archive_filename);
     EXPECT_NE(result, 0);
 }
 
-// Error path: Upload execution failure
+// Error path: Upload execution failure - Updated signature
 TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
     // Create a test archive first
-    char archive_filename[256] = "/tmp/rrd_test_upload_fail.tar.gz";
-    std::ofstream f(archive_filename);
+    char archive_filename[256];
+    snprintf(archive_filename, sizeof(archive_filename), "test_upload_fail_%d.tgz", getpid());
+    
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
+    
+    std::ofstream f(full_path);
     f << "dummy archive content\n";
     f.close();
     
-    // Test with invalid server
-    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload", "/tmp", archive_filename);
+    // Test with invalid server (empty string)
+    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload", 
+                                     rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
     
     // Test with NULL parameters
-    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload", "/tmp", archive_filename);
+    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload", 
+                                rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
     
-    result = rrd_upload_execute("server", NULL, "http://server/upload", "/tmp", archive_filename);
+    result = rrd_upload_execute("server", NULL, "http://server/upload", 
+                                rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
     
-    result = rrd_upload_execute("server", "HTTP", NULL, "/tmp", archive_filename);
+    result = rrd_upload_execute("server", "HTTP", NULL, 
+                                rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
     
-    result = rrd_upload_execute("server", "HTTP", "http://server/upload", NULL, archive_filename);
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                NULL, archive_filename, test_dir);
     EXPECT_NE(result, 0);
     
-    result = rrd_upload_execute("server", "HTTP", "http://server/upload", "/tmp", NULL);
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                rrd_log_dir, NULL, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL source_dir (new parameter)
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                rrd_log_dir, archive_filename, NULL);
     EXPECT_NE(result, 0);
     
     // Cleanup
-    remove(archive_filename);
+    remove(full_path);
 }
+
+// Test: Lock wait behavior
+TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
+    const char *lock_file = "/tmp/.log-upload.lock";
+    
+    // Create lock file
+    std::ofstream f(lock_file);
+    f << "locked\n";
+    f.close();
+    
+    // Test wait for lock with short timeout (should timeout)
+    int result = rrd_upload_wait_for_lock(2, 1);  // 2 attempts, 1 second each
+    EXPECT_NE(result, 0);  // Should timeout
+    
+    // Remove lock file
+    remove(lock_file);
+    
+    // Test wait for lock when no lock exists (should succeed immediately)
+    result = rrd_upload_wait_for_lock(2, 1);
+    EXPECT_EQ(result, 0);
+}
+
+// Main test runner
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+
 
 
 
