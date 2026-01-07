@@ -3957,16 +3957,8 @@ protected:
         f2 << "Test log content 2\n";
         f2.close();
 
-        // Create test configuration files in expected system locations
-        // Try /opt/dcm.properties first (most likely to be writable in test environment)
-        std::ofstream dcm_props("/opt/dcm.properties");
-        dcm_props << "LOG_SERVER=logs.example.com\n";
-        dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
-        dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
-        dcm_props.close();
-        
-        // Also create /etc/include.properties as backup
-        std::ofstream include_props("/etc/include.properties");
+        // Create test configuration files
+        std::ofstream include_props("/tmp/test_include.properties");
         include_props << "LOG_SERVER=logs.example.com\n";
         include_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
         include_props << "UPLOAD_PROTOCOL=HTTP\n";
@@ -3974,6 +3966,12 @@ protected:
         include_props << "LOG_PATH=/opt/logs\n";
         include_props << "BUILD_TYPE=dev\n";
         include_props.close();
+
+        std::ofstream dcm_props("/tmp/test_dcm.properties");
+        dcm_props << "LOG_SERVER=logs.example.com\n";
+        dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
+        dcm_props.close();
     }
 
     void TearDown() override {
@@ -4509,6 +4507,8 @@ TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
     result = rrd_upload_wait_for_lock(2, 1);
     EXPECT_EQ(result, 0);
 }
+
+
 
 
 
