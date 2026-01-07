@@ -3933,17 +3933,14 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
 
 
 
-// Test Fixture for Upload Orchestration
 class RRDUploadOrchestrationTest : public ::testing::Test {
 protected:
     const char *test_dir = "/tmp/rrd_test_upload";
     const char *test_issue_type = "cpu.high";
-    const char *rrd_log_dir = "/tmp/rrd/";
 
     void SetUp() override {
         // Create test directory with some log files
         mkdir(test_dir, 0755);
-        mkdir(rrd_log_dir, 0755);
         
         // Create dummy log files
         std::string log1 = std::string(test_dir) + "/test.log";
@@ -3972,19 +3969,36 @@ protected:
         dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
         dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
         dcm_props.close();
+        
+        // Create config files in expected locations for rrd_config_load()
+        // This requires writable /etc/ and /opt/ (works in Docker CI environment)
+        system("mkdir -p /etc 2>/dev/null || true");
+        system("mkdir -p /opt 2>/dev/null || true");
+        system("cp /tmp/test_include.properties /etc/include.properties 2>/dev/null || true");
+        system("cp /tmp/test_include.properties /etc/device.properties 2>/dev/null || true");
+        system("cp /tmp/test_dcm.properties /opt/dcm.properties 2>/dev/null || true");
+        system("mkdir -p /tmp/rrd 2>/dev/null || true");
     }
 
     void TearDown() override {
-        // Cleanup test directories
+        // Cleanup test directory
         int ret = system("rm -rf /tmp/rrd_test_upload*");
         (void)ret;  // Explicitly ignore return value
         
-        ret = system("rm -rf /tmp/rrd/*.tgz");
+        ret = system("rm -rf /tmp/rrd");
         (void)ret;
+        
+        // Unset environment variables
+        unsetenv("RRD_INCLUDE_PROPERTIES");
+        unsetenv("RRD_DEVICE_PROPERTIES");
+        unsetenv("RRD_DCM_PROPERTIES");
         
         // Cleanup test config files
         unlink("/tmp/test_include.properties");
         unlink("/tmp/test_dcm.properties");
+        unlink("/etc/include.properties");
+        unlink("/etc/device.properties");
+        unlink("/opt/dcm.properties");
     }
 };
 
