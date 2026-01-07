@@ -115,7 +115,8 @@ int rrd_config_load(rrd_config_t *config) {
     }
     
     // 4. Final fallback: if LOG_SERVER or HTTP_UPLOAD_LINK is still empty, try dcm.properties
-    //    (matching shell script lines 115-122)
+    config->log_server[sizeof(config->log_server)-1] = '\0';
+    config->http_upload_link[sizeof(config->http_upload_link)-1] = '\0';
     if (strlen(config->log_server) == 0 || strlen(config->http_upload_link) == 0) {
         RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
                 "%s: DCM params read using RFC/tr181 is empty, trying dcm.properties fallback\n", 
