@@ -20,23 +20,12 @@ int rrd_logproc_validate_source(const char *source_dir) {
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Validating source: %s\n", __FUNCTION__, source_dir);
     
-    struct stat st;
-    if (stat(source_dir, &st) != 0) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory does not exist: %s (errno: %d)\n", 
-                __FUNCTION__, source_dir, errno);
-        return -2;
-    }
-    
-    if (!S_ISDIR(st.st_mode)) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Path is not a directory: %s\n", __FUNCTION__, source_dir);
-        return -3;
-    }
-    
+    /* Open directory directly to avoid TOCTOU (Time of Check Time of Use) race condition */
     DIR *d = opendir(source_dir);
     if (!d) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot open directory: %s (errno: %d)\n", 
                 __FUNCTION__, source_dir, errno);
-        return -4;
+        return -2;
     }
     
     struct dirent *ent;
@@ -46,13 +35,14 @@ int rrd_logproc_validate_source(const char *source_dir) {
             found = 1; break;
         }
     }
-    closedir(d);
     
     if (!found) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory is empty: %s\n", __FUNCTION__, source_dir);
-        return -5;
+        closedir(d);
+        return -3;
     }
     
+    closedir(d);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Source directory validated successfully: %s\n", 
             __FUNCTION__, source_dir);
     return 0;
@@ -62,12 +52,12 @@ int rrd_logproc_validate_source(const char *source_dir) {
 int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Entry - source: %s, issue_type: %s\n", 
             __FUNCTION__, source_dir ? source_dir : "NULL", issue_type ? issue_type : "NULL");
-
+    
+    // Validate parameters
     if (!source_dir) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
         return -1;
     }
-    // Validate parameters
     if (!issue_type) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL issue_type\n", __FUNCTION__);
         return -1;
@@ -124,20 +114,37 @@ int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size)
     return 0;
 }
 
-// Handle live logs for LOGUPLOAD_ENABLE: could tail/follow logs, or copy latest
+// Handle live logs for LOGUPLOAD_ENABLE: move RRD_LIVE_LOGS.tar.gz to source directory
 int rrd_logproc_handle_live_logs(const char *source_dir) {
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Entry - source: %s\n", 
             __FUNCTION__, source_dir ? source_dir : "NULL");
     
-    // For now, just validate source
-    int valid = rrd_logproc_validate_source(source_dir);
-    if (valid != 0) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Source validation failed with code: %d\n", 
-                __FUNCTION__, valid);
-        return valid;
+    if (!source_dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
+        return -1;
     }
     
-    // In a real system, could tail logs, copy new logs, etc.
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Live logs handled successfully\n", __FUNCTION__);
+    // Check if RRD_LIVE_LOGS.tar.gz exists in /tmp/rrd/ (matching shell script line 130)
+    const char *live_logs_file = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
+    struct stat st;
+    if (stat(live_logs_file, &st) == 0) {
+        // Move to source directory
+        char dest_path[1024];
+        snprintf(dest_path, sizeof(dest_path), "%s/RRD_LIVE_LOGS.tar.gz", source_dir);
+        
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Moving %s to %s\n", 
+                __FUNCTION__, live_logs_file, dest_path);
+        
+        if (rename(live_logs_file, dest_path) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to move live logs: %s\n", 
+                    __FUNCTION__, strerror(errno));
+            return -2;
+        }
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Live logs moved successfully\n", __FUNCTION__);
+    } else {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: No live logs file found at %s\n", 
+                __FUNCTION__, live_logs_file);
+    }
+    
     return 0;
 }
