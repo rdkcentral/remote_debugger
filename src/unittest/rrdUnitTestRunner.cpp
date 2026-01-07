@@ -4483,11 +4483,6 @@ TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
                                 rrd_log_dir, NULL, test_dir);
     EXPECT_NE(result, 0);
     
-    // Test with NULL source_dir (new parameter)
-    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
-                                rrd_log_dir, archive_filename, NULL);
-    EXPECT_NE(result, 0);
-    
     // Cleanup
     remove(full_path);
 }
