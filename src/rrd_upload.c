@@ -95,7 +95,7 @@ int rrd_upload_check_lock(bool *is_locked) {
         return -1;
     }
     struct stat st;
-    int ret = stat("/tmp/.log-upload.pid", &st);
+    int ret = stat("/tmp/.log-upload.lock", &st);
     *is_locked = (ret == 0);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: %s\n", __FUNCTION__, *is_locked ? "locked" : "free");
     return 0;
@@ -108,7 +108,7 @@ int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
     
     for (int i = 0; i < max_attempts; ++i) {
         struct stat st;
-        if (stat("/tmp/.log-upload.pid", &st) != 0) {
+        if (stat("/tmp/.log-upload.lock", &st) != 0) {
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock cleared after %d attempt(s)\n", __FUNCTION__, i + 1);
             return 0; // lock gone
         }
