@@ -34,10 +34,18 @@ def reset_issuetype_rfc():
 
 def get_rrd_tarfile():
     logfile = '/opt/logs/remotedebugger.log.0'
+    # First try to find filename from new C code logs
+    command = f"grep -E 'Archive filename:|Archive created:' {logfile} | grep -oP '[A-Z0-9_]+\\.tar\\.gz' | tail -1"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    if result.returncode == 0 and result.stdout.strip():
+        return result.stdout.strip()
+    
+    # Fallback to old shell script pattern for backwards compatibility
     command = f"grep 'uploadSTBLogs.sh' {logfile} | grep -oP '\\S+\\.tgz'"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    if result.returncode == 0:
+    if result.returncode == 0 and result.stdout.strip():
         return result.stdout.strip()
+    
     return None
 
 def download_file(filename):
