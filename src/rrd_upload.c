@@ -1,3 +1,4 @@
+
 /*
  * rrd_upload.c - Upload Manager (skeleton)
  */
@@ -10,6 +11,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/file.h>
+#include <fcntl.h>
 
 
 
@@ -94,10 +97,35 @@ int rrd_upload_check_lock(bool *is_locked) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid is_locked pointer\n", __FUNCTION__);
         return -1;
     }
-    struct stat st;
-    int ret = stat("/tmp/.log-upload.lock", &st);
-    *is_locked = (ret == 0);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: %s\n", __FUNCTION__, *is_locked ? "locked" : "free");
+    
+    // Try to acquire a non-blocking lock on the same file uploadstblogs uses
+    int fd = open("/tmp/.log-upload.lock", O_RDONLY | O_CREAT, 0644);
+    if (fd == -1) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to open lock file (errno: %d)\n", __FUNCTION__, errno);
+        return -1;
+    }
+    
+    // Try to acquire a non-blocking shared lock (LOCK_SH | LOCK_NB)
+    // If uploadstblogs has an exclusive lock (LOCK_EX), this will fail with EWOULDBLOCK
+    int lock_ret = flock(fd, LOCK_SH | LOCK_NB);
+    if (lock_ret == 0) {
+        // Successfully acquired shared lock - no exclusive lock held
+        *is_locked = false;
+        flock(fd, LOCK_UN);  // Release our shared lock
+        close(fd);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: free\n", __FUNCTION__);
+    } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
+        // Exclusive lock is held by another process
+        *is_locked = true;
+        close(fd);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: locked\n", __FUNCTION__);
+    } else {
+        // Some other error
+        close(fd);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: flock failed (errno: %d)\n", __FUNCTION__, errno);
+        return -1;
+    }
+    
     return 0;
 }
 
@@ -107,13 +135,13 @@ int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
             __FUNCTION__, max_attempts, wait_seconds);
     
     for (int i = 0; i < max_attempts; ++i) {
-        struct stat st;
-        if (stat("/tmp/.log-upload.lock", &st) != 0) {
+        bool locked = false;
+        if (rrd_upload_check_lock(&locked) == 0 && !locked) {
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock cleared after %d attempt(s)\n", __FUNCTION__, i + 1);
             return 0; // lock gone
         }
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock still present, attempt %d/%d\n", 
-                __FUNCTION__, i + 1, max_attempts);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock still present, attempt %d/%d, sleeping %ds...\n", 
+                __FUNCTION__, i + 1, max_attempts, wait_seconds);
         sleep(wait_seconds);
     }
     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Lock timeout after %d attempts\n", __FUNCTION__, max_attempts);
