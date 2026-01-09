@@ -134,6 +134,7 @@ def test_rrd_upload_orchestrate_valid_parameters():
     
     # Clear previous logs
     remove_logfile()
+    remove_upload_lock()
     
     # Trigger via RRD daemon (which calls uploadDebugoutput -> rrd_upload_orchestrate)
     kill_rrd()
