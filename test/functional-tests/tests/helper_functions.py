@@ -104,6 +104,20 @@ def get_issue_type():
     assert result.returncode == 0
     return result.stdout.strip()
 
+
+def remove_upload_lock():
+    """Remove the upload lock file to prevent test hangs"""
+    lock_file = "/tmp/.log-upload.lock"
+    try:
+        if os.path.exists(lock_file):
+            os.remove(lock_file)
+            print(f"Upload lock file {lock_file} removed.")
+        else:
+            print(f"Upload lock file {lock_file} does not exist.")
+    except Exception as e:
+        print(f"Could not remove upload lock file {lock_file}: {e}")
+
+
 def remove_outdir_contents(directory):
     if os.path.exists(directory):
         for filename in os.listdir(directory):
