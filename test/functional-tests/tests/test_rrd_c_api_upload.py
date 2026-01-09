@@ -107,7 +107,7 @@ class TestCAPIHelper:
     @staticmethod
     def create_upload_lock():
         """Create upload lock file for testing"""
-        lock_file = "/tmp/rrd_upload.lock"
+        lock_file = "/tmp/.log-upload.lock"
         with open(lock_file, 'w') as f:
             f.write(str(os.getpid()))
         return lock_file
@@ -115,7 +115,7 @@ class TestCAPIHelper:
     @staticmethod
     def remove_upload_lock():
         """Remove upload lock file"""
-        lock_file = "/tmp/rrd_upload.lock"
+        lock_file = "/tmp/.log-upload.lock"
         if os.path.exists(lock_file):
             os.remove(lock_file)
 
