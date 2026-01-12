@@ -141,7 +141,7 @@ def test_check_issue_in_dynamic_profile():
     STOP_SERVICE = "Stopping remote_debugger_Test.TestRun1 service..."
     assert STOP_SERVICE in grep_rrdlogs(STOP_SERVICE)
 
-    UPLOAD_START = "rrd_upload_execute: Starting upload orchestration"
+    UPLOAD_START = "Starting Upload Debug output via API..."
     assert UPLOAD_START in grep_rrdlogs(UPLOAD_START)
 
 def test_remotedebugger_upload_report():
