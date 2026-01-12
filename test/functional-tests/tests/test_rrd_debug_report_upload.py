@@ -34,18 +34,43 @@ def reset_issuetype_rfc():
 
 def get_rrd_tarfile():
     logfile = '/opt/logs/remotedebugger.log.0'
+    
+    # Debug: Check if log file exists
+    if not os.path.exists(logfile):
+        print(f"Warning: Log file {logfile} does not exist!")
+        # Try alternative log file location
+        alt_logfile = '/opt/logs/remote-debugger.log'
+        if os.path.exists(alt_logfile):
+            print(f"Using alternative log file: {alt_logfile}")
+            logfile = alt_logfile
+        else:
+            print("No log file found!")
+            return None
+    
     # First try to find filename from new C code logs
-    command = f"grep -E 'Archive filename:|Archive created:' {logfile} | grep -oP '[A-Z0-9_]+\\.tgz' | tail -1"
+    # Pattern matches: MAC_ISSUETYPE_TIMESTAMP_RRD_DEBUG_LOGS.tgz
+    # Example: D452EE58F6AE_CONTROLMGR_AVRSTATUS_2026-01-12-03-45-30PM_RRD_DEBUG_LOGS.tgz
+    command = f"grep -E 'Creating.*tarfile|Archive filename:|Archive created:' {logfile} | tail -5"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    print(f"Debug - Last 5 archive-related log lines:\n{result.stdout}")
+    
+    # Extract .tgz filename - improved pattern to handle MAC, timestamp with dashes and AM/PM
+    command = f"grep -E 'Creating.*tarfile|Archive filename:|Archive created:' {logfile} | grep -oP '[A-Z0-9]+_[A-Z0-9_-]+_[0-9-]+[AP]M_RRD_DEBUG_LOGS\\.tgz' | tail -1"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0 and result.stdout.strip():
-        return result.stdout.strip()
+        filename = result.stdout.strip()
+        print(f"Found .tgz file from C code logs: {filename}")
+        return filename
     
     # Fallback to old shell script pattern for backwards compatibility
-    command = f"grep 'uploadSTBLogs.sh' {logfile} | grep -oP '\\S+\\.tgz'"
+    command = f"grep 'uploadSTBLogs.sh' {logfile} | grep -oP '\\S+\\.tgz' | tail -1"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0 and result.stdout.strip():
-        return result.stdout.strip()
+        filename = result.stdout.strip()
+        print(f"Found .tgz file from shell script logs: {filename}")
+        return filename
     
+    print("No .tgz file found in any log pattern")
     return None
 
 def download_file(filename):
