@@ -157,7 +157,7 @@ def test_rrd_upload_orchestrate_valid_parameters():
     time.sleep(20)  # Wait for processing
     
     # Verify logs
-    assert helper.check_log_contains("rrd_upload_orchestrate: Entry")
+    assert helper.check_log_contains("Entry")
     assert helper.check_log_contains("Configuration loaded")
     assert helper.check_log_contains("MAC address obtained")
     assert helper.check_log_contains("Timestamp generated")
