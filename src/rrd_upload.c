@@ -81,13 +81,7 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
         return -3;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Upload completed successfully\n", __FUNCTION__);
-
-    // 4. Cleanup files - archive and source directory (matching shell script line 143)
-    if (rrd_upload_cleanup_files(archive_fullpath, source_dir) != 0) {
-        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Failed to cleanup files\n", __FUNCTION__);
-        return -4;
-    }
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Cleanup completed\n", __FUNCTION__);
+    
     return 0;
 }
 
