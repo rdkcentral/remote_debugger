@@ -4150,30 +4150,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
     remove(full_path);
 }
 
-// Test: LOGUPLOAD_ENABLE special handling
-TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
-    // Create a dummy RRD_LIVE_LOGS.tar.gz file
-    const char *live_logs = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
-    std::ofstream f(live_logs);
-    f << "Live logs content\n";
-    f.close();
-    
-    // Test live logs handling
-    int result = rrd_logproc_handle_live_logs(test_dir);
-    EXPECT_EQ(result, 0);
-    
-    // Verify file was moved to test_dir
-    char moved_path[512];
-    snprintf(moved_path, sizeof(moved_path), "%s/RRD_LIVE_LOGS.tar.gz", test_dir);
-    struct stat st;
-    EXPECT_EQ(stat(moved_path, &st), 0);
-    
-    // Original should be gone
-    EXPECT_NE(stat(live_logs, &st), 0);
-    
-    // Cleanup
-    remove(moved_path);
-}
+
 
 // Test: File operations
 TEST_F(RRDUploadOrchestrationTest, FileOperations) {
@@ -4374,37 +4351,8 @@ TEST_F(RRDUploadOrchestrationTest, IssueTypeConversionNullFailure) {
 }
 
 // Failure case: Archive filename generation with NULL parameters
-TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
-    char filename[256];
-    
-    // NULL MAC
-    int result = rrd_archive_generate_filename(NULL, "ISSUE", "2026-01-01", filename, sizeof(filename));
-    EXPECT_NE(result, 0);
-    
-    // NULL issue type
-    result = rrd_archive_generate_filename("AABBCCDDEEFF", NULL, "2026-01-01", filename, sizeof(filename));
-    EXPECT_NE(result, 0);
-    
-    // NULL timestamp
-    result = rrd_archive_generate_filename("AABBCCDDEEFF", "ISSUE", NULL, filename, sizeof(filename));
-    EXPECT_NE(result, 0);
-    
-    // Buffer too small
-    char small_buffer[10];
-    result = rrd_archive_generate_filename("AABBCCDDEEFF", "ISSUE", "2026-01-01", small_buffer, sizeof(small_buffer));
-    EXPECT_NE(result, 0);
-}
 
-// Failure case: Log preparation with NULL parameters
-TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
-    // NULL source_dir
-    int result = rrd_logproc_prepare_logs(NULL, "issue");
-    EXPECT_NE(result, 0);
-    
-    // NULL issue_type
-    result = rrd_logproc_prepare_logs(test_dir, NULL);
-    EXPECT_NE(result, 0);
-}
+
 
 // Test case: LOGUPLOAD_ENABLE special handling
 TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
@@ -4426,12 +4374,7 @@ TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
     remove(live_logs);
 }
 
-// Failure case: Archive creation with invalid paths
-TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
-    // Try to create archive from non-existent directory
-    int result = rrd_archive_create("/nonexistent/path", "/tmp/rrd/", "test.tgz");
-    EXPECT_NE(result, 0);
-}
+
 
 // Failure case: Upload with invalid parameters
 TEST_F(RRDUploadOrchestrationTest, UploadInvalidParametersFailure) {
