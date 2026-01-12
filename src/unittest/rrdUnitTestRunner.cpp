@@ -4628,6 +4628,119 @@ TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
     EXPECT_EQ(result, 0);
 }
 
+// Archive test: NULL parameters
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationNullParams) {
+    // NULL source_dir
+    int result = rrd_archive_create(NULL, "/tmp/rrd/", "test.tgz");
+    EXPECT_EQ(result, -1);
+    
+    // NULL archive_filename
+    result = rrd_archive_create(test_dir, "/tmp/rrd/", NULL);
+    EXPECT_EQ(result, -1);
+}
+
+// Archive test: Invalid output path (unwritable directory)
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationUnwritable) {
+    // Try to create archive in non-existent directory
+    int result = rrd_archive_create(test_dir, "/nonexistent/dir/", "test.tgz");
+    EXPECT_EQ(result, -2);  // Should fail to create output file
+}
+
+// Archive test: Cleanup NULL parameter
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanupNullParam) {
+    int result = rrd_archive_cleanup(NULL);
+    EXPECT_EQ(result, -1);
+}
+
+// Archive test: Cleanup non-existent file (should log warning but not crash)
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanupNonExistent) {
+    int result = rrd_archive_cleanup("/tmp/nonexistent_archive_12345.tgz");
+    EXPECT_EQ(result, -2);  // Should fail to remove but not crash
+}
+
+// Archive test: Very long filename
+TEST_F(RRDUploadOrchestrationTest, ArchiveVeryLongFilename) {
+    // Create a file with very long name (>100 characters to test tar header splitting)
+    std::string long_filename(150, 'a');
+    long_filename += ".txt";
+    std::string long_path = std::string(test_dir) + "/" + long_filename;
+    
+    std::ofstream f(long_path);
+    f << "test content\n";
+    f.close();
+    
+    // Try to archive it
+    int result = rrd_archive_create(test_dir, "/tmp/rrd/", "longname_test.tgz");
+    // Should either succeed by splitting name or fail gracefully
+    // The important thing is it doesn't crash
+    
+    // Cleanup
+    remove(long_path.c_str());
+    remove("/tmp/rrd/longname_test.tgz");
+}
+
+// Archive test: Subdirectories
+TEST_F(RRDUploadOrchestrationTest, ArchiveWithSubdirectories) {
+    // Create subdirectory structure
+    std::string subdir = std::string(test_dir) + "/subdir";
+    mkdir(subdir.c_str(), 0755);
+    
+    std::string subfile = subdir + "/subfile.txt";
+    std::ofstream f(subfile);
+    f << "subdirectory file\n";
+    f.close();
+    
+    // Create archive
+    int result = rrd_archive_create(test_dir, "/tmp/rrd/", "subdir_test.tgz");
+    EXPECT_EQ(result, 0);
+    
+    // Verify archive exists and has content
+    struct stat st;
+    EXPECT_EQ(stat("/tmp/rrd/subdir_test.tgz", &st), 0);
+    EXPECT_GT(st.st_size, 0);
+    
+    // Cleanup
+    remove(subfile.c_str());
+    rmdir(subdir.c_str());
+    remove("/tmp/rrd/subdir_test.tgz");
+}
+
+// Archive test: Empty working directory
+TEST_F(RRDUploadOrchestrationTest, ArchiveEmptyWorkingDir) {
+    // Create archive with empty working_dir (should use current directory)
+    int result = rrd_archive_create(test_dir, "", "empty_workdir_test.tgz");
+    EXPECT_EQ(result, 0);
+    
+    // Cleanup
+    remove("empty_workdir_test.tgz");
+}
+
+// Archive test: CPU usage check (if implemented)
+TEST_F(RRDUploadOrchestrationTest, CPUUsageCheck) {
+    float cpu_usage = 0.0f;
+    int result = rrd_archive_check_cpu_usage(&cpu_usage);
+    // May succeed or fail depending on system, but shouldn't crash
+    if (result == 0) {
+        EXPECT_GE(cpu_usage, 0.0f);
+        EXPECT_LE(cpu_usage, 100.0f);
+    }
+}
+
+// Archive test: Priority adjustment
+TEST_F(RRDUploadOrchestrationTest, PriorityAdjustment) {
+    // Test with different CPU usage levels
+    int result = rrd_archive_adjust_priority(90.0f);  // High CPU
+    // May succeed or fail depending on permissions
+    
+    result = rrd_archive_adjust_priority(60.0f);  // Medium CPU
+    // May succeed or fail depending on permissions
+    
+    result = rrd_archive_adjust_priority(30.0f);  // Low CPU
+    // May succeed or fail depending on permissions
+    // The important thing is it doesn't crash
+}
+
+
 
 
 
