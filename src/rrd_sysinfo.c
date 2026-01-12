@@ -12,20 +12,34 @@
 
 int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Entry\n", __FUNCTION__);
-    if (!mac_addr || size < 18) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid MAC buffer or size\n", __FUNCTION__);
+    if (!mac_addr || size < 13) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid MAC buffer or size (need at least 13 bytes)\n", __FUNCTION__);
         return -1;
     }
-    memset(mac_addr, 0, size);
-    size_t copied = GetEstbMac(mac_addr, size);
+    
+    // Get MAC address with colons (e.g., "D4:52:EE:58:F6:AE")
+    char mac_with_colons[18] = {0};
+    size_t copied = GetEstbMac(mac_with_colons, sizeof(mac_with_colons));
     if (copied == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get MAC address\n", __FUNCTION__);
         return -1;
     }
+    
+    // Strip colons 
+    memset(mac_addr, 0, size);
+    size_t j = 0;
+    for (size_t i = 0; mac_with_colons[i] != '\0' && j < size - 1; i++) {
+        if (mac_with_colons[i] != ':') {
+            mac_addr[j++] = mac_with_colons[i];
+        }
+    }
+    mac_addr[j] = '\0';
+    
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: MAC address obtained: %s\n", __FUNCTION__, mac_addr);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Exit\n", __FUNCTION__);
     return 0;
 }
+
 
 
 int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
