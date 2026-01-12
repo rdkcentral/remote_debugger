@@ -141,27 +141,30 @@ def test_check_issue_in_dynamic_profile():
     STOP_SERVICE = "Stopping remote_debugger_Test.TestRun1 service..."
     assert STOP_SERVICE in grep_rrdlogs(STOP_SERVICE)
 
-    UPLOAD_SCRIPT_START = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh..."
-    assert UPLOAD_SCRIPT_START in grep_rrdlogs(UPLOAD_SCRIPT_START)
+    UPLOAD_START = "Starting Upload Debug output via API..."
+    assert UPLOAD_START in grep_rrdlogs(UPLOAD_START)
 
 def test_remotedebugger_upload_report():
-    UPLOAD_SUCCESS = "RRD Upload Script Execution Success"
-    UPLOAD_FAILURE = "RRD Upload Script Execution Failure"
+    # Check for C API upload execution
+    UPLOAD_EXECUTE = "Upload orchestration"
+    assert UPLOAD_EXECUTE in grep_rrdlogs(UPLOAD_EXECUTE)
+    
+    # Check upload completion status
+    UPLOAD_SUCCESS = "Upload orchestration completed successfully"
+    UPLOAD_FAILURE = "Upload orchestration failed"
     if UPLOAD_SUCCESS in grep_rrdlogs(UPLOAD_SUCCESS):
-        print("Upload success")
+        print("Upload completed successfully")
     elif UPLOAD_FAILURE in grep_rrdlogs(UPLOAD_FAILURE):
         print("Upload failed")
     else:
-        print("Upload status not found in logs")
-
-    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
-    SCRIPT_FAILURE = "Debug Information Report upload Success"
-    if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
-        print("Script execution success")
-    elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
-        print("Script execution failed")
+        print("Upload completion status not found in logs")
+    
+    # Verify archive was created
+    ARCHIVE_CREATED = "Archive created:"
+    if ARCHIVE_CREATED in grep_rrdlogs(ARCHIVE_CREATED):
+        print("Archive creation confirmed")
     else:
-        print("Script execution not found in logs")
+        print("Archive creation not found in logs")
 
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)

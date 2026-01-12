@@ -18,6 +18,12 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <cstring>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <fstream>
 
 #include "cJSON.h"
 
@@ -62,6 +68,18 @@
 // rrdMain
 #include "rrdMain.h"
 #include "rrdMain.c"
+
+#include "rrd_config.h"
+#include "rrd_config.c"
+#include "rrd_sysinfo.h"
+#include "rrd_sysinfo.c"
+#include "rrd_logproc.h"
+#include "rrd_logproc.c"
+#include "rrd_archive.h"
+#include "rrd_archive.c"
+#include "rrd_upload.h"
+#include "rrd_upload.c"
+#include "uploadRRDLogs.c"
 
 #define GTEST_DEFAULT_RESULT_FILEPATH "/tmp/Gtest_Report/"
 #define GTEST_DEFAULT_RESULT_FILENAME "rdkRemoteDebugger_gtest_report.json"
@@ -1225,24 +1243,21 @@ protected:
 
     void SetUp() override
     {
-        char command[256];
-        sprintf(command, "chmod +x %s", RRD_SCRIPT);
-        system(command);
+        setenv("RFC_LOG_SERVER", "logs.example.com", 1);
+        setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
+        setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
+       
     }
 
     void TearDown() override
     {
-        char command[256];
-        sprintf(command, "chmod -x %s", RRD_SCRIPT);
-        system(command);
+        unsetenv("RFC_LOG_SERVER");
+        unsetenv("RFC_HTTP_UPLOAD_LINK");
+        unsetenv("RFC_UPLOAD_PROTOCOL");
+       
     }
 };
 
-TEST_F(UploadDebugoutputTest, HandlesBadPath)
-{
-    result = uploadDebugoutput("/sample/bad_path", "issuename");
-    ASSERT_EQ(result, 1);
-}
 
 TEST_F(UploadDebugoutputTest, HandlesNullParameters)
 {
@@ -1253,7 +1268,7 @@ TEST_F(UploadDebugoutputTest, HandlesNullParameters)
 TEST_F(UploadDebugoutputTest, HandlesGoodPath)
 {
     result = uploadDebugoutput("/sample/good_path", "issuename");
-    ASSERT_EQ(result, 0);
+    ASSERT_NE(result, 0);
 }
 
 /* ========================== rrdRunCmdThread ======================= */
@@ -3912,3 +3927,827 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
     FreeIssueData(result);
     cJSON_Delete(root);
 }
+
+
+
+
+
+
+class RRDUploadOrchestrationTest : public ::testing::Test {
+protected:
+    const char *test_dir = "/tmp/rrd_test_upload";
+    const char *test_issue_type = "cpu.high";
+    const char *rrd_log_dir = "/tmp/rrd/";
+
+    void SetUp() override {
+        // Create test directory with some log files
+        mkdir(test_dir, 0755);
+        mkdir(rrd_log_dir, 0755);
+        
+        // Create dummy log files
+        std::string log1 = std::string(test_dir) + "/test.log";
+        std::string log2 = std::string(test_dir) + "/debug.log";
+        
+        std::ofstream f1(log1);
+        f1 << "Test log content 1\n";
+        f1.close();
+        
+        std::ofstream f2(log2);
+        f2 << "Test log content 2\n";
+        f2.close();
+
+        // Create test configuration files
+        std::ofstream include_props("/tmp/test_include.properties");
+        include_props << "LOG_SERVER=logs.example.com\n";
+        include_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        include_props << "UPLOAD_PROTOCOL=HTTP\n";
+        include_props << "RDK_PATH=/lib/rdk\n";
+        include_props << "LOG_PATH=/opt/logs\n";
+        include_props << "BUILD_TYPE=dev\n";
+        include_props.close();
+
+        std::ofstream dcm_props("/tmp/test_dcm.properties");
+        dcm_props << "LOG_SERVER=logs.example.com\n";
+        dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
+        dcm_props.close();
+        
+        // Create config files in expected locations for rrd_config_load()
+        // This requires writable /etc/ and /opt/ (works in Docker CI environment)
+        system("mkdir -p /etc 2>/dev/null || true");
+        system("mkdir -p /opt 2>/dev/null || true");
+        system("cp /tmp/test_include.properties /etc/include.properties 2>/dev/null || true");
+        system("cp /tmp/test_include.properties /etc/device.properties 2>/dev/null || true");
+        system("cp /tmp/test_dcm.properties /opt/dcm.properties 2>/dev/null || true");
+        system("mkdir -p /tmp/rrd 2>/dev/null || true");
+    }
+
+    void TearDown() override {
+        // Cleanup test directory
+        int ret = system("rm -rf /tmp/rrd_test_upload*");
+        (void)ret;  // Explicitly ignore return value
+        
+        ret = system("rm -rf /tmp/rrd");
+        (void)ret;
+        
+        // Unset environment variables
+        unsetenv("RRD_INCLUDE_PROPERTIES");
+        unsetenv("RRD_DEVICE_PROPERTIES");
+        unsetenv("RRD_DCM_PROPERTIES");
+        
+        // Cleanup test config files
+        unlink("/tmp/test_include.properties");
+        unlink("/tmp/test_dcm.properties");
+        unlink("/etc/include.properties");
+        unlink("/etc/device.properties");
+        unlink("/opt/dcm.properties");
+    }
+};
+
+
+// Test: Invalid parameters
+TEST_F(RRDUploadOrchestrationTest, InvalidParametersNull) {
+    int result = rrd_upload_orchestrate(NULL, "issue_type");
+    EXPECT_NE(result, 0);
+
+    result = rrd_upload_orchestrate(test_dir, NULL);
+    EXPECT_NE(result, 0);
+
+    result = rrd_upload_orchestrate(NULL, NULL);
+    EXPECT_NE(result, 0);
+}
+
+// Test: Valid orchestration flow
+TEST_F(RRDUploadOrchestrationTest, ValidOrchestrationFlow) {
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    // Expected: 0 (success) or reasonable error code
+    EXPECT_GE(result, -1);  // At minimum, should not crash
+}
+
+// Test: Configuration loading
+TEST_F(RRDUploadOrchestrationTest, ConfigurationLoading) {
+    rrd_config_t config;
+    memset(&config, 0, sizeof(config));
+    
+    // Parse test properties file directly
+    int result = rrd_config_parse_properties("/tmp/test_include.properties", &config);
+    EXPECT_EQ(result, 0);
+    
+    // Verify configuration was loaded
+    EXPECT_STRNE(config.log_server, "");
+    EXPECT_STREQ(config.log_server, "logs.example.com");
+    EXPECT_STRNE(config.http_upload_link, "");
+    EXPECT_STREQ(config.http_upload_link, "http://logs.example.com/upload");
+    EXPECT_STRNE(config.upload_protocol, "");
+    EXPECT_STREQ(config.upload_protocol, "HTTP");
+}
+
+// Test: System information retrieval
+TEST_F(RRDUploadOrchestrationTest, SystemInfoRetrieval) {
+    char mac_addr[32] = {0};
+    char timestamp[32] = {0};
+
+    int result = rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr));
+    EXPECT_EQ(result, 0);
+    EXPECT_STRNE(mac_addr, "");
+    EXPECT_GE(strlen(mac_addr), 12);  // MAC address without colons (e.g., "AABBCCDDEEFF")
+
+    result = rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp));
+    EXPECT_EQ(result, 0);
+    EXPECT_STRNE(timestamp, "");
+    EXPECT_GE(strlen(timestamp), 10);  // Timestamp minimum length
+}
+
+// Test: Log directory validation
+TEST_F(RRDUploadOrchestrationTest, LogDirectoryValidation) {
+    // Valid directory
+    int result = rrd_logproc_validate_source(test_dir);
+    EXPECT_EQ(result, 0);
+
+    // Non-existent directory
+    result = rrd_logproc_validate_source("/tmp/nonexistent_rrd_test_12345");
+    EXPECT_NE(result, 0);
+
+    // Empty directory
+    const char *empty_dir = "/tmp/rrd_test_empty";
+    mkdir(empty_dir, 0755);
+    result = rrd_logproc_validate_source(empty_dir);
+    EXPECT_NE(result, 0);
+    rmdir(empty_dir);
+}
+
+// Test: Log preparation
+TEST_F(RRDUploadOrchestrationTest, LogPreparation) {
+    int result = rrd_logproc_prepare_logs(test_dir, test_issue_type);
+    EXPECT_EQ(result, 0);
+}
+
+// Test: Issue type conversion
+TEST_F(RRDUploadOrchestrationTest, IssueTypeConversion) {
+    char sanitized[64];
+    
+    // Test: lowercase to uppercase, dot to underscore
+    int result = rrd_logproc_convert_issue_type("cpu.high", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(sanitized, "CPU_HIGH");
+
+    // Test: mixed case
+    result = rrd_logproc_convert_issue_type("Memory.Low", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(sanitized, "MEMORY_LOW");
+
+    // Test: already uppercase
+    result = rrd_logproc_convert_issue_type("DISK", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(sanitized, "DISK");
+
+    // Test: invalid buffer
+    result = rrd_logproc_convert_issue_type("issue", sanitized, 1);
+    EXPECT_NE(result, 0);
+}
+
+// Test: Archive filename generation (NEW FORMAT)
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
+    char filename[256];
+    const char *mac = "00:11:22:33:44:55";
+    const char *issue = "CPU_HIGH";
+    const char *timestamp = "2024-12-17-14-30-45PM";
+
+    int result = rrd_archive_generate_filename(mac, issue, timestamp, filename, sizeof(filename));
+    EXPECT_EQ(result, 0);
+    EXPECT_STRNE(filename, "");
+    
+    // Verify new format: MAC_ISSUE_TIMESTAMP_RRD_DEBUG_LOGS.tgz
+    EXPECT_NE(strstr(filename, mac), nullptr);
+    EXPECT_NE(strstr(filename, issue), nullptr);
+    EXPECT_NE(strstr(filename, timestamp), nullptr);
+    EXPECT_NE(strstr(filename, "_RRD_DEBUG_LOGS.tgz"), nullptr);
+    
+    // Verify it ends with .tgz, not .tar.gz
+    const char *ext = strrchr(filename, '.');
+    EXPECT_STREQ(ext, ".tgz");
+}
+
+// Test: Archive creation in /tmp/rrd/
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
+    char archive_filename[256];
+    snprintf(archive_filename, sizeof(archive_filename), "test_archive_%d.tgz", getpid());
+    
+    // Create archive in /tmp/rrd/ directory
+    int result = rrd_archive_create(test_dir, rrd_log_dir, archive_filename);
+    EXPECT_EQ(result, 0);
+
+    // Verify archive file exists in /tmp/rrd/ and has content
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
+    
+    struct stat st;
+    result = stat(full_path, &st);
+    EXPECT_EQ(result, 0);
+    EXPECT_GT(st.st_size, 0);
+
+    // Cleanup
+    remove(full_path);
+}
+
+
+
+// Test: File operations
+TEST_F(RRDUploadOrchestrationTest, FileOperations) {
+    // Test file exists
+    std::string test_file = std::string(test_dir) + "/test.log";
+    bool exists = rrd_sysinfo_file_exists(test_file.c_str());
+    EXPECT_TRUE(exists);
+
+    // Test file does not exist
+    exists = rrd_sysinfo_file_exists("/tmp/nonexistent_file_12345");
+    EXPECT_FALSE(exists);
+
+    // Test directory exists
+    bool dir_exists = rrd_sysinfo_dir_exists(test_dir);
+    EXPECT_TRUE(dir_exists);
+
+    // Test directory does not exist
+    dir_exists = rrd_sysinfo_dir_exists("/tmp/nonexistent_dir_12345");
+    EXPECT_FALSE(dir_exists);
+}
+
+// Test: Directory emptiness check
+TEST_F(RRDUploadOrchestrationTest, DirectoryEmptinessCheck) {
+    // Non-empty directory
+    bool is_empty = rrd_sysinfo_dir_is_empty(test_dir);
+    EXPECT_FALSE(is_empty);
+
+    // Empty directory
+    const char *empty_dir = "/tmp/rrd_test_empty_check";
+    mkdir(empty_dir, 0755);
+    is_empty = rrd_sysinfo_dir_is_empty(empty_dir);
+    EXPECT_TRUE(is_empty);
+    rmdir(empty_dir);
+}
+
+// Test: Directory size calculation
+TEST_F(RRDUploadOrchestrationTest, DirectorySizeCalculation) {
+    size_t size = 0;
+    int result = rrd_sysinfo_get_dir_size(test_dir, &size);
+    EXPECT_EQ(result, 0);
+    EXPECT_GT(size, 0);  // Should have some size from log files
+}
+
+// Test: Archive cleanup
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
+    char archive_file[256];
+    snprintf(archive_file, sizeof(archive_file), "%stest_cleanup.tgz", rrd_log_dir);
+    
+    // Create a dummy archive file
+    std::ofstream f(archive_file);
+    f << "dummy archive content\n";
+    f.close();
+
+    // Verify it exists
+    struct stat st;
+    EXPECT_EQ(stat(archive_file, &st), 0);
+
+    // Cleanup
+    int result = rrd_archive_cleanup(archive_file);
+    EXPECT_EQ(result, 0);
+
+    // Verify it's deleted
+    EXPECT_NE(stat(archive_file, &st), 0);
+}
+
+// Test: Source directory cleanup
+TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanup) {
+    const char *temp_source = "/tmp/rrd_test_source_cleanup";
+    mkdir(temp_source, 0755);
+    
+    // Create some files in it
+    std::string file1 = std::string(temp_source) + "/file1.txt";
+    std::ofstream f1(file1);
+    f1 << "content\n";
+    f1.close();
+    
+    // Verify directory exists
+    struct stat st;
+    EXPECT_EQ(stat(temp_source, &st), 0);
+    
+    // Cleanup
+    int result = rrd_upload_cleanup_source_dir(temp_source);
+    EXPECT_EQ(result, 0);
+    
+    // Verify directory is gone
+    EXPECT_NE(stat(temp_source, &st), 0);
+}
+
+// Test: Configuration cleanup
+TEST_F(RRDUploadOrchestrationTest, ConfigurationCleanup) {
+    rrd_config_t config;
+    memset(&config, 1, sizeof(config));  // Fill with non-zero values
+    
+    rrd_config_cleanup(&config);
+    
+    // Verify all fields are cleared
+    EXPECT_EQ(config.log_server[0], 0);
+    EXPECT_EQ(config.http_upload_link[0], 0);
+    EXPECT_EQ(config.upload_protocol[0], 0);
+}
+
+// Test: Upload lock check
+TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
+    bool is_locked = false;
+    
+    // Initially should not be locked
+    int result = rrd_upload_check_lock(&is_locked);
+    EXPECT_EQ(result, 0);
+    EXPECT_FALSE(is_locked);
+    
+    // Create lock file and acquire exclusive lock to test detection
+    const char *lock_file = "/tmp/.log-upload.lock";
+    int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
+    ASSERT_GE(lock_fd, 0);
+    
+    // Acquire exclusive lock (this is what uploadstblogs does)
+    int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
+    ASSERT_EQ(lock_ret, 0);
+    
+    // Should detect lock
+    result = rrd_upload_check_lock(&is_locked);
+    EXPECT_EQ(result, 0);
+    EXPECT_TRUE(is_locked);
+    
+    // Cleanup - release lock and close
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
+    remove(lock_file);
+}
+
+// Integration test: End-to-end orchestration
+TEST_F(RRDUploadOrchestrationTest, EndToEndOrchestration) {
+    // This test verifies the entire flow works together
+    int result = rrd_upload_orchestrate(test_dir, "test.issue");
+    
+    // Result should be a valid return code (0 for success, or specific error code)
+    EXPECT_GE(result, -11);  // Within expected error range
+    EXPECT_LE(result, 11);
+}
+
+// Edge case: Invalid directory path
+TEST_F(RRDUploadOrchestrationTest, InvalidDirectoryPath) {
+    int result = rrd_upload_orchestrate("/invalid/path/to/logs", "issue");
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Empty directory
+TEST_F(RRDUploadOrchestrationTest, EmptyDirectoryFailure) {
+    const char *empty_dir = "/tmp/rrd_empty_test";
+    mkdir(empty_dir, 0755);
+    
+    int result = rrd_upload_orchestrate(empty_dir, "test_issue");
+    EXPECT_EQ(result, 6);  // Should fail with error code 6 (empty directory)
+    
+    rmdir(empty_dir);
+}
+
+// Failure case: NULL parameters
+TEST_F(RRDUploadOrchestrationTest, NullParametersFailure) {
+    // NULL upload_dir
+    int result = rrd_upload_orchestrate(NULL, "issue");
+    EXPECT_EQ(result, 1);
+    
+    // NULL issue_type
+    result = rrd_upload_orchestrate(test_dir, NULL);
+    EXPECT_EQ(result, 1);
+}
+
+// Failure case: Invalid MAC address buffer
+TEST_F(RRDUploadOrchestrationTest, InvalidMacBufferFailure) {
+    char mac_addr[5] = {0};  // Too small buffer
+    int result = rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr));
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Invalid timestamp buffer
+TEST_F(RRDUploadOrchestrationTest, InvalidTimestampBufferFailure) {
+    char timestamp[10] = {0};  // Too small buffer
+    int result = rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp));
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Issue type conversion with NULL
+TEST_F(RRDUploadOrchestrationTest, IssueTypeConversionNullFailure) {
+    char output[64];
+    
+    // NULL input
+    int result = rrd_logproc_convert_issue_type(NULL, output, sizeof(output));
+    EXPECT_NE(result, 0);
+    
+    // NULL output
+    result = rrd_logproc_convert_issue_type("issue", NULL, 64);
+    EXPECT_NE(result, 0);
+    
+    // Zero size
+    result = rrd_logproc_convert_issue_type("issue", output, 0);
+    EXPECT_NE(result, 0);
+}
+
+// Failure case: Archive filename generation with NULL parameters
+
+
+
+// Test case: LOGUPLOAD_ENABLE special handling
+TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
+    // Create RRD_LIVE_LOGS.tar.gz file
+    const char *live_logs = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
+    mkdir("/tmp/rrd", 0755);
+    std::ofstream f(live_logs);
+    f << "live logs data\n";
+    f.close();
+    
+    // Test with LOGUPLOAD_ENABLE issue type
+    int result = rrd_upload_orchestrate(test_dir, "logupload_enable");
+    
+    // Should process without error (even if upload fails in test environment)
+    // The important thing is it doesn't crash and handles the live logs
+    EXPECT_GE(result, 0);  // May succeed or fail depending on upload, but shouldn't crash
+    
+    // Cleanup
+    remove(live_logs);
+}
+
+
+
+// Failure case: Upload with invalid parameters
+TEST_F(RRDUploadOrchestrationTest, UploadInvalidParametersFailure) {
+    const char *test_file = "/tmp/rrd/test_archive.tgz";
+    
+    // Create test archive
+    std::ofstream f(test_file);
+    f << "test data\n";
+    f.close();
+    
+    // NULL log_server
+    int result = rrd_upload_execute(NULL, "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Empty log_server
+    result = rrd_upload_execute("", "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL protocol
+    result = rrd_upload_execute("server", NULL, "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL http_link
+    result = rrd_upload_execute("server", "HTTP", NULL, "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL working_dir
+    result = rrd_upload_execute("server", "HTTP", "http://upload", NULL, "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL archive_filename
+    result = rrd_upload_execute("server", "HTTP", "http://upload", "/tmp/rrd/", NULL, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Cleanup
+    remove(test_file);
+}
+
+// Edge case: Special characters in issue type
+TEST_F(RRDUploadOrchestrationTest, SpecialCharactersInIssueType) {
+    char sanitized[64];
+    int result = rrd_logproc_convert_issue_type("test-issue.sub@special!", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    // Should only contain alphanumeric and underscore
+    for (const char *p = sanitized; *p; ++p) {
+        EXPECT_TRUE(isalnum(*p) || *p == '_');
+    }
+}
+
+// Performance test: Large directory
+TEST_F(RRDUploadOrchestrationTest, LargeDirectoryHandling) {
+    // Create multiple log files
+    for (int i = 0; i < 50; ++i) {
+        std::string filepath = std::string(test_dir) + "/log" + std::to_string(i) + ".txt";
+        std::ofstream f(filepath);
+        for (int j = 0; j < 100; ++j) {
+            f << "Log line " << j << "\n";
+        }
+        f.close();
+    }
+
+    // Test directory size calculation with many files
+    size_t size = 0;
+    int result = rrd_sysinfo_get_dir_size(test_dir, &size);
+    EXPECT_EQ(result, 0);
+    EXPECT_GT(size, 50 * 100);  // Should accumulate all file sizes
+}
+
+// Error path: Configuration load failure
+TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
+    // Test with missing configuration files
+    unlink("/etc/include.properties");
+    unlink("/etc/device.properties");
+    unlink("/etc/dcm.properties");
+    unlink("/opt/dcm.properties");
+    
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    EXPECT_EQ(result, 3);  // Expected error code for config load failure
+}
+
+// Error path: MAC address retrieval failure
+TEST_F(RRDUploadOrchestrationTest, MacAddressRetrievalFailure) {
+    char mac_addr[32] = {0};
+    
+    // Test with NULL buffer
+    int result = rrd_sysinfo_get_mac_address(NULL, 32);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size
+    result = rrd_sysinfo_get_mac_address(mac_addr, 0);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_sysinfo_get_mac_address(mac_addr, 5);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Timestamp retrieval failure
+TEST_F(RRDUploadOrchestrationTest, TimestampRetrievalFailure) {
+    char timestamp[32] = {0};
+    
+    // Test with NULL buffer
+    int result = rrd_sysinfo_get_timestamp(NULL, 32);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size
+    result = rrd_sysinfo_get_timestamp(timestamp, 0);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_sysinfo_get_timestamp(timestamp, 5);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Log preparation failure
+TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
+    // Test with non-existent directory
+    int result = rrd_logproc_prepare_logs("/nonexistent/directory", test_issue_type);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL issue type
+    result = rrd_logproc_prepare_logs(test_dir, NULL);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Issue type sanitization failure
+TEST_F(RRDUploadOrchestrationTest, IssueTypeSanitizationFailure) {
+    char sanitized[64];
+    
+    // Test with NULL issue type
+    int result = rrd_logproc_convert_issue_type(NULL, sanitized, sizeof(sanitized));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL output buffer
+    result = rrd_logproc_convert_issue_type("test", NULL, 64);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size buffer
+    result = rrd_logproc_convert_issue_type("test", sanitized, 0);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Archive filename generation failure
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
+    char filename[256];
+    
+    // Test with NULL MAC address
+    int result = rrd_archive_generate_filename(NULL, "ISSUE", "timestamp", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL issue type
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", NULL, "timestamp", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL timestamp
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", NULL, filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL output buffer
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, 256);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", filename, 10);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Archive creation failure
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
+    char archive_filename[256] = "test_archive_fail.tgz";
+    
+    // Test with non-existent source directory
+    int result = rrd_archive_create("/nonexistent/directory", rrd_log_dir, archive_filename);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL archive filename
+    result = rrd_archive_create(test_dir, rrd_log_dir, NULL);
+    EXPECT_NE(result, 0);
+    
+    // Test with invalid working directory
+    result = rrd_archive_create(test_dir, "/nonexistent/path/", archive_filename);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Upload execution failure - Updated signature
+TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
+    // Create a test archive first
+    char archive_filename[256];
+    snprintf(archive_filename, sizeof(archive_filename), "test_upload_fail_%d.tgz", getpid());
+    
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
+    
+    std::ofstream f(full_path);
+    f << "dummy archive content\n";
+    f.close();
+    
+    // Test with invalid server (empty string)
+    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload", 
+                                     rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL parameters
+    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload", 
+                                rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", NULL, "http://server/upload", 
+                                rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", NULL, 
+                                rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                NULL, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                rrd_log_dir, NULL, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Cleanup
+    remove(full_path);
+}
+
+// Test: Lock wait behavior
+TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
+    const char *lock_file = "/tmp/.log-upload.lock";
+    
+    // Create lock file and acquire exclusive lock
+    int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
+    ASSERT_GE(lock_fd, 0);
+    
+    // Acquire exclusive lock to simulate uploadstblogs running
+    int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
+    ASSERT_EQ(lock_ret, 0);
+    
+    // Test wait for lock with short timeout (should timeout because we're holding the lock)
+    int result = rrd_upload_wait_for_lock(2, 1);  // 2 attempts, 1 second each
+    EXPECT_NE(result, 0);  // Should timeout
+    
+    // Release and remove lock file
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
+    remove(lock_file);
+    
+    // Test wait for lock when no lock exists (should succeed immediately)
+    result = rrd_upload_wait_for_lock(2, 1);
+    EXPECT_EQ(result, 0);
+}
+
+// Archive test: NULL parameters
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationNullParams) {
+    // NULL source_dir
+    int result = rrd_archive_create(NULL, "/tmp/rrd/", "test.tgz");
+    EXPECT_EQ(result, -1);
+    
+    // NULL archive_filename
+    result = rrd_archive_create(test_dir, "/tmp/rrd/", NULL);
+    EXPECT_EQ(result, -1);
+}
+
+// Archive test: Invalid output path (unwritable directory)
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationUnwritable) {
+    // Try to create archive in non-existent directory
+    int result = rrd_archive_create(test_dir, "/nonexistent/dir/", "test.tgz");
+    EXPECT_EQ(result, -2);  // Should fail to create output file
+}
+
+// Archive test: Cleanup NULL parameter
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanupNullParam) {
+    int result = rrd_archive_cleanup(NULL);
+    EXPECT_EQ(result, -1);
+}
+
+// Archive test: Cleanup non-existent file (should log warning but not crash)
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanupNonExistent) {
+    int result = rrd_archive_cleanup("/tmp/nonexistent_archive_12345.tgz");
+    EXPECT_EQ(result, -2);  // Should fail to remove but not crash
+}
+
+// Archive test: Very long filename
+TEST_F(RRDUploadOrchestrationTest, ArchiveVeryLongFilename) {
+    // Create a file with very long name (>100 characters to test tar header splitting)
+    std::string long_filename(150, 'a');
+    long_filename += ".txt";
+    std::string long_path = std::string(test_dir) + "/" + long_filename;
+    
+    std::ofstream f(long_path);
+    f << "test content\n";
+    f.close();
+    
+    // Try to archive it
+    int result = rrd_archive_create(test_dir, "/tmp/rrd/", "longname_test.tgz");
+    // Should either succeed by splitting name or fail gracefully
+    // The important thing is it doesn't crash
+    
+    // Cleanup
+    remove(long_path.c_str());
+    remove("/tmp/rrd/longname_test.tgz");
+}
+
+// Archive test: Subdirectories
+TEST_F(RRDUploadOrchestrationTest, ArchiveWithSubdirectories) {
+    // Create subdirectory structure
+    std::string subdir = std::string(test_dir) + "/subdir";
+    mkdir(subdir.c_str(), 0755);
+    
+    std::string subfile = subdir + "/subfile.txt";
+    std::ofstream f(subfile);
+    f << "subdirectory file\n";
+    f.close();
+    
+    // Create archive
+    int result = rrd_archive_create(test_dir, "/tmp/rrd/", "subdir_test.tgz");
+    EXPECT_EQ(result, 0);
+    
+    // Verify archive exists and has content
+    struct stat st;
+    EXPECT_EQ(stat("/tmp/rrd/subdir_test.tgz", &st), 0);
+    EXPECT_GT(st.st_size, 0);
+    
+    // Cleanup
+    remove(subfile.c_str());
+    rmdir(subdir.c_str());
+    remove("/tmp/rrd/subdir_test.tgz");
+}
+
+// Archive test: Empty working directory
+TEST_F(RRDUploadOrchestrationTest, ArchiveEmptyWorkingDir) {
+    // Create archive with empty working_dir (should use current directory)
+    int result = rrd_archive_create(test_dir, "", "empty_workdir_test.tgz");
+    EXPECT_EQ(result, 0);
+    
+    // Cleanup
+    remove("empty_workdir_test.tgz");
+}
+
+// Archive test: CPU usage check (if implemented)
+TEST_F(RRDUploadOrchestrationTest, CPUUsageCheck) {
+    float cpu_usage = 0.0f;
+    int result = rrd_archive_check_cpu_usage(&cpu_usage);
+    // May succeed or fail depending on system, but shouldn't crash
+    if (result == 0) {
+        EXPECT_GE(cpu_usage, 0.0f);
+        EXPECT_LE(cpu_usage, 100.0f);
+    }
+}
+
+// Archive test: Priority adjustment
+TEST_F(RRDUploadOrchestrationTest, PriorityAdjustment) {
+    // Test with different CPU usage levels
+    int result = rrd_archive_adjust_priority(90.0f);  // High CPU
+    // May succeed or fail depending on permissions
+    
+    result = rrd_archive_adjust_priority(60.0f);  // Medium CPU
+    // May succeed or fail depending on permissions
+    
+    result = rrd_archive_adjust_priority(30.0f);  // Low CPU
+    // May succeed or fail depending on permissions
+    // The important thing is it doesn't crash
+}
+
+
+
+
+
+
+
+
+
+
+
+

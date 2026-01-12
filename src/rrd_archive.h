@@ -17,21 +17,15 @@
  * limitations under the License.
 */
 
-#ifndef _RRDEXECUTESCRIPT_H_
-#define _RRDEXECUTESCRIPT_H_
+#ifndef RRD_ARCHIVE_H
+#define RRD_ARCHIVE_H
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#include <stddef.h>
 
-#include "rrdCommon.h"
-#include "rrd_upload.h"
+int rrd_archive_create(const char *source_dir, const char *working_dir, const char *archive_filename);
+int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, char *filename, size_t size);
+int rrd_archive_cleanup(const char *archive_path);
+int rrd_archive_check_cpu_usage(float *cpu_usage);
+int rrd_archive_adjust_priority(float cpu_usage);
 
-int uploadDebugoutput(char *outdir, char *issuename);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif // RRD_ARCHIVE_H

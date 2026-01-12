@@ -365,3 +365,57 @@ public:
     MOCK_METHOD(void, PushBlobRequest, (execData * execDataLan), ());
     MOCK_METHOD(void, rdk_logger_init, (char* testStr), ());
 };
+
+
+
+/* ---------- UploadSTBLogs Types and Mock ----------- */
+typedef enum {
+    TRIGGER_SCHEDULED = 0,
+    TRIGGER_MANUAL = 1,
+    TRIGGER_REBOOT = 2,
+    TRIGGER_CRASH = 3,
+    TRIGGER_DEBUG = 4,
+    TRIGGER_ONDEMAND = 5
+} TriggerType;
+
+typedef struct {
+    int flag;
+    int dcm_flag;
+    bool upload_on_reboot;
+    const char* upload_protocol;
+    const char* upload_http_link;
+    TriggerType trigger_type;
+    bool rrd_flag;
+    const char* rrd_file;
+} UploadSTBLogsParams;
+
+class MockUploadSTBLogs
+{
+public:
+    MOCK_METHOD(int, uploadstblogs_run, (const UploadSTBLogsParams* params), ());
+    MOCK_METHOD(int, uploadstblogs_execute, (int argc, char** argv), ());
+};
+
+void setUploadSTBLogsMock(MockUploadSTBLogs *mock);
+
+/* ---------- Common Device API Mock ----------- */
+class MockCommonDeviceAPI
+{
+public:
+    MOCK_METHOD(size_t, GetEstbMac, (char *pEstbMac, size_t szBufSize), ());
+};
+
+void setCommonDeviceAPIMock(MockCommonDeviceAPI *mock);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int uploadstblogs_run(const UploadSTBLogsParams* params);
+int uploadstblogs_execute(int argc, char** argv);
+size_t GetEstbMac(char *pEstbMac, size_t szBufSize);
+
+#ifdef __cplusplus
+}
+#endif
+
