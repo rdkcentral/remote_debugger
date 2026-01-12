@@ -4050,7 +4050,7 @@ TEST_F(RRDUploadOrchestrationTest, SystemInfoRetrieval) {
     int result = rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr));
     EXPECT_EQ(result, 0);
     EXPECT_STRNE(mac_addr, "");
-    EXPECT_GE(strlen(mac_addr), 17);  // MAC address minimum length
+    EXPECT_GE(strlen(mac_addr), 12);  // MAC address without colons (e.g., "AABBCCDDEEFF")
 
     result = rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp));
     EXPECT_EQ(result, 0);
@@ -4282,19 +4282,25 @@ TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
     // Initially should not be locked
     int result = rrd_upload_check_lock(&is_locked);
     EXPECT_EQ(result, 0);
+    EXPECT_FALSE(is_locked);
     
-    // Create lock file to test detection
+    // Create lock file and acquire exclusive lock to test detection
     const char *lock_file = "/tmp/.log-upload.lock";
-    std::ofstream f(lock_file);
-    f << "locked\n";
-    f.close();
+    int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
+    ASSERT_GE(lock_fd, 0);
+    
+    // Acquire exclusive lock (this is what uploadstblogs does)
+    int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
+    ASSERT_EQ(lock_ret, 0);
     
     // Should detect lock
     result = rrd_upload_check_lock(&is_locked);
     EXPECT_EQ(result, 0);
     EXPECT_TRUE(is_locked);
     
-    // Cleanup
+    // Cleanup - release lock and close
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
     remove(lock_file);
 }
 
@@ -4312,6 +4318,156 @@ TEST_F(RRDUploadOrchestrationTest, EndToEndOrchestration) {
 TEST_F(RRDUploadOrchestrationTest, InvalidDirectoryPath) {
     int result = rrd_upload_orchestrate("/invalid/path/to/logs", "issue");
     EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Empty directory
+TEST_F(RRDUploadOrchestrationTest, EmptyDirectoryFailure) {
+    const char *empty_dir = "/tmp/rrd_empty_test";
+    mkdir(empty_dir, 0755);
+    
+    int result = rrd_upload_orchestrate(empty_dir, "test_issue");
+    EXPECT_EQ(result, 6);  // Should fail with error code 6 (empty directory)
+    
+    rmdir(empty_dir);
+}
+
+// Failure case: NULL parameters
+TEST_F(RRDUploadOrchestrationTest, NullParametersFailure) {
+    // NULL upload_dir
+    int result = rrd_upload_orchestrate(NULL, "issue");
+    EXPECT_EQ(result, 1);
+    
+    // NULL issue_type
+    result = rrd_upload_orchestrate(test_dir, NULL);
+    EXPECT_EQ(result, 1);
+}
+
+// Failure case: Invalid MAC address buffer
+TEST_F(RRDUploadOrchestrationTest, InvalidMacBufferFailure) {
+    char mac_addr[5] = {0};  // Too small buffer
+    int result = rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr));
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Invalid timestamp buffer
+TEST_F(RRDUploadOrchestrationTest, InvalidTimestampBufferFailure) {
+    char timestamp[10] = {0};  // Too small buffer
+    int result = rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp));
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Issue type conversion with NULL
+TEST_F(RRDUploadOrchestrationTest, IssueTypeConversionNullFailure) {
+    char output[64];
+    
+    // NULL input
+    int result = rrd_logproc_convert_issue_type(NULL, output, sizeof(output));
+    EXPECT_NE(result, 0);
+    
+    // NULL output
+    result = rrd_logproc_convert_issue_type("issue", NULL, 64);
+    EXPECT_NE(result, 0);
+    
+    // Zero size
+    result = rrd_logproc_convert_issue_type("issue", output, 0);
+    EXPECT_NE(result, 0);
+}
+
+// Failure case: Archive filename generation with NULL parameters
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
+    char filename[256];
+    
+    // NULL MAC
+    int result = rrd_archive_generate_filename(NULL, "ISSUE", "2026-01-01", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // NULL issue type
+    result = rrd_archive_generate_filename("AABBCCDDEEFF", NULL, "2026-01-01", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // NULL timestamp
+    result = rrd_archive_generate_filename("AABBCCDDEEFF", "ISSUE", NULL, filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Buffer too small
+    char small_buffer[10];
+    result = rrd_archive_generate_filename("AABBCCDDEEFF", "ISSUE", "2026-01-01", small_buffer, sizeof(small_buffer));
+    EXPECT_NE(result, 0);
+}
+
+// Failure case: Log preparation with NULL parameters
+TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
+    // NULL source_dir
+    int result = rrd_logproc_prepare_logs(NULL, "issue");
+    EXPECT_NE(result, 0);
+    
+    // NULL issue_type
+    result = rrd_logproc_prepare_logs(test_dir, NULL);
+    EXPECT_NE(result, 0);
+}
+
+// Test case: LOGUPLOAD_ENABLE special handling
+TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
+    // Create RRD_LIVE_LOGS.tar.gz file
+    const char *live_logs = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
+    mkdir("/tmp/rrd", 0755);
+    std::ofstream f(live_logs);
+    f << "live logs data\n";
+    f.close();
+    
+    // Test with LOGUPLOAD_ENABLE issue type
+    int result = rrd_upload_orchestrate(test_dir, "logupload_enable");
+    
+    // Should process without error (even if upload fails in test environment)
+    // The important thing is it doesn't crash and handles the live logs
+    EXPECT_GE(result, 0);  // May succeed or fail depending on upload, but shouldn't crash
+    
+    // Cleanup
+    remove(live_logs);
+}
+
+// Failure case: Archive creation with invalid paths
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
+    // Try to create archive from non-existent directory
+    int result = rrd_archive_create("/nonexistent/path", "/tmp/rrd/", "test.tgz");
+    EXPECT_NE(result, 0);
+}
+
+// Failure case: Upload with invalid parameters
+TEST_F(RRDUploadOrchestrationTest, UploadInvalidParametersFailure) {
+    const char *test_file = "/tmp/rrd/test_archive.tgz";
+    
+    // Create test archive
+    std::ofstream f(test_file);
+    f << "test data\n";
+    f.close();
+    
+    // NULL log_server
+    int result = rrd_upload_execute(NULL, "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Empty log_server
+    result = rrd_upload_execute("", "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL protocol
+    result = rrd_upload_execute("server", NULL, "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL http_link
+    result = rrd_upload_execute("server", "HTTP", NULL, "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL working_dir
+    result = rrd_upload_execute("server", "HTTP", "http://upload", NULL, "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL archive_filename
+    result = rrd_upload_execute("server", "HTTP", "http://upload", "/tmp/rrd/", NULL, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Cleanup
+    remove(test_file);
 }
 
 // Edge case: Special characters in issue type
@@ -4507,16 +4663,21 @@ TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
 TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
     const char *lock_file = "/tmp/.log-upload.lock";
     
-    // Create lock file
-    std::ofstream f(lock_file);
-    f << "locked\n";
-    f.close();
+    // Create lock file and acquire exclusive lock
+    int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
+    ASSERT_GE(lock_fd, 0);
     
-    // Test wait for lock with short timeout (should timeout)
+    // Acquire exclusive lock to simulate uploadstblogs running
+    int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
+    ASSERT_EQ(lock_ret, 0);
+    
+    // Test wait for lock with short timeout (should timeout because we're holding the lock)
     int result = rrd_upload_wait_for_lock(2, 1);  // 2 attempts, 1 second each
     EXPECT_NE(result, 0);  // Should timeout
     
-    // Remove lock file
+    // Release and remove lock file
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
     remove(lock_file);
     
     // Test wait for lock when no lock exists (should succeed immediately)
