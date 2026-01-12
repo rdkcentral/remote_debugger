@@ -126,9 +126,4 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     return 0;
 }
 
-void rrd_upload_cleanup(void)
-{
-    // Placeholder for any additional cleanup (temp files, etc.)
-}
 
-// --- End of Skeleton ---
