@@ -149,7 +149,7 @@ def test_rrd_upload_orchestrate_valid_parameters():
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', TEST_ISSUE_TYPE
+        'string', CATEGORY_STRING
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
