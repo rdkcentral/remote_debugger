@@ -30,7 +30,7 @@ mkdir -p "$LIB_DIR"
 mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
-echo "AA:BB:CC:dd:EE:FF" >> /tmp/.estb_mac
+echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
 
 
 apt-get remove systemd
