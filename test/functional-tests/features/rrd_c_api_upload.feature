@@ -23,6 +23,19 @@ Feature: Remote Debugger C API Upload Orchestration
     And test log files are created in the upload directory
     When I call rrd_upload_orchestrate with valid upload directory and issue type
     Then the C API should return success code 0
+    And logs should contain "Executing binary to upload Debug info of ISSUETYPE"
+    And logs should contain "Logging ready"
+    And logs should contain "Configuration loaded"
+    And logs should contain "MAC:" for MAC address
+    And logs should contain "Timestamp:" for timestamp generation
+    And logs should contain "size and contents" for directory size check
+    And logs should contain "Log directory validated and prepared"
+    And logs should contain "Issue type sanitized"
+    And logs should contain "Archive filename:" with the generated filename
+    And logs should contain "Creating" for tarfile creation
+    And logs should contain "tarfile from Debug Commands output"
+    And logs should contain "Invoking uploadSTBLogs binary to upload"
+    And logs should contain "uploadSTBLogs parameters - server:"
     And the archive should be created with correct naming format
     And the archive should contain all log files from the directory
     And the upload should be triggered successfully
@@ -107,17 +120,19 @@ Feature: Remote Debugger C API Upload Orchestration
     Given the remote debugger is configured
     And successful upload has completed
     When I call rrd_upload_orchestrate with valid parameters
-    Then the archive file should be cleaned up
+    Then logs should contain "Debug Information Report upload Success"
+    And logs should contain "Removing uploaded report"
+    And logs should contain "Exit" for orchestration exit
+    And the archive file should be cleaned up
     And temporary files should be removed
-    And logs should show "Cleanup complete"
 
   Scenario: Test rrd_upload_orchestrate cleanup after upload failure
     Given the remote debugger is configured
     And upload will fail
     When I call rrd_upload_orchestrate with valid parameters
-    Then the archive file should still be cleaned up
+    Then logs should contain "Debug Information Report upload Failed"
+    And the archive file should still be cleaned up
     And error code 11 should be returned
-    And logs should show upload failure
 
   Scenario: Test uploadDebugoutput wrapper function
     Given the remote debugger is running
@@ -145,16 +160,49 @@ Feature: Remote Debugger C API Upload Orchestration
     And logs should be prepared for upload
     And archive should include live log data
 
-  Scenario: Verify rrd_upload_orchestrate logging throughout execution
-    Given the remote debugger is configured with debug logging
-    When I call rrd_upload_orchestrate with valid parameters
-    Then entry and exit logs should be present
-    And each step should log progress
-    And configuration values should be logged
-    And system info should be logged
-    And archive creation should be logged
-    And upload status should be logged
-    And cleanup should be logged
+  Scenario: Test remote debugger end-to-end with RFC trigger
+    Given the remote debugger process is running
+    And the issue type RFC is reset to empty string
+    When I set RFC parameter "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType" to test issue string
+    Then logs should contain "Received event for RRD_SET_ISSUE_EVENT"
+    And logs should contain "SUCCESS: Message sending Done"
+    And logs should contain "SUCCESS: Message Reception Done"
+    And logs should contain "MSG=" followed by the issue string
+    And logs should contain "Start Reading JSON File... /etc/rrd/remote_debugger.json"
+    And logs should contain "Json File parse Success... /etc/rrd/remote_debugger.json"
+    And logs should contain "Issue Data Node:" with node and subnode information
+    And logs should contain "Creating Directory"
+    And logs should contain "Found valid Commands"
+    And logs should contain "Adding Details of Debug commands to Output File"
+    And logs should contain "Starting remote_debugger_" service success message
+    And logs should contain "journalctl remote_debugger_" service success message
+    And logs should contain "Sleeping with timeout"
+    And logs should contain "Stopping remote_debugger_" service message
+    And logs should contain "Starting Upload Debug output via API"
+    And the output directory should contain generated files
+
+  Scenario: Test upload report validation with success path
+    Given the remote debugger has completed upload orchestration
+    When upload completes successfully
+    Then logs should contain "Debug Information Report upload Success"
+    And logs should contain "Removing uploaded report"
+    And logs should contain "Exit" for orchestration completion
+    And logs should contain "Logging ready" from orchestration initialization
+    And logs should contain "Configuration loaded" from orchestration setup
+
+  Scenario: Test upload report validation with failure path
+    Given the remote debugger has completed upload orchestration
+    When upload fails
+    Then logs should contain "Debug Information Report upload Failed"
+    And logs should contain "Logging ready" from orchestration initialization
+    And logs should contain "Configuration loaded" from orchestration setup
+    And cleanup should still occur
+
+  Scenario: Test upload report with legacy log compatibility
+    Given the remote debugger is using legacy logging
+    When upload completes
+    Then logs should contain either "RRD Upload Script Execution Success" or "RRD Upload Script Execution Failure"
+    And upload orchestration logs should confirm execution
 
   Scenario: Test rrd_upload_orchestrate error propagation
     Given the remote debugger is configured
