@@ -34,7 +34,7 @@ def reset_issuetype_rfc():
 
 def get_rrd_tarfile():
     logfile = '/opt/logs/remotedebugger.log.0'
-    command = f"grep -oP '\\S+\\.tgz' {logfile}"
+    command = f"grep 'Generated filename:' {logfile} | grep -oP '\\S+\\.tgz'"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         return result.stdout.strip()

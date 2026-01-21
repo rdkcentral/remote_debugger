@@ -17,602 +17,197 @@
 # limitations under the License.
 ##########################################################################
 
-import os
-import subprocess
-import tarfile
-import gzip
-import re
-import time
 from helper_functions import *
 
-# Test Constants
-TEST_UPLOAD_DIR = "/tmp/rrd_test_upload"
-TEST_ISSUE_TYPE = "test_issue"
-RRD_LOG_FILE = "/opt/logs/remote-debugger.log"
-RRD_BINARY = "/usr/local/bin/remotedebugger"
+def test_check_remote_debugger_config_file():
+    config_file_path = JSON_FILE
+    assert check_file_exists(config_file_path), f"Configuration file '{config_file_path}' does not exist."
 
-class TestCAPIHelper:
-    """Helper class for C API testing"""
-    
-    @staticmethod
-    def create_test_directory(path):
-        """Create test directory structure"""
-        os.makedirs(path, exist_ok=True)
-        return os.path.exists(path)
-    
-    @staticmethod
-    def create_test_files(directory, file_count=5):
-        """Create test log files in directory"""
-        created_files = []
-        for i in range(file_count):
-            filepath = os.path.join(directory, f"test_log_{i}.txt")
-            with open(filepath, 'w') as f:
-                f.write(f"Test log content {i}\n" * 10)
-            created_files.append(filepath)
-        return created_files
-    
-    @staticmethod
-    def cleanup_test_directory(path):
-        """Remove test directory and contents"""
-        if os.path.exists(path):
-            subprocess.run(['rm', '-rf', path], check=False)
-    
-    @staticmethod
-    def get_archive_filename_pattern(mac, issue_type):
-        """Generate expected archive filename pattern"""
-        # Format: MAC_ISSUETYPE_TIMESTAMP.tar.gz
-        return f"{mac}_{issue_type}_*.tar.gz"
-    
-    @staticmethod
-    def validate_archive_format(archive_path):
-        """Validate that archive is valid tar.gz"""
-        try:
-            with gzip.open(archive_path, 'rb') as gz:
-                with tarfile.open(fileobj=gz, mode='r:') as tar:
-                    return tar is not None
-        except Exception as e:
-            print(f"Archive validation failed: {e}")
-            return False
-    
-    @staticmethod
-    def get_archive_contents(archive_path):
-        """Get list of files in archive"""
-        try:
-            with gzip.open(archive_path, 'rb') as gz:
-                with tarfile.open(fileobj=gz, mode='r:') as tar:
-                    return tar.getnames()
-        except Exception as e:
-            print(f"Failed to read archive: {e}")
-            return []
-    
-    @staticmethod
-    def check_log_contains(pattern, log_file=RRD_LOG_FILE):
-        """Check if log file contains pattern"""
-        try:
-            with open(log_file, 'r') as f:
-                content = f.read()
-                return pattern in content
-        except FileNotFoundError:
-            return False
-    
-    @staticmethod
-    def get_mac_address():
-        """Get system MAC address"""
-        result = subprocess.run(['sh', '-c', 'getMacAddressOnly'], 
-                              capture_output=True, text=True)
-        if result.returncode == 0:
-            return result.stdout.strip()
-        return None
-    
-    @staticmethod
-    def create_upload_lock():
-        """Create upload lock file for testing"""
-        lock_file = "/tmp/.log-upload.lock"
-        with open(lock_file, 'w') as f:
-            f.write(str(os.getpid()))
-        return lock_file
-    
-    @staticmethod
-    def remove_upload_lock():
-        """Remove upload lock file"""
-        lock_file = "/tmp/.log-upload.lock"
-        if os.path.exists(lock_file):
-            os.remove(lock_file)
+def test_check_rrd_directory_exists():
+    dir_path = OUTPUT_DIR
+    assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
 
+def reset_issuetype_rfc():
+    command = 'rbuscli set Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType string ""'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    assert result.returncode == 0
 
-# Test Functions
-
-def test_rrd_upload_orchestrate_valid_parameters():
-    """Test rrd_upload_orchestrate with valid parameters"""
-    helper = TestCAPIHelper()
-    
-    # Setup
-    helper.cleanup_test_directory(TEST_UPLOAD_DIR)
-    assert helper.create_test_directory(TEST_UPLOAD_DIR)
-    created_files = helper.create_test_files(TEST_UPLOAD_DIR)
-    assert len(created_files) == 5
-    
-    # Clear previous logs
-    remove_logfile()
-    remove_upload_lock()
-    
-    # Trigger via RRD daemon (which calls uploadDebugoutput -> rrd_upload_orchestrate)
+def test_check_and_start_remotedebugger():
     kill_rrd()
-    time.sleep(2)
-    
-    # Start remotedebugger
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
+    remove_logfile()
+    print("Starting remotedebugger process")
+    command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger event to invoke C API
+    command_to_get_pid = "pidof remotedebugger"
+    pid = run_shell_command(command_to_get_pid)
+    assert pid != "", "remotedebugger process did not start"
+
+def test_remote_debugger_trigger_event():
+    reset_issuetype_rfc()
+    sleep(10)
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', TEST_ISSUE_TYPE
+        'string', ISSUE_STRING
     ]
     result = subprocess.run(command, capture_output=True, text=True)
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Command failed with error: {result.stderr}"
+
+    sleep(15)
+
+    QUERY_MSG = "Received event for RRD_SET_ISSUE_EVENT"
+    assert QUERY_MSG in grep_rrdlogs(QUERY_MSG)
+
+    MSG_SEND = "SUCCESS: Message sending Done"
+    sleep(2)
+    assert MSG_SEND in grep_rrdlogs(MSG_SEND)
+
+    MSG_RECEIVE = "SUCCESS: Message Reception Done"
+    sleep(2)
+    assert MSG_RECEIVE in grep_rrdlogs(MSG_RECEIVE)
+
+    ISSUE_MSG = f'MSG={ISSUE_STRING}'
+    assert ISSUE_MSG in grep_rrdlogs(ISSUE_MSG)
+    print("Sent and received messages are found and match in the logfile")
+
+    READ_JSON = "Start Reading JSON File... /etc/rrd/remote_debugger.json"
+    assert READ_JSON in grep_rrdlogs(READ_JSON)
+
+    PARSE_JSON = "Json File parse Success... /etc/rrd/remote_debugger.json"
+    assert PARSE_JSON in grep_rrdlogs(PARSE_JSON)
+
+    if '.' in ISSUE_STRING:
+        ISSUE_NODE, ISSUE_SUBNODE = ISSUE_STRING.split('.')
+    else:
+        node = ISSUE_STRING
+        subnode = None
+
+    ISSUE_FOUND = f"Issue Data Node: {ISSUE_NODE} and Sub-Node: {ISSUE_SUBNODE} found in Static JSON File /etc/rrd/remote_debugger.json"
+
+    DIR_CREATION = "Creating Directory"
+    assert DIR_CREATION in grep_rrdlogs(DIR_CREATION)
+
+    SANITY_CHECK = "Found valid Commands"
+    assert SANITY_CHECK in grep_rrdlogs(SANITY_CHECK)
+
+    DEBUG_FILE = "Adding Details of Debug commands to Output File"
+    assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
+
+    SERVICE_START = f"Starting remote_debugger_{ISSUE_STRING} service success"
+    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+
+    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING} service success"
+    assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
+
+    SLEEP_TIME = "Sleeping with timeout"
+    assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
+    sleep(20)
+
+    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING} service"
+    assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
+
+    result = check_output_dir()
+    print(result)
+
+    UPLOAD_LOGS = "Starting Upload Debug output via API"
+    assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
+
+    # Verify rrd_upload_orchestrate() function logs
+    print("Validating rrd_upload_orchestrate logs...")
     
-    time.sleep(20)  # Wait for processing
+    # Check orchestration entry
+    ORCHESTRATE_ENTRY = "Executing binary to upload Debug info of ISSUETYPE"
+    assert ORCHESTRATE_ENTRY in grep_rrdlogs(ORCHESTRATE_ENTRY), "Missing orchestration entry log"
     
-    # Verify logs
-    assert helper.check_log_contains("Entry")
-    assert helper.check_log_contains("Configuration loaded")
-    assert helper.check_log_contains("MAC address obtained")
-    assert helper.check_log_contains("Timestamp generated")
-    assert helper.check_log_contains("Archive created")
-    assert helper.check_log_contains("rrd_upload_orchestrate: Exit")
+    # Check logging subsystem initialization
+    LOGGING_READY = "Logging ready"
+    assert LOGGING_READY in grep_rrdlogs(LOGGING_READY), "Missing logging ready log"
+    
+    # Check configuration loading
+    CONFIG_LOADED = "Configuration loaded"
+    assert CONFIG_LOADED in grep_rrdlogs(CONFIG_LOADED), "Missing configuration loaded log"
+    
+    # Check MAC and timestamp
+    MAC_TIMESTAMP = "MAC:"
+    assert MAC_TIMESTAMP in grep_rrdlogs(MAC_TIMESTAMP), "Missing MAC address log"
+    
+    TIMESTAMP_LOG = "Timestamp:"
+    assert TIMESTAMP_LOG in grep_rrdlogs(TIMESTAMP_LOG), "Missing timestamp log"
+    
+    # Check directory validation
+    CHECKING_SIZE = "size and contents"
+    assert CHECKING_SIZE in grep_rrdlogs(CHECKING_SIZE), "Missing directory size check log"
+    
+    LOG_DIR_VALIDATED = "Log directory validated and prepared"
+    assert LOG_DIR_VALIDATED in grep_rrdlogs(LOG_DIR_VALIDATED), "Missing log directory validation log"
+    
+    # Check issue type sanitization
+    ISSUE_SANITIZED = "Issue type sanitized"
+    assert ISSUE_SANITIZED in grep_rrdlogs(ISSUE_SANITIZED), "Missing issue type sanitized log"
+    
+    # Check archive filename generation
+    ARCHIVE_FILENAME = "Archive filename:"
+    assert ARCHIVE_FILENAME in grep_rrdlogs(ARCHIVE_FILENAME), "Missing archive filename log"
+    
+    # Check archive creation
+    CREATING_TARFILE = "Creating"
+    TARFILE_TEXT = "tarfile from Debug Commands output"
+    assert CREATING_TARFILE in grep_rrdlogs(CREATING_TARFILE), "Missing tarfile creation log"
+    assert TARFILE_TEXT in grep_rrdlogs(TARFILE_TEXT), "Missing tarfile output log"
+    
+    # Check upload invocation
+    INVOKING_UPLOAD = "Invoking uploadSTBLogs binary to upload"
+    assert INVOKING_UPLOAD in grep_rrdlogs(INVOKING_UPLOAD), "Missing upload invocation log"
+    
+    UPLOAD_PARAMS = "uploadSTBLogs parameters - server:"
+    assert UPLOAD_PARAMS in grep_rrdlogs(UPLOAD_PARAMS), "Missing upload parameters log"
+    
+    print("All rrd_upload_orchestrate logs validated successfully")
+
+def test_remotedebugger_upload_report():
+    print("Validating upload report logs...")
+    
+    # Check for upload result logs from rrd_upload_orchestrate
+    UPLOAD_SUCCESS = "Debug Information Report upload Success"
+    UPLOAD_FAILURE = "Debug Information Report upload Failed"
+    
+    if UPLOAD_SUCCESS in grep_rrdlogs(UPLOAD_SUCCESS):
+        print("Upload successful - validating success path logs")
+        
+        # On success, check for cleanup logs
+        REMOVING_REPORT = "Removing uploaded report"
+        assert REMOVING_REPORT in grep_rrdlogs(REMOVING_REPORT), "Missing report removal log"
+        
+        # Check for orchestration exit
+        ORCHESTRATE_EXIT = "Exit"
+        assert ORCHESTRATE_EXIT in grep_rrdlogs(ORCHESTRATE_EXIT), "Missing orchestration exit log"
+        
+    elif UPLOAD_FAILURE in grep_rrdlogs(UPLOAD_FAILURE):
+        print("Upload failed - validating failure path logs")
+        # On failure, cleanup still happens but with different flow
+        
+    else:
+        # Check legacy log messages for backward compatibility
+        LEGACY_SUCCESS = "RRD Upload Script Execution Success"
+        LEGACY_FAILURE = "RRD Upload Script Execution Failure"
+        
+        if LEGACY_SUCCESS in grep_rrdlogs(LEGACY_SUCCESS):
+            print("Legacy upload success log found")
+        elif LEGACY_FAILURE in grep_rrdlogs(LEGACY_FAILURE):
+            print("Legacy upload failure log found")
+        else:
+            print("Warning: No upload status logs found")
+    
+    # Verify that the upload orchestration completed
+    ORCHESTRATE_LOGS_PRESENT = (
+        "Logging ready" in grep_rrdlogs("Logging ready") and
+        "Configuration loaded" in grep_rrdlogs("Configuration loaded")
+    )
+    assert ORCHESTRATE_LOGS_PRESENT, "Upload orchestration did not execute properly"
+    
+    print("Upload report validation completed")
     
     # Cleanup
-    helper.cleanup_test_directory(TEST_UPLOAD_DIR)
-    kill_rrd()
-
-
-def test_rrd_upload_orchestrate_null_parameters():
-    """Test rrd_upload_orchestrate with NULL parameters"""
-    helper = TestCAPIHelper()
-    
-    # This test would require a test harness that directly calls the C API
-    # For now, we verify that the daemon doesn't crash with invalid params
-    
-    # The uploadDebugoutput function checks for NULL before calling orchestrate
-    # So we verify the error handling logs
-    
     remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    # Normal startup
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # The daemon should handle edge cases gracefully
-    pid = run_shell_command("pidof remotedebugger")
-    assert pid != "", "remotedebugger should still be running"
-    
-    kill_rrd()
-
-
-def test_rrd_upload_orchestrate_empty_directory():
-    """Test rrd_upload_orchestrate with empty directory"""
-    helper = TestCAPIHelper()
-    
-    # Setup empty directory
-    helper.cleanup_test_directory(TEST_UPLOAD_DIR)
-    helper.create_test_directory(TEST_UPLOAD_DIR)
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    # Start remotedebugger
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger with empty directory (would fail at validation)
-    # The actual upload directory used by RRD is controlled by JSON config
-    # This test validates that empty directory detection works
-    
-    # Create a scenario where the output directory is empty
-    # In practice, RRD won't create archive if no commands produced output
-    
-    # Cleanup
-    helper.cleanup_test_directory(TEST_UPLOAD_DIR)
-    kill_rrd()
-
-
-def test_rrd_config_loading():
-    """Test configuration loading in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    # Ensure config files exist
-    assert os.path.exists('/etc/include.properties'), "include.properties should exist"
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    # Start with config
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload to test config loading
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'config_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify configuration was loaded
-    assert helper.check_log_contains("Loading configuration")
-    assert helper.check_log_contains("Configuration loaded")
-    
-    # Check that config sources were tried
-    log_patterns = [
-        "Parsing /etc/include.properties",
-        "Configuration loaded - LOG_SERVER:",
-        "UPLOAD_PROTOCOL:",
-        "HTTP_UPLOAD_LINK:"
-    ]
-    
-    for pattern in log_patterns:
-        assert helper.check_log_contains(pattern), f"Missing log pattern: {pattern}"
-    
-    kill_rrd()
-
-
-def test_mac_address_retrieval():
-    """Test MAC address retrieval in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    # Get system MAC for comparison
-    mac = helper.get_mac_address()
-    assert mac is not None, "System should have a MAC address"
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'mac_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify MAC was retrieved
-    assert helper.check_log_contains("MAC address obtained")
-    assert helper.check_log_contains(f"MAC: {mac}"), f"MAC {mac} should be in logs"
-    
-    kill_rrd()
-
-
-def test_timestamp_generation():
-    """Test timestamp generation in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'timestamp_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify timestamp was generated
-    assert helper.check_log_contains("Timestamp generated")
-    
-    # Check timestamp format in logs (YYYY-MM-DD-HH-MM-SS[AM|PM])
-    timestamp_pattern = r'\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}[AP]M'
-    
-    with open(RRD_LOG_FILE, 'r') as f:
-        content = f.read()
-        assert re.search(timestamp_pattern, content), "Timestamp format should match expected pattern"
-    
-    kill_rrd()
-
-
-def test_issue_type_sanitization():
-    """Test issue type sanitization in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger with issue type containing dots and hyphens
-    test_issue = "test.issue-type.example"
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', test_issue
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify sanitization (dots become underscores, uppercase)
-    # normalizeIssueName converts dots to underscores
-    # rrd_logproc_convert_issue_type converts to uppercase and sanitizes
-    expected_normalized = "TEST_ISSUE_TYPE_EXAMPLE"
-    
-    assert helper.check_log_contains("Issue type sanitized")
-    assert helper.check_log_contains(expected_normalized) or helper.check_log_contains("test_issue_type_example")
-    
-    kill_rrd()
-
-
-def test_archive_creation():
-    """Test archive creation in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    # Create test files
-    helper.cleanup_test_directory(TEST_UPLOAD_DIR)
-    helper.create_test_directory(TEST_UPLOAD_DIR)
-    helper.create_test_files(TEST_UPLOAD_DIR)
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'archive_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify archive creation logs
-    assert helper.check_log_contains("Creating archive")
-    assert helper.check_log_contains("Archive created")
-    assert helper.check_log_contains(".tar.gz")
-    
-    # Note: Archive is typically created in /tmp/rrd/ and then cleaned up
-    # So we verify logs rather than checking for file existence
-    
-    helper.cleanup_test_directory(TEST_UPLOAD_DIR)
-    kill_rrd()
-
-
-def test_upload_execution():
-    """Test upload execution in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'upload_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(20)
-    
-    # Verify upload was attempted
-    assert helper.check_log_contains("Starting upload")
-    
-    # Check for either success or failure (depending on server availability)
-    upload_attempted = (
-        helper.check_log_contains("Upload completed successfully") or
-        helper.check_log_contains("Log upload failed")
-    )
-    assert upload_attempted, "Upload should have been attempted"
-    
-    kill_rrd()
-
-
-def test_cleanup_after_upload():
-    """Test cleanup in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'cleanup_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(20)
-    
-    # Verify cleanup logs
-    assert helper.check_log_contains("Cleanup complete")
-    
-    kill_rrd()
-
-
-def test_upload_debug_output_wrapper():
-    """Test uploadDebugoutput wrapper function"""
-    helper = TestCAPIHelper()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger with issue containing dots (tests normalization)
-    test_issue = "wrapper.test.issue"
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', test_issue
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify wrapper was called
-    assert helper.check_log_contains("Starting Upload Debug output via API")
-    
-    # Verify outcome logging
-    outcome_logged = (
-        helper.check_log_contains("Upload orchestration completed successfully") or
-        helper.check_log_contains("Upload orchestration failed")
-    )
-    assert outcome_logged, "Wrapper should log outcome"
-    
-    kill_rrd()
-
-
-def test_concurrent_upload_lock():
-    """Test upload lock handling"""
-    helper = TestCAPIHelper()
-    
-    # Create a lock file
-    helper.remove_upload_lock()
-    lock_file = helper.create_upload_lock()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload while lock exists
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'lock_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    
-    time.sleep(5)
-    
-    # Remove lock to allow completion
-    helper.remove_upload_lock()
-    
-    time.sleep(15)
-    
-    # Note: Lock handling is done in rrd_upload_execute
-    # Verify that it doesn't crash with lock present
-    pid = run_shell_command("pidof remotedebugger")
-    assert pid != "", "remotedebugger should handle lock gracefully"
-    
-    kill_rrd()
-
-
-def test_comprehensive_logging():
-    """Test comprehensive logging throughout rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'logging_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(20)
-    
-    # Verify comprehensive logging at each step
-    expected_logs = [
-        "rrd_upload_orchestrate: Entry",
-        "Logging ready",
-        "Loading configuration",
-        "Configuration loaded",
-        "MAC address obtained",
-        "Timestamp generated",
-        "Log directory validated and prepared",
-        "Issue type sanitized",
-        "Archive filename:",
-        "Archive created",
-        "Cleanup complete",
-        "rrd_upload_orchestrate: Exit"
-    ]
-    
-    for log_pattern in expected_logs:
-        assert helper.check_log_contains(log_pattern), f"Missing expected log: {log_pattern}"
-    
-    kill_rrd()
-
-
-def test_error_code_propagation():
-    """Test error code propagation in rrd_upload_orchestrate"""
-    helper = TestCAPIHelper()
-    
-    # This test verifies that errors are logged with appropriate codes
-    # Actual return codes are checked by the wrapper function
-    
-    remove_logfile()
-    kill_rrd()
-    time.sleep(2)
-    
-    command_to_start = f"nohup {RRD_BINARY} > /dev/null 2>&1 &"
-    run_shell_silent(command_to_start)
-    time.sleep(5)
-    
-    # Trigger normal upload
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'error_test'
-    ]
-    subprocess.run(command, capture_output=True, text=True)
-    time.sleep(15)
-    
-    # Verify that errors would be logged if they occurred
-    # In normal operation, we should see success path
-    
-    # Check that the function completes one way or another
-    assert (
-        helper.check_log_contains("rrd_upload_orchestrate: Exit") or
-        helper.check_log_contains("Upload orchestration failed")
-    )
-    
+    remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()

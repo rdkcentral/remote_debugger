@@ -43,7 +43,7 @@ fi
 if [ ! -d tr69hostif ]; then
     git clone https://github.com/rdkcentral/tr69hostif.git
 fi
-git clone https://github.com/rdkcentral/dcm-agent.git -b feature/logupload_copilot_lib
+git clone https://github.com/rdkcentral/dcm-agent.git -b develop
 
 cd dcm-agent
 sh cov_build.sh

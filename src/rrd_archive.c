@@ -384,7 +384,7 @@ int rrd_archive_generate_filename(const char *mac, const char *issue_type, const
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Filename truncated\n", __FUNCTION__);
         return -1;
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s] Generated filename: %s\n", __FUNCTION__, filename);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Generated filename: %s\n", __FUNCTION__, filename);
     return 0;
 }
 
