@@ -80,3 +80,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_ba
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_static.json test/functional-tests/tests/test_rrd_deepsleep_static_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_c_api_upload.json test/functional-tests/tests/test_rrd_c_api_upload.py
+
