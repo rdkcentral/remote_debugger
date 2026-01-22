@@ -30,6 +30,8 @@ mkdir -p "$LIB_DIR"
 mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
+echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
+
 
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
@@ -79,3 +81,4 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_st
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_static.json test/functional-tests/tests/test_rrd_deepsleep_static_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_c_api_upload.json test/functional-tests/tests/test_rrd_c_api_upload.py

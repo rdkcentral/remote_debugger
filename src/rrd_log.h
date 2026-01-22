@@ -17,21 +17,14 @@
  * limitations under the License.
 */
 
-#ifndef _RRDEXECUTESCRIPT_H_
-#define _RRDEXECUTESCRIPT_H_
+#ifndef RRD_LOG_H
+#define RRD_LOG_H
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+// Initialize rdklogger
+int rrd_log_init(const char *debug_ini_file);
 
-#include "rrdCommon.h"
-#include "rrd_upload.h"
+// Logging macro placeholder (replace with actual RDK_LOG macro)
+#define LOG_UPLOADRRDLOGS "LOG.RDK.UPLOADRRDLOGS"
 
-int uploadDebugoutput(char *outdir, char *issuename);
+#endif // RRD_LOG_H
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif

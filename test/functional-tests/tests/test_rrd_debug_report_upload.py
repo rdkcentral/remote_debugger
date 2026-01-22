@@ -34,11 +34,12 @@ def reset_issuetype_rfc():
 
 def get_rrd_tarfile():
     logfile = '/opt/logs/remotedebugger.log.0'
-    command = f"grep 'uploadSTBLogs.sh' {logfile} | grep -oP '\\S+\\.tgz'"
+    command = f"grep 'Generated filename:' {logfile} | grep -oP '\\S+\\.tgz'"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         return result.stdout.strip()
     return None
+
 
 def download_file(filename):
     url = f"https://mockxconf:50054/tmp/{filename}"
@@ -141,7 +142,7 @@ def test_remote_debugger_trigger_event():
     result = check_output_dir()
     print(result)
 
-    UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
+    UPLOAD_LOGS = "Starting Upload Debug output via API..."
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
 

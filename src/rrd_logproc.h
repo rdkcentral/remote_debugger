@@ -1,5 +1,6 @@
 /*
- * If not stated otherwise in this file or this component's LICENSE file the
+ *
+ * If not stated otherwise in this file or this component's Licenses.txt file the
  * following copyright and licenses apply:
  *
  * Copyright 2018 RDK Management
@@ -15,23 +16,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-#ifndef _RRDEXECUTESCRIPT_H_
-#define _RRDEXECUTESCRIPT_H_
+#ifndef RRD_LOGPROC_H
+#define RRD_LOGPROC_H
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#include <stddef.h>
 
-#include "rrdCommon.h"
-#include "rrd_upload.h"
+int rrd_logproc_validate_source(const char *source_dir);
+int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type);
+int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size);
+int rrd_logproc_handle_live_logs(const char *source_dir);
 
-int uploadDebugoutput(char *outdir, char *issuename);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+#endif // RRD_LOGPROC_H

@@ -112,25 +112,102 @@ def test_remote_debugger_trigger_event():
     UPLOAD_LOGS = "Starting Upload Debug output via API"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
+    # Verify rrd_upload_orchestrate() function logs
+    print("Validating rrd_upload_orchestrate logs...")
+    
+    # Check orchestration entry
+    ORCHESTRATE_ENTRY = "Executing binary to upload Debug info of ISSUETYPE"
+    assert ORCHESTRATE_ENTRY in grep_rrdlogs(ORCHESTRATE_ENTRY), "Missing orchestration entry log"
+    
+    # Check logging subsystem initialization
+    LOGGING_READY = "Logging ready"
+    assert LOGGING_READY in grep_rrdlogs(LOGGING_READY), "Missing logging ready log"
+    
+    # Check configuration loading
+    CONFIG_LOADED = "Configuration loaded"
+    assert CONFIG_LOADED in grep_rrdlogs(CONFIG_LOADED), "Missing configuration loaded log"
+    
+    # Check MAC and timestamp
+    MAC_TIMESTAMP = "MAC:"
+    assert MAC_TIMESTAMP in grep_rrdlogs(MAC_TIMESTAMP), "Missing MAC address log"
+    
+    TIMESTAMP_LOG = "Timestamp:"
+    assert TIMESTAMP_LOG in grep_rrdlogs(TIMESTAMP_LOG), "Missing timestamp log"
+    
+    # Check directory validation
+    CHECKING_SIZE = "size and contents"
+    assert CHECKING_SIZE in grep_rrdlogs(CHECKING_SIZE), "Missing directory size check log"
+    
+    LOG_DIR_VALIDATED = "Log directory validated and prepared"
+    assert LOG_DIR_VALIDATED in grep_rrdlogs(LOG_DIR_VALIDATED), "Missing log directory validation log"
+    
+    # Check issue type sanitization
+    ISSUE_SANITIZED = "Issue type sanitized"
+    assert ISSUE_SANITIZED in grep_rrdlogs(ISSUE_SANITIZED), "Missing issue type sanitized log"
+    
+    # Check archive filename generation
+    ARCHIVE_FILENAME = "Archive filename:"
+    assert ARCHIVE_FILENAME in grep_rrdlogs(ARCHIVE_FILENAME), "Missing archive filename log"
+    
+    # Check archive creation
+    CREATING_TARFILE = "Creating"
+    TARFILE_TEXT = "tarfile from Debug Commands output"
+    assert CREATING_TARFILE in grep_rrdlogs(CREATING_TARFILE), "Missing tarfile creation log"
+    assert TARFILE_TEXT in grep_rrdlogs(TARFILE_TEXT), "Missing tarfile output log"
+    
+    # Check upload invocation
+    INVOKING_UPLOAD = "Invoking uploadSTBLogs binary to upload"
+    assert INVOKING_UPLOAD in grep_rrdlogs(INVOKING_UPLOAD), "Missing upload invocation log"
+    
+    UPLOAD_PARAMS = "uploadSTBLogs parameters - server:"
+    assert UPLOAD_PARAMS in grep_rrdlogs(UPLOAD_PARAMS), "Missing upload parameters log"
+    
+    print("All rrd_upload_orchestrate logs validated successfully")
+
 def test_remotedebugger_upload_report():
-    UPLOAD_SUCCESS = "RRD Upload Script Execution Success"
-    UPLOAD_FAILURE = "RRD Upload Script Execution Failure"
+    print("Validating upload report logs...")
+    
+    # Check for upload result logs from rrd_upload_orchestrate
+    UPLOAD_SUCCESS = "Debug Information Report upload Success"
+    UPLOAD_FAILURE = "Debug Information Report upload Failed"
+    
     if UPLOAD_SUCCESS in grep_rrdlogs(UPLOAD_SUCCESS):
-        print("Upload success")
+        print("Upload successful - validating success path logs")
+        
+        # On success, check for cleanup logs
+        REMOVING_REPORT = "Removing uploaded report"
+        assert REMOVING_REPORT in grep_rrdlogs(REMOVING_REPORT), "Missing report removal log"
+        
+        # Check for orchestration exit
+        ORCHESTRATE_EXIT = "Exit"
+        assert ORCHESTRATE_EXIT in grep_rrdlogs(ORCHESTRATE_EXIT), "Missing orchestration exit log"
+        
     elif UPLOAD_FAILURE in grep_rrdlogs(UPLOAD_FAILURE):
-        print("Upload failed")
+        print("Upload failed - validating failure path logs")
+        # On failure, cleanup still happens but with different flow
+        
     else:
-        print("Upload status not found in logs")
-
-    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
-    SCRIPT_FAILURE = "Debug Information Report upload Success"
-    if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
-        print("Script execution success")
-    elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
-        print("Script execution failed")
-    else:
-        print("Script execution not found in logs")
-
+        # Check legacy log messages for backward compatibility
+        LEGACY_SUCCESS = "RRD Upload Script Execution Success"
+        LEGACY_FAILURE = "RRD Upload Script Execution Failure"
+        
+        if LEGACY_SUCCESS in grep_rrdlogs(LEGACY_SUCCESS):
+            print("Legacy upload success log found")
+        elif LEGACY_FAILURE in grep_rrdlogs(LEGACY_FAILURE):
+            print("Legacy upload failure log found")
+        else:
+            print("Warning: No upload status logs found")
+    
+    # Verify that the upload orchestration completed
+    ORCHESTRATE_LOGS_PRESENT = (
+        "Logging ready" in grep_rrdlogs("Logging ready") and
+        "Configuration loaded" in grep_rrdlogs("Configuration loaded")
+    )
+    assert ORCHESTRATE_LOGS_PRESENT, "Upload orchestration did not execute properly"
+    
+    print("Upload report validation completed")
+    
+    # Cleanup
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()
