@@ -300,6 +300,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
     	RRDMsgDeliver(msqid, sendbuf);
 	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
+	/* coverity[leaked_storage] */
 	remove_item(cache);
     }
     else
@@ -338,10 +339,12 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     if (dataMsg[0] == '\0' || len <= 0  )
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
+        free(dataMsg);
     }
     else
     {
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
+        /* coverity[leaked_storage] */
     }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
@@ -393,6 +396,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         }	
         RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
+        /* coverity[leaked_storage] */
     }
 }
 
@@ -417,7 +421,7 @@ int RRD_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
 #endif
 #if !defined(GTEST_ENABLE)
-    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
+    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);

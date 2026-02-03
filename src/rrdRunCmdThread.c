@@ -40,7 +40,9 @@ static cacheData *cacheDataNode = NULL;
 void initCache(void)
 {
     pthread_mutex_init(&rrdCacheMut, NULL);
+    pthread_mutex_lock(&rrdCacheMut);
     cacheDataNode = NULL;
+    pthread_mutex_unlock(&rrdCacheMut);
 }
 
 /*
@@ -375,8 +377,9 @@ bool executeCommands(issueData *cmdinfo)
             /*Executing Commands using systemd-run*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Executing following commands using systemd-run:\n \"%s\"\n",__FUNCTION__,__LINE__,cmdData->command);
 
-            strncpy(remoteDebuggerServiceStr, remoteDebuggerPrefix, strlen(remoteDebuggerPrefix) + 1);
-	    strncat(remoteDebuggerServiceStr, cmdData->rfcvalue, strlen(cmdData->rfcvalue));
+            strncpy(remoteDebuggerServiceStr, remoteDebuggerPrefix, sizeof(remoteDebuggerServiceStr) - 1);
+            remoteDebuggerServiceStr[sizeof(remoteDebuggerServiceStr) - 1] = '\0';
+            strncat(remoteDebuggerServiceStr, cmdData->rfcvalue, sizeof(remoteDebuggerServiceStr) - strlen(remoteDebuggerServiceStr) - 1);
 
 	    removeQuotes(cmdData->command);
 	    
@@ -389,8 +392,8 @@ bool executeCommands(issueData *cmdinfo)
             {
                 RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
 		copyDebugLogDestFile(systemdfp, filePointer);
+                v_secure_pclose(systemdfp);
             }
-            v_secure_pclose(systemdfp);
 
             /*Logging output using journalctl to Output file*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Using journalctl to log command output...\n",__FUNCTION__,__LINE__);
@@ -403,9 +406,8 @@ bool executeCommands(issueData *cmdinfo)
             {
                 RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: journalctl remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
 		copyDebugLogDestFile(journalctlfp, filePointer);
+                v_secure_pclose(journalctlfp);
             }
-            
-	    v_secure_pclose(journalctlfp);
 
 	    /* Close debug_output.txt file*/
 	    fclose(filePointer);
