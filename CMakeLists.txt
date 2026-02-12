@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(rrd_otel_cpp_wrapper VERSION 1.0.0 LANGUAGES CXX)
 
+
+include(GNUInstallDirs)
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,13 +40,13 @@ endif()
 
 # Install library for Makefile to link against
 install(TARGETS rrd_otel_cpp_wrapper
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 # Install header for C code to include
 install(FILES src/rrdOpenTelemetry_cpp_wrapper.h
-    DESTINATION include
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # ============================================================================
