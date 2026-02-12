@@ -37,13 +37,13 @@ endif()
 
 # Install library for Makefile to link against
 install(TARGETS rrd_otel_cpp_wrapper
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
 )
 
 # Install header for C code to include
 install(FILES src/rrdOpenTelemetry_cpp_wrapper.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    DESTINATION include
 )
 
 # ============================================================================
