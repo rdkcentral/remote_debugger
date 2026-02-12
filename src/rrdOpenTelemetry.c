@@ -31,6 +31,22 @@
 #define RDK_LOG(a, b, c, ...) printf(c, ##__VA_ARGS__)
 #endif
 
+/* ✅ CRITICAL FIXES #1-6: Forward declarations for C++ wrapper functions */
+/* These provide the actual OpenTelemetry-CPP SDK integration with all 6 fixes:
+ * #1: Parent SpanContext conversion from W3C hex format
+ * #2: StartSpan with StartSpanOptions and parent context
+ * #3: Thread-local trace::Scope management for context propagation
+ * #4: Resource attributes with service metadata
+ * #5: Thread-safe span storage with std::map + std::mutex
+ * #6: SimpleSpanProcessor (sync) instead of BatchSpanProcessor (async)
+ */
+extern int rrdOtel_Initialize_Cpp(const char *serviceName, const char *collectorEndpoint);
+extern uint64_t rrdOtel_StartSpan_Cpp(const char *spanName, const char *attributes,
+                                       const char *traceParent);
+extern int rrdOtel_EndSpan_Cpp(uint64_t spanHandle);
+extern int rrdOtel_LogEvent_Cpp(const char *eventName, const char *eventData);
+extern int rrdOtel_Shutdown_Cpp(void);
+
 /* Thread-local storage for trace context */
 static __thread rrd_otel_context_t g_thread_local_context = {0};
 static pthread_once_t g_otel_init_once = PTHREAD_ONCE_INIT;
@@ -83,37 +99,19 @@ int rrdOtel_Initialize(const char *serviceName, const char *collectorEndpoint)
             "[%s:%d]: Initializing OpenTelemetry for service '%s' with collector '%s'\n",
             __FUNCTION__, __LINE__, serviceName, collectorEndpoint);
 
-    /* 
-     * Initialize OpenTelemetry-CPP SDK with OTLP exporter
-     * Note: In a full C++ implementation, this would:
-     * 1. Create OtlpHttpExporterOptions with collectorEndpoint
-     * 2. Create OtlpHttpExporter(options)
-     * 3. Create SimpleSpanProcessorFactory or BatchSpanProcessorFactory
-     * 4. Create TracerProvider with the span processor
-     * 5. Set global TracerProvider via GetTracerProvider()->AddProcessor()
-     * 
-     * For C implementation, we create a minimal wrapper that:
-     * - Stores service name and endpoint for later use
-     * - Initializes thread-local storage for spans
-     * - Sets up periodic flush mechanism
-     * 
-     * In production, this would call C++ code like:
-     * 
-     * auto exporter = std::make_unique<opentelemetry::exporter::otlp::OtlpHttpExporter>(
-     *     opentelemetry::exporter::otlp::OtlpHttpExporterOptions{collectorEndpoint});
-     * 
-     * auto processor = std::make_unique<opentelemetry::sdk::trace::BatchSpanProcessor>(
-     *     std::move(exporter));
-     * 
-     * auto provider = std::make_shared<opentelemetry::sdk::trace::TracerProvider>();
-     * provider->AddProcessor(std::move(processor));
-     * opentelemetry::trace::Provider::SetTracerProvider(provider);
+    /* ✅ CRITICAL FIXES #1-6: Call C++ wrapper with all fixes:
+     * #1: W3C hex format parent context conversion (inside StartSpan_Cpp)
+     * #2: StartSpanOptions with parent context linking
+     * #3: Thread-local trace::Scope management
+     * #4: Resource attributes with service.name, version, namespace, environment
+     * #5: std::unordered_map + std::mutex for thread-safe span tracking
+     * #6: SimpleSpanProcessor (sync immediate export) instead of Batch
      */
-
-    if (pthread_key_create(&g_thread_local_key, NULL) != 0)
+    int result = rrdOtel_Initialize_Cpp(serviceName, collectorEndpoint);
+    if (result != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-                "[%s:%d]: Failed to create thread-local storage key\n",
+                "[%s:%d]: Failed to initialize OpenTelemetry C++ wrapper\n",
                 __FUNCTION__, __LINE__);
         return -1;
     }
@@ -146,36 +144,21 @@ int rrdOtel_Shutdown(void)
             "[%s:%d]: Shutting down OpenTelemetry\n",
             __FUNCTION__, __LINE__);
 
-    /* 
-     * OpenTelemetry-CPP SDK Shutdown Implementation:
-     * 
-     * In a full C++ implementation with OTEL SDK, this would:
-     * 1. Get global TracerProvider:
-     *    auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-     * 
-     * 2. Force flush all pending spans:
-     *    provider->ForceFlush(std::chrono::milliseconds(5000));  // Wait up to 5s
-     * 
-     * 3. Shutdown all span processors:
-     *    Each processor flushes remaining spans via the exporter
-     * 
-     * 4. Close HTTP connections:
-     *    OtlpHttpExporter closes persistent connections to collector
-     * 
-     * 5. Release resources:
-     *    Deallocate SDK instances and thread-local storage
-     * 
-     * Flush behavior:
-     * - BatchSpanProcessor flushes accumulated spans
-     * - OtlpHttpExporter batches into OTLP protobuf messages
-     * - HTTP POST to collector_endpoint/v1/traces
-     * - Waits for acknowledgment before returning
-     * 
-     * Ensures no traces are lost during shutdown.
+    /* ✅ CRITICAL FIXES #1-6: Call C++ wrapper shutdown with proper cleanup
+     * The C++ wrapper will:
+     * 1. Flush all pending spans to the OTLP collector
+     * 2. Close HTTP connections gracefully
+     * 3. Deallocate TracerProvider and processors
+     * 4. Release all resources allocated in Initialize_Cpp
      */
-
+    int result = rrdOtel_Shutdown_Cpp();
+    
     g_otel_initialized = 0;
-    return 0;
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+            "[%s:%d]: OpenTelemetry shutdown completed\n",
+            __FUNCTION__, __LINE__);
+    
+    return result;
 }
 
 /**
@@ -256,164 +239,79 @@ int rrdOtel_GenerateContext(rrd_otel_context_t *ctx)
  */
 uint64_t rrdOtel_StartSpan(const char *spanName, const char *attributes)
 {
-    if (!spanName || g_span_count >= MAX_SPANS_PER_THREAD)
+    if (!spanName)
     {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Invalid span name\n", __FUNCTION__, __LINE__);
         return 0;
     }
 
-    uint64_t spanId = (uint64_t)time(NULL) * 1000000 + g_span_count;
-    
-    otel_span_t *span = &g_active_spans[g_span_count];
-    span->spanId = spanId;
-    span->startTime = (uint64_t)time(NULL);
-    strncpy(span->spanName, spanName, sizeof(span->spanName) - 1);
-    span->spanName[sizeof(span->spanName) - 1] = '\0';
-    if (attributes)
-    {
-        strncpy(span->attributes, attributes, sizeof(span->attributes) - 1);
-        span->attributes[sizeof(span->attributes) - 1] = '\0';
-    }
-    else
-    {
-        span->attributes[0] = '\0';
-    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+            "[%s:%d]: Starting span '%s'\n", __FUNCTION__, __LINE__, spanName);
 
-    g_span_count++;
+    /* ✅ CRITICAL FIXES #1-3: Call C++ wrapper with parent context and all fixes:
+     * #1: Parent context conversion from W3C hex format (done in wrapper)
+     *      Format: 00-<32hexchars>-<16hexchars>-<2hexchars>
+     * #2: StartSpanOptions with parent context linking (ensures parent-child relationship)
+     * #3: Thread-local trace::Scope activation (makes span current for nested operations)
+     * The wrapper also handles #4 (Resource attrs), #5 (thread-safe map+mutex), #6 (SimpleProcessor)
+     */
+    uint64_t spanHandle = rrdOtel_StartSpan_Cpp(spanName, attributes,
+                                                 g_thread_local_context.traceParent);
+    
+    if (spanHandle == 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Failed to create span '%s'\n", __FUNCTION__, __LINE__, spanName);
+        return 0;
+    }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
-            "[%s:%d]: Started span '%s' (ID: %llu) with attributes: %s\n",
-            __FUNCTION__, __LINE__, spanName, (unsigned long long)spanId, 
-            attributes ? attributes : "none");
+            "[%s:%d]: Created span '%s' (handle: %llu)\n",
+            __FUNCTION__, __LINE__, spanName, (unsigned long long)spanHandle);
 
-    /* 
-     * OpenTelemetry-CPP Span Creation Implementation:
-     * 
-     * In a full C++ implementation with OTEL SDK, this would:
-     * 1. Get the global TracerProvider:
-     *    auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-     * 
-     * 2. Get a tracer:
-     *    auto tracer = provider->GetTracer("remote-debugger", "1.0");
-     * 
-     * 3. Parse parent trace context from g_thread_local_context.traceParent:
-     *    Extract trace ID and span ID from W3C format (00-traceId-spanId-flags)
-     * 
-     * 4. Create parent span context:
-     *    auto parent_ctx = SpanContext::FromString(traceParent);
-     * 
-     * 5. Create child span:
-     *    auto span_opts = StartSpanOptions{};
-     *    span_opts.parent = parent_ctx;  // Link to parent trace
-     *    auto span = tracer->StartSpan(spanName, span_opts);
-     * 
-     * 6. Set attributes if provided:
-     *    if (attributes) {
-     *        span->SetAttribute("custom_attributes", attributes);
-     *    }
-     * 
-     * 7. Store span handle for later reference:
-     *    span->SetAttribute("span_handle", spanId);
-     * 
-     * For this C implementation, the span data is stored locally and will be:
-     * - Exported via the span processor when End is called
-     * - Transmitted to the collector endpoint via OTLP HTTP
-     * - Visible in Jaeger UI with proper parent-child relationships
-     */
-
-    return spanId;
+    return spanHandle;
 }
 
 /**
  * @brief End a span and mark it for export
  * 
- * Finalizes the span by recording end time and attributes.
- * The span is now ready to be exported to the collector.
+ * Finalizes the span by recording end time. The span is exported to the OTLP collector.
  */
 int rrdOtel_EndSpan(uint64_t spanHandle)
 {
-    if (g_span_count <= 0)
+    if (spanHandle == 0)
     {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Invalid span handle\n", __FUNCTION__, __LINE__);
         return -1;
     }
 
-    /* Find and close the span */
-    for (int i = 0; i < g_span_count; i++)
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+            "[%s:%d]: Ending span (handle: %llu)\n", __FUNCTION__, __LINE__,
+            (unsigned long long)spanHandle);
+
+    /* ✅ CRITICAL FIXES #1-3: Call C++ wrapper to end span with all fixes:
+     * #1-2: Parent context properly linked during creation (already done in StartSpan_Cpp)
+     * #3: Deactivates trace::Scope (clears thread-local current span)
+     * Also handles #5 (thread-safe removal) and #6 (SimpleProcessor immediate export)
+     */
+    int result = rrdOtel_EndSpan_Cpp(spanHandle);
+
+    if (result == 0)
     {
-        if (g_active_spans[i].spanId == spanHandle)
-        {
-            uint64_t duration = (uint64_t)time(NULL) - g_active_spans[i].startTime;
-            
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
-                    "[%s:%d]: Ended span '%s' (ID: %llu) duration: %llu seconds\n",
-                    __FUNCTION__, __LINE__, g_active_spans[i].spanName,
-                    (unsigned long long)spanHandle, (unsigned long long)duration);
-
-            /* Remove span from tracking */
-            g_active_spans[i].spanId = 0;
-            g_span_count--;
-
-            /* 
-             * OpenTelemetry-CPP Span Finalization Implementation:
-             * 
-             * In a full C++ implementation with OTEL SDK, this would:
-             * 1. Get the span from the span collection:
-             *    auto span = FindSpanById(spanHandle);
-             * 
-             * 2. Set end time:
-             *    span->End(EndSpanOptions{std::chrono::system_clock::now()});
-             * 
-             * 3. The span processor automatically:
-             *    - Collects the span
-             *    - Batches spans for efficient export
-             *    - Sends to OTLP collector endpoint via HTTP
-             * 
-             * 4. Export flow:
-             *    BatchSpanProcessor accumulates spans and periodically:
-             *    - Calls exporter->Export(spans)
-             *    - OtlpHttpExporter converts spans to OTLP protobuf format
-             *    - Sends HTTP POST request to collector_endpoint/v1/traces
-             *    - Collector forwards to Jaeger backend
-             * 
-             * 5. Jaeger visualization:
-             *    - Spans appear with parent-child relationships
-             *    - Timeline shows execution flow
-             *    - Attributes and events visible in UI
-             * 
-             * Example OTLP request:
-             * POST http://localhost:4318/v1/traces
-             * Content-Type: application/x-protobuf
-             * 
-             * ResourceSpans {
-             *   resource: {
-             *     attributes: {
-             *       service.name: "remote-debugger"
-             *     }
-             *   }
-             *   scope_spans: [
-             *     {
-             *       scope: { name: "remote-debugger", version: "1.0" }
-             *       spans: [
-             *         {
-             *           trace_id: "..." (from traceParent)
-             *           span_id: "..." (spanId)
-             *           parent_span_id: "..." (from traceParent parent)
-             *           name: "ProcessIssueEvent"
-             *           start_time: ...
-             *           end_time: ...
-             *           attributes: { ... }
-             *           status: UNSET
-             *         }
-             *       ]
-             *     }
-             *   ]
-             * }
-             */
-
-            return 0;
-        }
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "[%s:%d]: Ended span successfully, exported to collector\n",
+                __FUNCTION__, __LINE__);
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Failed to end span (handle: %llu)\n", __FUNCTION__, __LINE__,
+                (unsigned long long)spanHandle);
     }
 
-    return -1;
+    return result;
 }
 
 /**
@@ -424,8 +322,10 @@ int rrdOtel_EndSpan(uint64_t spanHandle)
  */
 int rrdOtel_LogEvent(const char *eventName, const char *eventData)
 {
-    if (!eventName || g_span_count == 0)
+    if (!eventName)
     {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Invalid event name\n", __FUNCTION__, __LINE__);
         return -1;
     }
 
@@ -433,57 +333,25 @@ int rrdOtel_LogEvent(const char *eventName, const char *eventData)
             "[%s:%d]: Logging event '%s' - data: %s\n",
             __FUNCTION__, __LINE__, eventName, eventData ? eventData : "");
 
-    /* 
-     * OpenTelemetry-CPP Event Logging Implementation:
+    /* ✅ CRITICAL FIXES #1-3: Call C++ wrapper to log event:
+     * The C++ wrapper has the currently active span via thread-local trace::Scope
+     * (#3 was activated in StartSpan_Cpp)
      * 
-     * In a full C++ implementation with OTEL SDK, this would:
-     * 1. Get the currently active span:
-     *    auto span = GetActiveSpan();  // From thread-local context
-     * 
-     * 2. Create event attributes map:
-     *    std::map<std::string, opentelemetry::common::AttributeValue> attributes;
-     *    if (eventData) {
-     *        attributes["event_data"] = eventData;
-     *        // Parse JSON or structured data if needed
-     *    }
-     * 
-     * 3. Add event to span:
-     *    span->AddEvent(eventName, attributes, std::chrono::system_clock::now());
-     * 
-     * 4. Event captured includes:
-     *    - Event name ("ProcessIssueEvent", "rbus_set", etc.)
-     *    - Timestamp (milliseconds precision)
-     *    - Attributes (event-specific key-value pairs)
-     * 
-     * 5. Export as part of span:
-     *    When span ends, all captured events are included in export:
-     *    
-     *    Event {
-     *      name: "ProcessIssueEvent"
-     *      time_unix_nano: 1707819600000000000
-     *      attributes: {
-     *        event_data: "issue_type=dvr_space..."
-     *      }
-     *    }
-     * 
-     * 6. Jaeger visualization:
-     *    - Timeline shows event markers
-     *    - Click to view event attributes
-     *    - Correlate events across spans
-     * 
-     * Example Jaeger span with events:
-     * 
-     *   ProcessIssueEvent ────────────────────► [500ms duration]
-     *     │
-     *     ├─ Event: "rbus_get" @ 0ms
-     *     │   └─ response_code: "200"
-     *     │
-     *     ├─ Event: "rbus_set" @ 250ms
-     *     │   └─ property: "Device.X_COMCAST-COM_..."
-     *     │
-     *     └─ Event: "rbus_get" @ 480ms
-     *         └─ response_code: "200"
+     * This adds timestamped event to the span that will be exported with it.
+     * Events help correlate RBUS property changes and other activities within trace.
      */
+    int result = rrdOtel_LogEvent_Cpp(eventName, eventData);
 
-    return 0;
+    if (result == 0)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "[%s:%d]: Event logged successfully\n", __FUNCTION__, __LINE__);
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Failed to log event (no active span?)\n", __FUNCTION__, __LINE__);
+    }
+
+    return result;
 }
