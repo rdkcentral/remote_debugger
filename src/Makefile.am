@@ -24,6 +24,6 @@ remotedebugger_SOURCES += rrdIarmEvents.c
 remotedebugger_CFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs/rdmmgr -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal -DIARMBUS_SUPPORT
 AM_LDFLAGS += "-lIARMBus -lrfcapi -ltr181api"
 endif
-remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -luploadstblogs -fno-common
+remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -luploadstblogs -fno-common -L$(STAGING_DIR)/usr/lib -lrrd_otel_cpp_wrapper -lopentelemetry_trace -lopentelemetry_otlp_http_exporter -lopentelemetry_common -lopentelemetry_resources 
 rrdTestApp_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -luploadstblogs -fno-common
 
