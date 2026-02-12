@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
-project(remote_debugger VERSION 1.0.0 LANGUAGES C CXX)
+project(rrd_otel_cpp_wrapper VERSION 1.0.0 LANGUAGES CXX)
 
-# Set C and C++ standards
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -22,36 +20,18 @@ if(NOT opentelemetry-cpp_FOUND AND NOT OPENTELEMETRY_FOUND)
     message(FATAL_ERROR "OpenTelemetry-CPP not found. Please install it or set CMAKE_PREFIX_PATH")
 endif()
 
-message(STATUS "OpenTelemetry-CPP found - building with distributed tracing support")
-
-# Include directories
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-)
+message(STATUS "OpenTelemetry-CPP found - building C++ wrapper for remote_debugger")
 
 # ============================================================================
 # OpenTelemetry C++ Wrapper Library
 # ============================================================================
-if(ENABLE_OPENTELEMETRY AND HAS_OPENTELEMETRY)
-    add_library(rrd_otel_cpp_wrapper STATIC
-        src/rrdOpenTelemetry_cpp_wrapper.cpp
-    )
-    
-    # Set C++17 requirement
-    target_compile_features(rrd_otel_cpp_wrapper PRIVATE cxx_std_17)
-    
-    # Link OpenTelemetry libraries
 add_library(rrd_otel_cpp_wrapper STATIC
     src/rrdOpenTelemetry_cpp_wrapper.cpp
 )
 
-# Set C++17 requirement
 target_compile_features(rrd_otel_cpp_wrapper PRIVATE cxx_std_17)
 
 # Link OpenTelemetry libraries
-if(opentelemetry-cpp_FOUND)
-    # Using CMake config
     target_link_libraries(rrd_otel_cpp_wrapper PUBLIC
         opentelemetry-cpp::trace
         opentelemetry-cpp::common
@@ -59,20 +39,12 @@ if(opentelemetry-cpp_FOUND)
         opentelemetry-cpp::otlp_http_exporter
         opentelemetry-cpp::resources
     )
-else()
-    # Using pkg-config
-    target_include_directories(rrd_otel_cpp_wrapper PUBLIC ${OPENTELEMETRY_INCLUDE_DIRS})
-    target_link_libraries(rrd_otel_cpp_wrapper PUBLIC ${OPENTELEMETRY_LIBRARIES})
-    target_compile_options(rrd_otel_cpp_wrapper PUBLIC ${OPENTELEMETRY_CFLAGS_OTHER})
-endif()
 
-# Include paths
 target_include_directories(rrd_otel_cpp_wrapper PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# Optional: Disable RTTI and exceptions for smaller binary (if compatible)
+# Optimize for size
 if(NOT MSVC)
     target_compile_options(rrd_otel_cpp_wrapper PRIVATE
         -fno-rtti
@@ -80,49 +52,26 @@ if(NOT MSVC)
     )
 endif()
 
-# Install library
+# Install library for Makefile to link against
 install(TARGETS rrd_otel_cpp_wrapper
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-# Install header
+# Install header for C code to include
 install(FILES src/rrdOpenTelemetry_cpp_wrapper.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rrd
-
-add_library(remote_debugger STATIC ${RRD_SOURCES})
-
-# Link OpenTelemetry wrapper if enabled
-if(ENABLE_OPENTELEMETRY AND HAS_OPENTELEMETRY)
-    target_link_libraries(re
-target_link_libraries(remote_debugger PUBLIC rrd_otel_cpp_wrapperude directories for remote_debugger
-target_include_directories(remote_debugger PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-)
-
-# Install library
-install(TARGETS remote_debugger
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-# Install public headers
-install(FILES
-    include/rrdOpenTelemetry.h
-    # Add other public headers here
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rrd
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # ============================================================================
-# Optional: Example/Test Application
-# ============================================================================
-option(BUILD_RRD_EXAMPLES "Build remote_debugger examples" OFF)
-Summary
+# Summary
 # ============================================================================
 message(STATUS "")
-message(STATUS "Remote Debugger Build Configuration:")
-message(STATUS "  C Standard:         ${CMAKE_C_STANDARD}")
+message(STATUS "C++ Wrapper Build Configuration:")
 message(STATUS "  C++ Standard:       ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Build Type:         ${CMAKE_BUILD_TYPE}")
-message(STATUS "  Install Prefix:
+message(STATUS "  Install Prefix:     ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "  Output Library:     librrd_otel_cpp_wrapper.a")
+message(STATUS "")
+message(STATUS "NOTE: Main binary built by existing Makefile")
+message(STATUS "")
