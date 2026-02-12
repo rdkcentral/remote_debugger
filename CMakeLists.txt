@@ -5,23 +5,6 @@ project(rrd_otel_cpp_wrapper VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find OpenTelemetry-CPP
-find_package(opentelemetry-cpp CONFIG QUIET)
-
-if(NOT opentelemetry-cpp_FOUND)
-    # Fall back to pkg-config (common in Yocto)
-    find_package(PkgConfig QUIET)
-    if(PkgConfig_FOUND)
-        pkg_check_modules(OPENTELEMETRY opentelemetry-cpp)
-    endif()
-endif()
-
-if(NOT opentelemetry-cpp_FOUND AND NOT OPENTELEMETRY_FOUND)
-    message(FATAL_ERROR "OpenTelemetry-CPP not found. Please install it or set CMAKE_PREFIX_PATH")
-endif()
-
-message(STATUS "OpenTelemetry-CPP found - building C++ wrapper for remote_debugger")
-
 # ============================================================================
 # OpenTelemetry C++ Wrapper Library
 # ============================================================================
