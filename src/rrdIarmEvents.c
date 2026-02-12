@@ -18,7 +18,8 @@
  */
 
 #include "rrdInterface.h"
-#include "rrdRunCmdThread.h" 
+#include "rrdRunCmdThread.h"
+#include "rrdOpenTelemetry.h"
 #if defined(PWRMGR_PLUGIN)
 #include "power_controller.h"
 #include <pthread.h>
@@ -156,7 +157,21 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         rbusValue_t value;
 	    rbusValue_Init(&value);
         rbusValue_SetString(value,"root");
+		
+		/* Generate and set trace context before RBUS operation */
+        rrd_otel_context_t ctx;
+        rrdOtel_GenerateContext(&ctx);
+        rrdOtel_SetContext(&ctx);
+        rbusHandle_SetTraceContextFromString(rrdRbusHandle, ctx.traceParent, ctx.traceState);
+		
         rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
+
+		/* Log the operation in trace */
+        rrdOtel_LogEvent("rbus_set", RRD_WEBCFG_FORCE_SYNC);
+        
+        /* Clear trace context after operation */
+        rbusHandle_ClearTraceContext(rrdRbusHandle);
+		
 #ifndef USE_L2_SUPPORT
 	if (rc != RBUS_ERROR_SUCCESS)
         {
