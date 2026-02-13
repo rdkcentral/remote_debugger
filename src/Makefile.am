@@ -15,6 +15,9 @@ remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h \
 rrdTestApp_SOURCES = rrdTraceTestApp.c
 remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdDynamic.c rrdExecuteScript.c rrdMsgPackDecoder.c rrdInterface.c uploadRRDLogs.c rrd_config.c rrd_sysinfo.c rrd_logproc.c rrd_archive.c rrd_upload.c rrdOpenTelemetry.c
 
+# Allow wrapper library path to be overridden (for Yocto builds)
+RRD_OTEL_WRAPPER_DIR ?= $(STAGING_DIR)/usr/lib
+
 remotedebugger_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} $(CJSON_CFLAGS)
 rrdTestApp_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} $(CJSON_CFLAGS)
 AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper "
@@ -24,6 +27,6 @@ remotedebugger_SOURCES += rrdIarmEvents.c
 remotedebugger_CFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs/rdmmgr -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal -DIARMBUS_SUPPORT
 AM_LDFLAGS += "-lIARMBus -lrfcapi -ltr181api"
 endif
-remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -luploadstblogs -fno-common -L$(STAGING_DIR)/usr/lib -lrrd_otel_cpp_wrapper -lopentelemetry_trace -lopentelemetry_otlp_http_exporter -lopentelemetry_common -lopentelemetry_resources 
 rrdTestApp_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -luploadstblogs -fno-common
+remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -luploadstblogs -fno-common -L$(RRD_OTEL_WRAPPER_DIR) -lrrd_otel_cpp_wrapper -lopentelemetry_trace -lopentelemetry_otlp_http_exporter -lopentelemetry_common -lopentelemetry_resources
 
