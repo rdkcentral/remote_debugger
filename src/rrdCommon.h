@@ -97,6 +97,10 @@ typedef struct mbuffer {
      bool                inDynamic;
      bool                appendMode;
      deepsleep_event_et  dsEvent;
+     /* OpenTelemetry trace context for distributed tracing */
+     char                *traceParent;
+     char                *traceState;
+     uint64_t            spanHandle;
 } data_buf;
 
 /*Structure for Message Header*/
