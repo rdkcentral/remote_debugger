@@ -22,8 +22,28 @@ else()
     # Fall back to pkg-config (common in Yocto)
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)
-        pkg_check_modules(OPENTELEMETRY opentelemetry-cpp)
-        if(OPENTELEMETRY_FOUND)
+        # Try different possible package names
+        pkg_check_modules(OPENTELEMETRY QUIET opentelemetry-cpp)
+        if(NOT OPENTELEMETRY_FOUND)
+            pkg_check_modules(OPENTELEMETRY QUIET opentelemetry)
+        endif()
+        if(NOT OPENTELEMETRY_FOUND)
+            # Try individual components
+            pkg_check_modules(OTEL_TRACE QUIET opentelemetry_trace)
+            pkg_check_modules(OTEL_COMMON QUIET opentelemetry_common)
+            pkg_check_modules(OTEL_RESOURCES QUIET opentelemetry_resources)
+            pkg_check_modules(OTEL_OTLP QUIET opentelemetry_otlp_http_exporter)
+            if(OTEL_TRACE_FOUND AND OTEL_COMMON_FOUND)
+                message(STATUS "OpenTelemetry-CPP found via pkg-config (individual components)")
+                set(FOUND_BY_PKGCONFIG TRUE)
+                # Combine all the variables
+                set(OPENTELEMETRY_INCLUDE_DIRS ${OTEL_TRACE_INCLUDE_DIRS} ${OTEL_COMMON_INCLUDE_DIRS} ${OTEL_RESOURCES_INCLUDE_DIRS} ${OTEL_OTLP_INCLUDE_DIRS})
+                set(OPENTELEMETRY_LIBRARIES ${OTEL_TRACE_LIBRARIES} ${OTEL_COMMON_LIBRARIES} ${OTEL_RESOURCES_LIBRARIES} ${OTEL_OTLP_LIBRARIES})
+                set(OPENTELEMETRY_LIBRARY_DIRS ${OTEL_TRACE_LIBRARY_DIRS} ${OTEL_COMMON_LIBRARY_DIRS} ${OTEL_RESOURCES_LIBRARY_DIRS} ${OTEL_OTLP_LIBRARY_DIRS})
+                list(REMOVE_DUPLICATES OPENTELEMETRY_INCLUDE_DIRS)
+                list(REMOVE_DUPLICATES OPENTELEMETRY_LIBRARY_DIRS)
+            endif()
+        else()
             message(STATUS "OpenTelemetry-CPP found via pkg-config")
             set(FOUND_BY_PKGCONFIG TRUE)
         endif()
@@ -31,7 +51,30 @@ else()
 endif()
 
 if(NOT FOUND_BY_CMAKE AND NOT FOUND_BY_PKGCONFIG)
-    message(FATAL_ERROR "OpenTelemetry-CPP not found. Please install it or set CMAKE_PREFIX_PATH")
+    message(WARNING "OpenTelemetry-CPP not found via CMake or pkg-config")
+    message(WARNING "Attempting to use direct library linking...")
+    # Last resort: try to find libraries directly
+    find_library(OTEL_TRACE_LIB opentelemetry_trace)
+    find_library(OTEL_COMMON_LIB opentelemetry_common)
+    if(OTEL_TRACE_LIB AND OTEL_COMMON_LIB)
+        message(STATUS "OpenTelemetry libraries found directly")
+        set(FOUND_BY_PKGCONFIG TRUE)
+        set(OPENTELEMETRY_LIBRARIES 
+            ${OTEL_TRACE_LIB}
+            ${OTEL_COMMON_LIB}
+        )
+        # Try to find additional libraries
+        find_library(OTEL_RESOURCES_LIB opentelemetry_resources)
+        find_library(OTEL_OTLP_LIB opentelemetry_otlp_http_exporter)
+        if(OTEL_RESOURCES_LIB)
+            list(APPEND OPENTELEMETRY_LIBRARIES ${OTEL_RESOURCES_LIB})
+        endif()
+        if(OTEL_OTLP_LIB)
+            list(APPEND OPENTELEMETRY_LIBRARIES ${OTEL_OTLP_LIB})
+        endif()
+    else()
+        message(FATAL_ERROR "OpenTelemetry-CPP not found. Please install opentelemetry-cpp package.")
+    endif()
 endif()
 
 message(STATUS "OpenTelemetry-CPP found - building C++ wrapper for remote_debugger")
@@ -68,6 +111,14 @@ endif()
 target_include_directories(rrd_otel_cpp_wrapper PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
+
+# Optimize for size
+if(NOT MSVC)
+    target_compile_options(rrd_otel_cpp_wrapper PRIVATE
+        -fno-rtti
+        $<$<CONFIG:Release>:-O3>
+    )
+endif()
 
 # Install library for Makefile to link against
 install(TARGETS rrd_otel_cpp_wrapper
