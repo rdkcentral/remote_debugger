@@ -36,4 +36,4 @@ remotedebugger_CFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -
 AM_LDFLAGS += "-lIARMBus -lrfcapi -ltr181api"
 endif
 rrdTestApp_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -lrbus -fno-common
-remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -fno-common -L$(RRD_OTEL_WRAPPER_DIR) -lrrd_otel_cpp_wrapper -lopentelemetry_trace -lopentelemetry_otlp_http_exporter -lopentelemetry_common -lopentelemetry_resources
+remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -fno-common -L$(RRD_OTEL_WRAPPER_DIR) -lrrd_otel_cpp_wrapper -lopentelemetry_trace -lopentelemetry_otlp_http_exporter -lopentelemetry_common -lopentelemetry_resources -lstdc++
