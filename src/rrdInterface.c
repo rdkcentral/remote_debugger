@@ -194,6 +194,7 @@ static void _clear_rbus_trace_context(void)
             "[%s:%d]: RBUS trace context cleared\n",
             __FUNCTION__, __LINE__);
 }
+
 void RRDMsgDeliver(int msgqid, data_buf *sbuf)
 {
     msgRRDHdr msgHdr;
@@ -222,7 +223,7 @@ void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event
     sbuf->inDynamic = false;
     sbuf->appendMode = false;
     sbuf->dsEvent = deepSleepEvent;
-	/* Initialize OpenTelemetry trace context fields */
+    /* Initialize OpenTelemetry trace context fields */
     sbuf->traceParent = NULL;
     sbuf->traceState = NULL;
     sbuf->spanHandle = 0;
@@ -246,7 +247,8 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
         {
             free(sbuf->jsonPath);
         }
-		/* Free OpenTelemetry trace context fields */
+
+        /* Free OpenTelemetry trace context fields */
         if (sbuf->traceParent)
         {
             free(sbuf->traceParent);
@@ -256,6 +258,7 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
         {
             free(sbuf->traceState);
         }
+
         free(sbuf);
     }
 }
@@ -310,6 +313,7 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
                 "         This is SCENARIO 2 - becoming root of new trace\n",
                 __FUNCTION__, __LINE__, ctx.traceParent);
     }
+    
     /* Set trace context in thread-local storage for RBUS */
     if (rrdOtel_SetContext(&ctx) != 0)
     {
@@ -352,7 +356,7 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
         sbuf->traceState = NULL;
     }
     
-    /* Create root span for this event */
+    /* ✅ Create root span for this event - MUST be done after trace context is set */
     sbuf->spanHandle = rrdOtel_StartSpan(eventName, NULL);
     if (sbuf->spanHandle != 0)
     {
@@ -364,7 +368,7 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
                 trace_source ? "EXTERNAL COMPONENT" : "LOCAL GENERATION",
                 trace_source ? "part of external trace chain" : "root of new trace");
         
-        /* Now that span is active, we can log events to it */
+        /* ✅ Now that span is active, we can log events to it */
         if (trace_source == 1)
         {
             rrdOtel_LogEvent("EventReceived", "Continuing external trace");
@@ -401,14 +405,18 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     rbusValue_t value = NULL;
     rbusValue_Init(&value);
     char const* issue = NULL;
-	/* Set trace context before RBUS operation */
+    
+    /* Set trace context before RBUS operation */
     _set_rbus_trace_context();
+    
     retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
-	/* Log the RBUS operation in trace */
+    
+    /* Log the RBUS operation in trace */
     rrdOtel_LogEvent("rbus_get", RRD_SET_ISSUE_EVENT);
     
     /* Clear trace context after RBUS operation */
     _clear_rbus_trace_context();
+    
     if(retCode != RBUS_ERROR_SUCCESS || value == NULL)
     {
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RBUS get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
@@ -497,7 +505,8 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *dataMsg = NULL;
-	data_buf *eventBuf = NULL;
+    data_buf *eventBuf = NULL;
+    
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 
     (void)(handle);
@@ -527,26 +536,41 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     }
     else
     {
-		/* Initialize trace context for this event */
+        /* Initialize trace context for this event */
         eventBuf = (data_buf *)malloc(sizeof(data_buf));
-		if (eventBuf)
+        if (eventBuf)
         {
             RRD_data_buff_init(eventBuf, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
             /* Setup OpenTelemetry trace context */
             _setup_trace_context_for_event(eventBuf, "ProcessIssueEvent");
-			            
+            
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
                     "[%s:%d]: Event processed with trace context - parent: %s\n",
                     __FUNCTION__, __LINE__, 
                     eventBuf->traceParent ? eventBuf->traceParent : "none");
+            
+            /* ✅ Pass trace context to message queue along with data */
+            pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG, eventBuf);
+            
+            /* Note: Don't free eventBuf->traceParent/traceState here - they're now owned by the message */
+            eventBuf->traceParent = NULL;
+            eventBuf->traceState = NULL;
         }
-        pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
+        else
+        {
+            /* Fallback: no trace context, just send the message */
+            pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG, NULL);
+        }
     }
-	if (eventBuf)
+
+    if (eventBuf)
     {
         RRD_data_buff_deAlloc(eventBuf);
     }
-    free(dataMsg);
+    
+    /* ✅ DO NOT free dataMsg - it's now owned by sbuf in the message queue */
+    /* The message queue consumer will free it via RRD_data_buff_deAlloc */
+
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 
@@ -570,13 +594,15 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
         if(inString)
         {
             strncpy(inString, rbusValue_GetString(value, NULL), len);
-            pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
+            pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG, NULL);
         }
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
+    
+    /* Clean up temporary buffer - trace context (if any) is now owned by pushed message */
 }
 #endif
-void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
+void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype, data_buf *traceBuf)
 {
     data_buf *sbuf = NULL;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
@@ -589,6 +615,15 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
     {
         RRD_data_buff_init(sbuf, sndtype, RRD_DEEPSLEEP_INVALID_DEFAULT);
         sbuf->mdata = issueTypeList;
+        
+        /* ✅ Copy trace context from eventBuf if provided */
+        if (traceBuf && traceBuf->traceParent)
+        {
+            sbuf->traceParent = traceBuf->traceParent;
+            sbuf->traceState = traceBuf->traceState;
+            sbuf->spanHandle = traceBuf->spanHandle;
+        }
+        
         if (checkAppendRequest(sbuf->mdata))
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
