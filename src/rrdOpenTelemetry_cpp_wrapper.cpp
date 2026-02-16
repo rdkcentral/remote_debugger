@@ -18,6 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <cstdarg>
 #include <fstream>
 
 namespace trace = opentelemetry::trace;
