@@ -291,8 +291,6 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
                 "         Trace Parent: %s\n"
                 "         This is SCENARIO 1 - continuing existing trace chain\n",
                 __FUNCTION__, __LINE__, ctx.traceParent);
-        
-        rrdOtel_LogEvent("EventReceived", "Continuing external trace");
     }
     else
     {
@@ -311,8 +309,6 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
                 "         Trace Parent: %s\n"
                 "         This is SCENARIO 2 - becoming root of new trace\n",
                 __FUNCTION__, __LINE__, ctx.traceParent);
-        
-        rrdOtel_LogEvent("EventReceived", "Starting new root trace");
     }
     /* Set trace context in thread-local storage for RBUS */
     if (rrdOtel_SetContext(&ctx) != 0)
@@ -358,13 +354,32 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
     
     /* Create root span for this event */
     sbuf->spanHandle = rrdOtel_StartSpan(eventName, NULL);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
-            "[%s:%d]: Created span for event '%s' (handle: %llu)\n"
-            "         Source: %s\n"
-            "         Trace will be %s\n",
-            __FUNCTION__, __LINE__, eventName, (unsigned long long)sbuf->spanHandle,
-            trace_source ? "EXTERNAL COMPONENT" : "LOCAL GENERATION",
-            trace_source ? "part of external trace chain" : "root of new trace");
+    if (sbuf->spanHandle != 0)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "[%s:%d]: Created span for event '%s' (handle: %llu)\n"
+                "         Source: %s\n"
+                "         Trace will be %s\n",
+                __FUNCTION__, __LINE__, eventName, (unsigned long long)sbuf->spanHandle,
+                trace_source ? "EXTERNAL COMPONENT" : "LOCAL GENERATION",
+                trace_source ? "part of external trace chain" : "root of new trace");
+        
+        /* Now that span is active, we can log events to it */
+        if (trace_source == 1)
+        {
+            rrdOtel_LogEvent("EventReceived", "Continuing external trace");
+        }
+        else
+        {
+            rrdOtel_LogEvent("EventReceived", "Starting new root trace");
+        }
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Failed to create span for event '%s'\n",
+                __FUNCTION__, __LINE__, eventName);
+    }
 }
 
 /*
