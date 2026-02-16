@@ -555,7 +555,7 @@ void PrepareDataToPush(remotedebuggerparam_t *param)
     strncpy(issueTypeList, commandList, issueTypeListLen);
     issueTypeList[issueTypeListLen] = '\0';
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data Prepared for Message Queue\n", __FUNCTION__, __LINE__);
-    pushIssueTypesToMsgQueue(issueTypeList, EVENT_MSG);
+    pushIssueTypesToMsgQueue(issueTypeList, EVENT_MSG, NULL);
     return;
 }
 
