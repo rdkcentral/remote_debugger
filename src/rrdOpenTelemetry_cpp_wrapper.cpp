@@ -17,12 +17,47 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <fstream>
 
 namespace trace = opentelemetry::trace;
 namespace trace_sdk = opentelemetry::sdk::trace;
 namespace resource = opentelemetry::sdk::resource;
 namespace nostd = opentelemetry::nostd;
 namespace otlp = opentelemetry::exporter::otlp;
+
+// ===== Logging Helper =====
+static const char* LOG_FILE = "/tmp/rrd_wrapper_debug.log";
+static std::mutex log_mutex_;
+
+static void _log_wrapper(const char* level, const char* func, int line, const char* fmt, ...) {
+    std::lock_guard<std::mutex> lock(log_mutex_);
+    
+    FILE* f = std::fopen(LOG_FILE, "a");
+    if (!f) return;
+    
+    // Get current time
+    time_t now = time(nullptr);
+    struct tm* tm_info = localtime(&now);
+    char timestamp[32];
+    strftime(timestamp, sizeof(timestamp), "%Y%m%d-%H:%M:%S", tm_info);
+    
+    // Write header
+    std::fprintf(f, "[%s] [%s] [%s:%d] ", timestamp, level, func, line);
+    
+    // Write formatted message
+    va_list args;
+    va_start(args, fmt);
+    std::vfprintf(f, fmt, args);
+    va_end(args);
+    
+    std::fprintf(f, "\n");
+    std::fflush(f);
+    std::fclose(f);
+}
+
+#define LOG_INFO(fmt, ...) _log_wrapper("INFO", __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) _log_wrapper("ERROR", __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
 
 class RrdOtelWrapper {
 private:
@@ -73,6 +108,9 @@ public:
 
     void initialize(const char *serviceName, const char *collectorEndpoint) {
         try {
+            LOG_INFO("Starting OTel initialization for service=%s, endpoint=%s", 
+                     serviceName, collectorEndpoint);
+            
             // ✅ CRITICAL FIX #4: Create Resource with service attributes
             auto resource_attributes = resource::ResourceAttributes{
                 {"service.name", serviceName},
@@ -85,38 +123,58 @@ public:
                 {"telemetry.sdk.version", "1.23.0"}
             };
             auto res = resource::Resource::Create(resource_attributes);
+            LOG_INFO("Resource created");
             
             // ✅ Create OTLP HTTP exporter
             otlp::OtlpHttpExporterOptions exporter_opts;
             exporter_opts.url = std::string(collectorEndpoint) + "/v1/traces";
+            LOG_INFO("OTLP endpoint set to %s", exporter_opts.url.c_str());
             
             auto exporter = std::make_unique<otlp::OtlpHttpExporter>(exporter_opts);
+            LOG_INFO("OtlpHttpExporter created");
             
             // ✅ CRITICAL FIX #6: Use SimpleSpanProcessor (synchronous, immediate export)
             // vs BatchSpanProcessor (asynchronous, buffered)
             // SimpleSpanProcessor: Each span exported immediately when ended
             auto processor = std::make_unique<trace_sdk::SimpleSpanProcessor>(std::move(exporter));
+            LOG_INFO("SimpleSpanProcessor created");
             
             // ✅ Create TracerProvider with Resource (MUST pass resource)
             auto provider = std::make_shared<trace_sdk::TracerProvider>(
                 std::move(processor),  // span processor
                 res                    // CRITICAL: resource with attributes
             );
+            LOG_INFO("TracerProvider created");
             
             // Set as global provider
             trace::Provider::SetTracerProvider(nostd::shared_ptr<trace::TracerProvider>(provider));
+            LOG_INFO("Global provider set");
             
             // Get tracer from provider
             tracer_ = provider->GetTracer(serviceName, "1.0.0");
+            if (!tracer_) {
+                LOG_ERROR("Failed to get tracer from provider!");
+                return;
+            }
+            LOG_INFO("Tracer obtained successfully");
         }
         catch (const std::exception& e) {
-            // Log error if needed
+            LOG_ERROR("Exception - %s", e.what());
+        }
+        catch (...) {
+            LOG_ERROR("Unknown exception during initialization");
         }
     }
 
     uint64_t StartSpan(const char *spanName, const char *attributes, 
                        const char *traceParent) {
         try {
+            // ✅ CRITICAL: Validate tracer is initialized
+            if (!tracer_) {
+                LOG_ERROR("tracer_ is null (not initialized?)");
+                return 0;
+            }
+            
             nostd::shared_ptr<trace::Span> span;
             
             if (traceParent && traceParent[0] != '\0') {
@@ -161,12 +219,19 @@ public:
                     active_spans_[std::this_thread::get_id()] = span;
                 }
                 
+                LOG_INFO("Created span '%s' (handle=%p)", spanName, span.get());
+                
                 // Return span handle (pointer)
                 return reinterpret_cast<uint64_t>(span.get());
+            } else {
+                LOG_ERROR("tracer_->StartSpan returned null for '%s'", spanName);
             }
         }
         catch (const std::exception& e) {
-            // Log error if needed
+            LOG_ERROR("Exception - %s", e.what());
+        }
+        catch (...) {
+            LOG_ERROR("Unknown exception");
         }
         
         return 0;
