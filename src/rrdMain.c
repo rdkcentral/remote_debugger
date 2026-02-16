@@ -23,6 +23,7 @@
 #include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
+#include "rrdOpenTelemetry.h"
 
 
 devicePropertiesData devPropData;
@@ -154,6 +155,13 @@ int main(int argc, char *argv[])
     }
     
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Starting RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
+	/* Initialize OpenTelemetry */
+    if (rrdOtel_Initialize("remote-debugger", "http://localhost:4318") != 0) {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]:Failed to initialize OpenTelemetry\n",__FUNCTION__,__LINE__);
+        /* Continue anyway - OTel failure shouldn't block app startup */
+    } else {
+        RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:OpenTelemetry initialized successfully\n",__FUNCTION__,__LINE__);
+    }
     if ((msqid = msgget(key, IPC_CREAT | 0666 )) < 0)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]:Message Queue ID Creation failed, msqid=%d!!!\n",__FUNCTION__,__LINE__,msqid);
