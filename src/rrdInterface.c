@@ -290,49 +290,27 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
     rbusValue_t traceParentValue = NULL;
     rbusValue_t traceStateValue = NULL;
     
-    /* SCENARIO 1: Check if trace context was provided via RBUS by external component */
-    /* Try to extract from event data properties first */
-    if (eventData != NULL)
-    {
-        traceParentValue = rbusObject_GetValue(eventData, "traceparent");
-        traceStateValue = rbusObject_GetValue(eventData, "tracestate");
-        
-        if (traceParentValue != NULL && rbusValue_GetString(traceParentValue, NULL) != NULL)
-        {
-            const char *tp = rbusValue_GetString(traceParentValue, NULL);
-            const char *ts = traceStateValue ? rbusValue_GetString(traceStateValue, NULL) : "";
-            
-            if (tp && tp[0] != '\0')
-            {
-                /* Found trace context in event properties */
-                trace_source = 1;
-                strncpy(ctx.traceParent, tp, RRD_OTEL_TRACE_PARENT_MAX - 1);
-                ctx.traceParent[RRD_OTEL_TRACE_PARENT_MAX - 1] = '\0';
-                
-                strncpy(ctx.traceState, ts ? ts : "", RRD_OTEL_TRACE_STATE_MAX - 1);
-                ctx.traceState[RRD_OTEL_TRACE_STATE_MAX - 1] = '\0';
-                
-                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
-                        "[%s:%d]: Using trace context from event properties\n"
-                        "         Trace Parent: %s\n"
-                        "         Trace State: %s\n"
-                        "         This is SCENARIO 1 - continuing existing trace chain\n",
-                        __FUNCTION__, __LINE__, ctx.traceParent, ctx.traceState);
-            }
-        }
-    }
+    /* SCENARIO 1: Try to get trace context from RBUS handle (message metadata) */
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+            "[%s:%d]: Attempting to extract trace context from RBUS event...\n",
+            __FUNCTION__, __LINE__);
     
-    /* If not in event properties, try handle */
-    if (trace_source == 0 && handle != NULL)
+    if (handle != NULL)
     {
         rc = rbusHandle_GetTraceContextAsString(handle, retrieved_trace_parent, 
                                                sizeof(retrieved_trace_parent),
                                                retrieved_trace_state, 
                                                sizeof(retrieved_trace_state));
         
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
-                "[%s:%d]: rbusHandle_GetTraceContextAsString returned: %s, parent=%s\n",
-                __FUNCTION__, __LINE__, rbusError_ToString(rc), retrieved_trace_parent);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
+                "[%s:%d]: rbusHandle_GetTraceContextAsString result:\n"
+                "         Return Code: %s\n"
+                "         Retrieved Parent: '%s' (length=%zu)\n"
+                "         Retrieved State: '%s' (length=%zu)\n",
+                __FUNCTION__, __LINE__, 
+                rbusError_ToString(rc), 
+                retrieved_trace_parent, strlen(retrieved_trace_parent),
+                retrieved_trace_state, strlen(retrieved_trace_state));
         
         if (rc == RBUS_ERROR_SUCCESS && retrieved_trace_parent[0] != '\0')
         {
