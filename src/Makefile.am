@@ -23,6 +23,6 @@ AM_LDFLAGS += "-lIARMBus -lrfcapi -ltr181api"
 endif
 remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -fno-common
 if IARMBUS_ENABLE
-remotedebugger_LDFLAGS += -luploadstblogs
-remotedebugger_LDADD = -lfwutils -lz
+remotedebugger_LDFLAGS += -luploadstblogs 
+remotedebugger_LDADD = -lfwutils -lz -luploadstblogs
 endif
