@@ -280,25 +280,63 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
  * - Stores trace context in data_buf for message queue propagation
  * - Creates a span for event processing
  */
-static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName, rbusHandle_t handle)
+static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName, rbusHandle_t handle, rbusObject_t eventData)
 {
     rrd_otel_context_t ctx;
     int trace_source = 0;  /* 0=generated, 1=from external */
     char retrieved_trace_parent[256] = {0};
     char retrieved_trace_state[256] = {0};
     rbusError_t rc;
+    rbusValue_t traceParentValue = NULL;
+    rbusValue_t traceStateValue = NULL;
     
     /* SCENARIO 1: Check if trace context was provided via RBUS by external component */
-    if (handle != NULL)
+    /* Try to extract from event data properties first */
+    if (eventData != NULL)
+    {
+        traceParentValue = rbusObject_GetValue(eventData, "traceparent");
+        traceStateValue = rbusObject_GetValue(eventData, "tracestate");
+        
+        if (traceParentValue != NULL && rbusValue_GetString(traceParentValue, NULL) != NULL)
+        {
+            const char *tp = rbusValue_GetString(traceParentValue, NULL);
+            const char *ts = traceStateValue ? rbusValue_GetString(traceStateValue, NULL) : "";
+            
+            if (tp && tp[0] != '\0')
+            {
+                /* Found trace context in event properties */
+                trace_source = 1;
+                strncpy(ctx.traceParent, tp, RRD_OTEL_TRACE_PARENT_MAX - 1);
+                ctx.traceParent[RRD_OTEL_TRACE_PARENT_MAX - 1] = '\0';
+                
+                strncpy(ctx.traceState, ts ? ts : "", RRD_OTEL_TRACE_STATE_MAX - 1);
+                ctx.traceState[RRD_OTEL_TRACE_STATE_MAX - 1] = '\0';
+                
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
+                        "[%s:%d]: Using trace context from event properties\n"
+                        "         Trace Parent: %s\n"
+                        "         Trace State: %s\n"
+                        "         This is SCENARIO 1 - continuing existing trace chain\n",
+                        __FUNCTION__, __LINE__, ctx.traceParent, ctx.traceState);
+            }
+        }
+    }
+    
+    /* If not in event properties, try handle */
+    if (trace_source == 0 && handle != NULL)
     {
         rc = rbusHandle_GetTraceContextAsString(handle, retrieved_trace_parent, 
                                                sizeof(retrieved_trace_parent),
                                                retrieved_trace_state, 
                                                sizeof(retrieved_trace_state));
         
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "[%s:%d]: rbusHandle_GetTraceContextAsString returned: %s, parent=%s\n",
+                __FUNCTION__, __LINE__, rbusError_ToString(rc), retrieved_trace_parent);
+        
         if (rc == RBUS_ERROR_SUCCESS && retrieved_trace_parent[0] != '\0')
         {
-            /* Found trace context from external component - use it */
+            /* Found trace context from handle - use it */
             trace_source = 1;
             strncpy(ctx.traceParent, retrieved_trace_parent, RRD_OTEL_TRACE_PARENT_MAX - 1);
             ctx.traceParent[RRD_OTEL_TRACE_PARENT_MAX - 1] = '\0';
@@ -307,45 +345,27 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
             ctx.traceState[RRD_OTEL_TRACE_STATE_MAX - 1] = '\0';
             
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
-                    "[%s:%d]: Using existing trace context from external component (via RBUS)\n"
+                    "[%s:%d]: Using trace context from RBUS handle\n"
                     "         Trace Parent: %s\n"
                     "         Trace State: %s\n"
                     "         This is SCENARIO 1 - continuing existing trace chain\n",
                     __FUNCTION__, __LINE__, ctx.traceParent, ctx.traceState);
         }
-        else
-        {
-            /* No trace in RBUS handle - generate new one */
-            trace_source = 0;
-            if (rrdOtel_GenerateContext(&ctx) != 0)
-            {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-                        "[%s:%d]: Failed to generate trace context for event %s\n",
-                        __FUNCTION__, __LINE__, eventName);
-                return;
-            }
-            
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
-                    "[%s:%d]: Generated new trace context (no trace provided via RBUS)\n"
-                    "         Trace Parent: %s\n"
-                    "         This is SCENARIO 2 - becoming root of new trace\n",
-                    __FUNCTION__, __LINE__, ctx.traceParent);
-        }
     }
-    else
+    
+    /* If still no trace found, generate new one (SCENARIO 2) */
+    if (trace_source == 0)
     {
-        /* No handle provided - generate new trace */
-        trace_source = 0;
         if (rrdOtel_GenerateContext(&ctx) != 0)
         {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-                    "[%s:%d]: Failed to generate trace context for event %s (no handle)\n",
+                    "[%s:%d]: Failed to generate trace context for event %s\n",
                     __FUNCTION__, __LINE__, eventName);
             return;
         }
         
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
-                "[%s:%d]: Generated new trace context (handle is NULL)\n"
+                "[%s:%d]: Generated new trace context (no trace provided)\n"
                 "         Trace Parent: %s\n"
                 "         This is SCENARIO 2 - becoming root of new trace\n",
                 __FUNCTION__, __LINE__, ctx.traceParent);
@@ -577,8 +597,8 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         if (eventBuf)
         {
             RRD_data_buff_init(eventBuf, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
-            /* Setup OpenTelemetry trace context - pass handle to extract trace from RBUS */
-            _setup_trace_context_for_event(eventBuf, "ProcessIssueEvent", handle);
+            /* Setup OpenTelemetry trace context - pass handle and event data to extract trace from RBUS */
+            _setup_trace_context_for_event(eventBuf, "ProcessIssueEvent", handle, event->data);
             
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
                     "[%s:%d]: Event processed with trace context - parent: %s\n",
