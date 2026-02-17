@@ -75,24 +75,51 @@ int RRD_subscribe()
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
 
+    /* General event subscriptions (for rbusEvent_Publish) */
+    subscriptions[2].eventName = RRD_SET_ISSUE_EVENT"!";
+    subscriptions[2].filter = NULL;
+    subscriptions[2].duration = 0;
+    subscriptions[2].handler  = _remoteDebuggerEventHandler;
+    subscriptions[2].userData = NULL;
+
+    subscriptions[3].eventName = RRD_WEBCFG_ISSUE_EVENT"!";
+    subscriptions[3].filter = NULL;
+    subscriptions[3].duration = 0;
+    subscriptions[3].handler  = _remoteDebuggerWebCfgDataEventHandler;
+    subscriptions[3].userData = NULL;
+
 #ifdef IARMBUS_SUPPORT
 #ifdef USE_L2_SUPPORT
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-   subscriptions[2].filter = NULL;
-   subscriptions[2].duration = 0;
-   subscriptions[2].handler  = _rdmDownloadEventHandler;
-   subscriptions[2].userData = NULL;
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
+   subscriptions[4].eventName = RDM_DOWNLOAD_EVENT;
+   subscriptions[4].filter = NULL;
+   subscriptions[4].duration = 0;
+   subscriptions[4].handler  = _rdmDownloadEventHandler;
+   subscriptions[4].userData = NULL;
+
+   subscriptions[5].eventName = RDM_DOWNLOAD_EVENT"!";
+   subscriptions[5].filter = NULL;
+   subscriptions[5].duration = 0;
+   subscriptions[5].handler  = _rdmDownloadEventHandler;
+   subscriptions[5].userData = NULL;
+
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60);
 #else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 60);
 #endif
 #else
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-   subscriptions[2].filter = NULL;
-   subscriptions[2].duration = 0;
-   subscriptions[2].handler  = _rdmDownloadEventHandler;
-   subscriptions[2].userData = NULL;
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
+   subscriptions[4].eventName = RDM_DOWNLOAD_EVENT;
+   subscriptions[4].filter = NULL;
+   subscriptions[4].duration = 0;
+   subscriptions[4].handler  = _rdmDownloadEventHandler;
+   subscriptions[4].userData = NULL;
+
+   subscriptions[5].eventName = RDM_DOWNLOAD_EVENT"!";
+   subscriptions[5].filter = NULL;
+   subscriptions[5].duration = 0;
+   subscriptions[5].handler  = _rdmDownloadEventHandler;
+   subscriptions[5].userData = NULL;
+
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60);
 #endif
 #endif
     if(ret != 0)
