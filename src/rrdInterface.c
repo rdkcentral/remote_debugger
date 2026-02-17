@@ -290,12 +290,58 @@ static void _setup_trace_context_for_event(data_buf *sbuf, const char *eventName
     rbusValue_t traceParentValue = NULL;
     rbusValue_t traceStateValue = NULL;
     
-    /* SCENARIO 1: Try to get trace context from RBUS handle (message metadata) */
+    /* SCENARIO 1: Try to extract trace context from event properties */
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
             "[%s:%d]: Attempting to extract trace context from RBUS event...\n",
             __FUNCTION__, __LINE__);
     
-    if (handle != NULL)
+    /* First, try event data properties (for rbusEvent_Publish with trace properties) */
+    if (eventData != NULL)
+    {
+        traceParentValue = rbusObject_GetValue(eventData, "traceparent");
+        traceStateValue = rbusObject_GetValue(eventData, "tracestate");
+        
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "[%s:%d]: Checking event properties: traceparent=%p, tracestate=%p\n",
+                __FUNCTION__, __LINE__, (void*)traceParentValue, (void*)traceStateValue);
+        
+        if (traceParentValue != NULL && rbusValue_GetString(traceParentValue, NULL) != NULL)
+        {
+            const char *tp = rbusValue_GetString(traceParentValue, NULL);
+            const char *ts = traceStateValue ? rbusValue_GetString(traceStateValue, NULL) : "";
+            
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                    "[%s:%d]: Found trace properties - parent='%s', state='%s'\n",
+                    __FUNCTION__, __LINE__, tp, ts ? ts : "(null)");
+            
+            if (tp && tp[0] != '\0')
+            {
+                /* Found trace context in event properties */
+                trace_source = 1;
+                strncpy(ctx.traceParent, tp, RRD_OTEL_TRACE_PARENT_MAX - 1);
+                ctx.traceParent[RRD_OTEL_TRACE_PARENT_MAX - 1] = '\0';
+                
+                strncpy(ctx.traceState, ts ? ts : "", RRD_OTEL_TRACE_STATE_MAX - 1);
+                ctx.traceState[RRD_OTEL_TRACE_STATE_MAX - 1] = '\0';
+                
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
+                        "[%s:%d]: Using trace context from event properties\n"
+                        "         Trace Parent: %s\n"
+                        "         Trace State: %s\n"
+                        "         This is SCENARIO 1 - continuing existing trace chain\n",
+                        __FUNCTION__, __LINE__, ctx.traceParent, ctx.traceState);
+            }
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                    "[%s:%d]: No trace properties found in event data\n",
+                    __FUNCTION__, __LINE__);
+        }
+    }
+    
+    /* If not in event properties, try RBUS handle (for method calls) */
+    if (trace_source == 0 && handle != NULL)
     {
         rc = rbusHandle_GetTraceContextAsString(handle, retrieved_trace_parent, 
                                                sizeof(retrieved_trace_parent),
