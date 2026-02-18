@@ -22,6 +22,7 @@
 #include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
 #include "rrdOpenTelemetry.h"
+#include <pthread.h>
 #if !defined(GTEST_ENABLE)
 #include "webconfig_framework.h"
 
@@ -33,6 +34,80 @@ key_t key = 1234;
 #define RRD_TMP_DIR "/tmp/"
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
+
+/* Subscription retry thread state */
+static pthread_t subscription_retry_thread;
+static volatile int subscription_active = 0;
+static volatile int retry_thread_running = 0;
+
+/**
+ * @brief Background thread to retry RBUS event subscriptions
+ * This thread runs when initial subscription fails (providers don't exist yet)
+ * and retries every 10 seconds until successful.
+ */
+static void* subscription_retry_thread_func(void* arg)
+{
+    (void)arg;
+    int retry_count = 0;
+    int ret;
+    
+#ifdef IARMBUS_SUPPORT
+#ifdef USE_L2_SUPPORT
+    int num_subscriptions = 6;
+#else
+    int num_subscriptions = 4;
+#endif
+#else
+    int num_subscriptions = 6;
+#endif
+    
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, 
+            "[%s:%d]: Subscription retry thread started\n", 
+            __FUNCTION__, __LINE__);
+    
+    while (!subscription_active && retry_thread_running)
+    {
+        sleep(10);  /* Wait 10 seconds between retries */
+        retry_count++;
+        
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
+                "[%s:%d]: Retry attempt %d - subscribing to events...\n",
+                __FUNCTION__, __LINE__, retry_count);
+        
+        ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, num_subscriptions, 10);
+        
+        if (ret == 0)
+        {
+            subscription_active = 1;
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
+                    "[%s:%d]: Subscription successful on retry attempt %d!\n",
+                    __FUNCTION__, __LINE__, retry_count);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribed to events:\n", __FUNCTION__, __LINE__);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [0] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[0].eventName);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [1] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[1].eventName);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [2] %s (general event)\n", __FUNCTION__, __LINE__, subscriptions[2].eventName);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [3] %s (general event)\n", __FUNCTION__, __LINE__, subscriptions[3].eventName);
+#ifdef USE_L2_SUPPORT
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [4] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[4].eventName);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [5] %s (general event)\n", __FUNCTION__, __LINE__, subscriptions[5].eventName);
+#endif
+            break;
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                    "[%s:%d]: Retry attempt %d failed: %s (will retry)\n",
+                    __FUNCTION__, __LINE__, retry_count, rbusError_ToString((rbusError_t)ret));
+        }
+    }
+    
+    retry_thread_running = 0;
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG,
+            "[%s:%d]: Subscription retry thread exiting (active=%d)\n",
+            __FUNCTION__, __LINE__, subscription_active);
+    
+    return NULL;
+}
 
 /*Function: RRD_subscribe
  *Details: This helps to perform Bus init/connect and event handler registration for receiving
@@ -102,21 +177,21 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   /* Subscribe with large timeout to wait for providers to register
-    * The timeout parameter is how long to wait for the subscription to complete,
-    * not the subscription duration (duration=0 means forever).
-    * This will block until providers register, which is perfect for our testing scenario. */
-   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events (will wait for providers to register)...\n", 
+   /* Subscribe with short timeout to avoid blocking startup.
+    * If providers haven't registered yet, subscription will fail but RBUS will
+    * automatically activate it when providers register later.
+    * duration=0 means subscription lasts forever once activated. */
+   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events...\n", 
            __FUNCTION__, __LINE__);
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60000);  /* Wait up to 60000 seconds */
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 10);  /* 10 second timeout */
 #else
-   /* Subscribe with large timeout to wait for providers to register
-    * The timeout parameter is how long to wait for the subscription to complete,
-    * not the subscription duration (duration=0 means forever).
-    * This will block until providers register, which is perfect for our testing scenario. */
-   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events (will wait for providers to register)...\n", 
+   /* Subscribe with short timeout to avoid blocking startup.
+    * If providers haven't registered yet, subscription will fail but RBUS will
+    * automatically activate it when providers register later.
+    * duration=0 means subscription lasts forever once activated. */
+   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events...\n", 
            __FUNCTION__, __LINE__);
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 60000);  /* Wait up to 60000 seconds */
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 10);  /* 10 second timeout */
 #endif
 #else
    subscriptions[4].eventName = RDM_DOWNLOAD_EVENT;
@@ -131,22 +206,38 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   /* Subscribe with large timeout to wait for providers to register
-    * The timeout parameter is how long to wait for the subscription to complete,
-    * not the subscription duration (duration=0 means forever).
-    * This will block until providers register, which is perfect for our testing scenario. */
-   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events (will wait for providers to register)...\n", 
+   /* Subscribe with short timeout to avoid blocking startup.
+    * If providers haven't registered yet, subscription will fail but RBUS will
+    * automatically activate it when providers register later.
+    * duration=0 means subscription lasts forever once activated. */
+   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events...\n", 
            __FUNCTION__, __LINE__);
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60000);  /* Wait up to 60000 seconds */
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 10);  /* 10 second timeout */
 #endif
 #endif
     if(ret != 0)
     {
         RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: RBUS Event Subscribe for RRD returned: %s\n", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
-        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: This may happen if event providers haven't registered yet. Will continue...\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: Event providers not available yet. Starting background retry thread...\n", __FUNCTION__, __LINE__);
+        
+        /* Start background thread to retry subscription */
+        retry_thread_running = 1;
+        subscription_active = 0;
+        
+        if (pthread_create(&subscription_retry_thread, NULL, subscription_retry_thread_func, NULL) != 0)
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to create subscription retry thread\n", __FUNCTION__, __LINE__);
+            retry_thread_running = 0;
+        }
+        else
+        {
+            pthread_detach(subscription_retry_thread);  /* Thread will clean up itself */
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription retry thread started (will retry every 10 seconds)\n", __FUNCTION__, __LINE__);
+        }
     }
     else
     {
+        subscription_active = 1;
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Event Subscribe for RRD done! \n", __FUNCTION__, __LINE__);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribed to events:\n", __FUNCTION__, __LINE__);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [0] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[0].eventName);
@@ -161,9 +252,6 @@ int RRD_subscribe()
 
     webconfigFrameworkInit();
     
-    /* Note: Return 0 to allow remote_debugger to continue even if subscription failed.
-     * This is important for scenarios where event providers start after remote_debugger.
-     * Once a provider registers, the subscription will become active. */
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting.. \n", __FUNCTION__, __LINE__);
     return 0;
 }
