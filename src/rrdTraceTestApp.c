@@ -115,16 +115,11 @@ int main(int argc, char *argv[])
         return 1;
     }
     printf("    SUCCESS: Registered as provider for %s!\n", RRD_SET_ISSUE_EVENT"!");
-    printf("    Waiting for subscribers to connect...\n");
-    printf("    (give remote_debugger time to subscribe after startup)\n\n");
+    printf("    Provider is now active and ready to publish events\n\n");
     
-    /* CRITICAL: Wait for subscribers to connect before publishing */
-    printf("[2b] Waiting 20 seconds for remote_debugger to subscribe...\n");
-    for (int i = 20; i > 0; i--)
-    {
-        printf("     %d seconds remaining...\n", i);
-        sleep(1);
-    }
+    /* Brief pause to ensure registration completes */
+    printf("[2b] Waiting 2 seconds for registration to complete...\n");
+    sleep(2);
 
     /* Create and set trace context - SCENARIO 1 */
     printf("[3] Setting up OpenTelemetry trace context (SCENARIO 1)...\n");
