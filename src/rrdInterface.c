@@ -129,6 +129,15 @@ int RRD_subscribe()
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Event Subscribe for RRD done! \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribed to events:\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [0] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[0].eventName);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [1] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[1].eventName);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [2] %s (general event)\n", __FUNCTION__, __LINE__, subscriptions[2].eventName);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [3] %s (general event)\n", __FUNCTION__, __LINE__, subscriptions[3].eventName);
+#ifdef USE_L2_SUPPORT
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [4] %s (property change)\n", __FUNCTION__, __LINE__, subscriptions[4].eventName);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:   [5] %s (general event)\n", __FUNCTION__, __LINE__, subscriptions[5].eventName);
+#endif
     }
 
     webconfigFrameworkInit();
@@ -616,12 +625,15 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     data_buf *eventBuf = NULL;
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: EVENT HANDLER TRIGGERED! Event name: %s, Type: %d \n", __FUNCTION__, __LINE__, event->name, event->type);
 
     (void)(subscription);
 
     rbusValue_t value = rbusObject_GetValue(event->data, "value");
 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Event data object: %p, Value pointer: %p \n", __FUNCTION__, __LINE__, event->data, value);
+    
     if(!value)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: event->data value is NULL \n", __FUNCTION__, __LINE__);
