@@ -24,6 +24,7 @@
  * This app demonstrates SCENARIO 1: External component provides trace context
  * 
  * Implementation:
+ *   - Registers as RBUS event provider (required for publishing)
  *   - Creates W3C trace context (traceparent, tracestate)
  *   - Embeds trace context as properties in RBUS event object
  *   - Publishes event via rbusEvent_Publish()
@@ -54,10 +55,23 @@
 
 #define RRD_SET_ISSUE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType"
 
+/* Event subscription handler - required for providers */
+static rbusError_t eventSubHandler(rbusHandle_t handle, rbusEventSubAction_t action, const char* eventName, rbusFilter_t filter, int32_t interval, bool* autoPublish)
+{
+    (void)handle;
+    (void)filter;
+    (void)autoPublish;
+    (void)interval;
+    
+    printf("[EventSubHandler] %s for event: %s\n", 
+           action == RBUS_EVENT_ACTION_SUBSCRIBE ? "SUBSCRIBE" : "UNSUBSCRIBE",
+           eventName);
+    return RBUS_ERROR_SUCCESS;
+}
+
 int main(int argc, char *argv[])
 {
     rbusHandle_t handle;
-    rbusValue_t value;
     rbusError_t rc;
     const char *issueValue = "SecurityPatch.0";  /* Default issue */
     char traceParent[256];
@@ -87,8 +101,24 @@ int main(int argc, char *argv[])
     }
     printf("    SUCCESS: RBUS connection opened\n\n");
 
+    /* Register as event provider (CRITICAL STEP!) */
+    printf("[2] Registering as RBUS event provider...\n");
+    rbusDataElement_t dataElements[1] = {
+        {RRD_SET_ISSUE_EVENT"!", RBUS_ELEMENT_TYPE_EVENT, {NULL, NULL, NULL, NULL, eventSubHandler, NULL}}
+    };
+    
+    rc = rbus_regDataElements(handle, 1, dataElements);
+    if (rc != RBUS_ERROR_SUCCESS)
+    {
+        printf("ERROR: Failed to register event provider - %s\n", rbusError_ToString(rc));
+        rbus_close(handle);
+        return 1;
+    }
+    printf("    SUCCESS: Registered as provider for %s!\n", RRD_SET_ISSUE_EVENT"!");
+    printf("    Waiting for subscribers...\n\n");
+
     /* Create and set trace context - SCENARIO 1 */
-    printf("[2] Setting up OpenTelemetry trace context (SCENARIO 1)...\n");
+    printf("[3] Setting up OpenTelemetry trace context (SCENARIO 1)...\n");
     printf("    Creating W3C trace context for propagation\n");
     printf("    Will embed trace context in event properties\n\n");
     
@@ -101,7 +131,7 @@ int main(int argc, char *argv[])
     printf("    Trace State:  %s\n\n", traceState);
 
     /* Trigger the event by publishing with trace context embedded */
-    printf("[3] Publishing event with embedded trace context...\n");
+    printf("[4] Publishing event with embedded trace context...\n");
     printf("    Using rbusEvent_Publish() with trace context properties\n");
     printf("    This enables SCENARIO 1 (trace propagation)\n\n");
     
@@ -126,8 +156,8 @@ int main(int argc, char *argv[])
     rbusValue_SetString(valueTraceState, traceState);
     rbusObject_SetValue(eventObj, "tracestate", valueTraceState);
     
-    /* Publish event */
-    event.name = RRD_SET_ISSUE_EVENT;
+    /* Publish event with GENERAL type */
+    event.name = RRD_SET_ISSUE_EVENT"!";
     event.data = eventObj;
     event.type = RBUS_EVENT_GENERAL;
     
@@ -147,14 +177,17 @@ int main(int argc, char *argv[])
     rbusValue_Release(valueTraceState);
     rbusObject_Release(eventObj);
 
-    printf("\n[4] Event Processing Summary...\n");
+    printf("\n[5] Event Processing Summary...\n");
     printf("    SCENARIO 1: External component provides trace via event properties\n");
     printf("    remote_debugger will extract and USE this trace context\n");
     printf("    Trace ID will be PRESERVED throughout the processing chain\n");
-    printf("\n[5] Waiting for event processing (2 seconds)...\n");
-    sleep(2);
+    printf("\n[6] Waiting for event processing (5 seconds)...\n");
+    sleep(5);
 
-    printf("\n[6] Closing RBUS connection...\n");
+    printf("\n[7] Unregistering event provider...\n");
+    rbus_unregDataElements(handle, 1, dataElements);
+    
+    printf("[8] Closing RBUS connection...\n");
     rbus_close(handle);
 
     printf("\n");
@@ -164,11 +197,13 @@ int main(int argc, char *argv[])
     printf("SCENARIO 1 (External provides trace): TESTED\n");
     printf("  ✓ Generated trace context\n");
     printf("  ✓ Embedded in event properties (traceparent/tracestate)\n");
+    printf("  ✓ Registered as RBUS event provider\n");
     printf("  ✓ Published via rbusEvent_Publish()\n");
     printf("  ✓ remote_debugger should extract and USE this trace\n");
     printf("  ✓ Trace ID should be PRESERVED throughout\n\n");
     printf("Key Implementation:\n");
-    printf("  • Use rbusEvent_Publish() instead of rbus_set()\n");
+    printf("  • Register event via rbus_regDataElements() with '!' suffix\n");
+    printf("  • Publish with RBUS_EVENT_GENERAL type\n");
     printf("  • Add 'traceparent' and 'tracestate' properties to event object\n");
     printf("  • remote_debugger extracts from event->data properties\n\n");
     printf("Check remote_debugger logs to verify:\n");
