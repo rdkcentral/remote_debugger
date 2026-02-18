@@ -102,9 +102,9 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 0);
 #else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 60);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 0);
 #endif
 #else
    subscriptions[4].eventName = RDM_DOWNLOAD_EVENT;
@@ -119,7 +119,7 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 0);
 #endif
 #endif
     if(ret != 0)
@@ -774,7 +774,12 @@ int RRD_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
 #endif
 #if !defined(GTEST_ENABLE)
-    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
+    /* Unsubscribe from all subscriptions (4 or 6 depending on USE_L2_SUPPORT) */
+#ifdef USE_L2_SUPPORT
+    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 6);
+#else
+    rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 4);
+#endif
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);
