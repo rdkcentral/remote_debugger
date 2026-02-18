@@ -102,9 +102,51 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 0);
+   /* Retry subscription indefinitely with 10 second intervals - good for manual testing
+    * where user needs time to SSH and run test app after remote_debugger starts.
+    * Will keep retrying until subscription succeeds. */
+   int retry_attempt = 0;
+   int retry_wait = 10;   /* Wait 10 seconds between retries */
+   
+   while (1)
+   {
+       retry_attempt++;
+       ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, retry_wait);
+       if (ret == 0)
+       {
+           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription successful on attempt %d\n", 
+                   __FUNCTION__, __LINE__, retry_attempt);
+           break;
+       }
+       
+       RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
+               "[%s:%d]: Subscription attempt %d failed (%s), retrying in %d seconds...\n",
+               __FUNCTION__, __LINE__, retry_attempt, rbusError_ToString((rbusError_t)ret), retry_wait);
+       sleep(retry_wait);
+   }
 #else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 0);
+   /* Retry subscription indefinitely with 10 second intervals - good for manual testing
+    * where user needs time to SSH and run test app after remote_debugger starts.
+    * Will keep retrying until subscription succeeds. */
+   int retry_attempt = 0;
+   int retry_wait = 10;   /* Wait 10 seconds between retries */
+   
+   while (1)
+   {
+       retry_attempt++;
+       ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, retry_wait);
+       if (ret == 0)
+       {
+           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription successful on attempt %d\n", 
+                   __FUNCTION__, __LINE__, retry_attempt);
+           break;
+       }
+       
+       RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
+               "[%s:%d]: Subscription attempt %d failed (%s), retrying in %d seconds...\n",
+               __FUNCTION__, __LINE__, retry_attempt, rbusError_ToString((rbusError_t)ret), retry_wait);
+       sleep(retry_wait);
+   }
 #endif
 #else
    subscriptions[4].eventName = RDM_DOWNLOAD_EVENT;
@@ -119,12 +161,34 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 0);
+   /* Retry subscription indefinitely with 10 second intervals - good for manual testing
+    * where user needs time to SSH and run test app after remote_debugger starts.
+    * Will keep retrying until subscription succeeds. */
+   int retry_attempt = 0;
+   int retry_wait = 10;   /* Wait 10 seconds between retries */
+   
+   while (1)
+   {
+       retry_attempt++;
+       ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, retry_wait);
+       if (ret == 0)
+       {
+           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription successful on attempt %d\n", 
+                   __FUNCTION__, __LINE__, retry_attempt);
+           break;
+       }
+       
+       RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
+               "[%s:%d]: Subscription attempt %d failed (%s), retrying in %d seconds...\n",
+               __FUNCTION__, __LINE__, retry_attempt, rbusError_ToString((rbusError_t)ret), retry_wait);
+       sleep(retry_wait);
+   }
 #endif
 #endif
     if(ret != 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Event Subscribe for RRD return value is : %s \n ", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
+        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: RBUS Event Subscribe for RRD returned: %s\n", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
+        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: This may happen if event providers haven't registered yet. Will continue...\n", __FUNCTION__, __LINE__);
     }
     else
     {
@@ -141,8 +205,12 @@ int RRD_subscribe()
     }
 
     webconfigFrameworkInit();
+    
+    /* Note: Return 0 to allow remote_debugger to continue even if subscription failed.
+     * This is important for scenarios where event providers start after remote_debugger.
+     * Once a provider registers, the subscription will become active. */
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting.. \n", __FUNCTION__, __LINE__);
-    return ret;
+    return 0;
 }
 
 bool checkAppendRequest(char *issueRequest)
