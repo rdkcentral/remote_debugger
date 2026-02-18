@@ -102,51 +102,21 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   /* Retry subscription indefinitely with 10 second intervals - good for manual testing
-    * where user needs time to SSH and run test app after remote_debugger starts.
-    * Will keep retrying until subscription succeeds. */
-   int retry_attempt = 0;
-   int retry_wait = 10;   /* Wait 10 seconds between retries */
-   
-   while (1)
-   {
-       retry_attempt++;
-       ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, retry_wait);
-       if (ret == 0)
-       {
-           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription successful on attempt %d\n", 
-                   __FUNCTION__, __LINE__, retry_attempt);
-           break;
-       }
-       
-       RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
-               "[%s:%d]: Subscription attempt %d failed (%s), retrying in %d seconds...\n",
-               __FUNCTION__, __LINE__, retry_attempt, rbusError_ToString((rbusError_t)ret), retry_wait);
-       sleep(retry_wait);
-   }
+   /* Subscribe with large timeout to wait for providers to register
+    * The timeout parameter is how long to wait for the subscription to complete,
+    * not the subscription duration (duration=0 means forever).
+    * This will block until providers register, which is perfect for our testing scenario. */
+   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events (will wait for providers to register)...\n", 
+           __FUNCTION__, __LINE__);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60000);  /* Wait up to 60000 seconds */
 #else
-   /* Retry subscription indefinitely with 10 second intervals - good for manual testing
-    * where user needs time to SSH and run test app after remote_debugger starts.
-    * Will keep retrying until subscription succeeds. */
-   int retry_attempt = 0;
-   int retry_wait = 10;   /* Wait 10 seconds between retries */
-   
-   while (1)
-   {
-       retry_attempt++;
-       ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, retry_wait);
-       if (ret == 0)
-       {
-           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription successful on attempt %d\n", 
-                   __FUNCTION__, __LINE__, retry_attempt);
-           break;
-       }
-       
-       RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
-               "[%s:%d]: Subscription attempt %d failed (%s), retrying in %d seconds...\n",
-               __FUNCTION__, __LINE__, retry_attempt, rbusError_ToString((rbusError_t)ret), retry_wait);
-       sleep(retry_wait);
-   }
+   /* Subscribe with large timeout to wait for providers to register
+    * The timeout parameter is how long to wait for the subscription to complete,
+    * not the subscription duration (duration=0 means forever).
+    * This will block until providers register, which is perfect for our testing scenario. */
+   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events (will wait for providers to register)...\n", 
+           __FUNCTION__, __LINE__);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 4, 60000);  /* Wait up to 60000 seconds */
 #endif
 #else
    subscriptions[4].eventName = RDM_DOWNLOAD_EVENT;
@@ -161,28 +131,13 @@ int RRD_subscribe()
    subscriptions[5].handler  = _rdmDownloadEventHandler;
    subscriptions[5].userData = NULL;
 
-   /* Retry subscription indefinitely with 10 second intervals - good for manual testing
-    * where user needs time to SSH and run test app after remote_debugger starts.
-    * Will keep retrying until subscription succeeds. */
-   int retry_attempt = 0;
-   int retry_wait = 10;   /* Wait 10 seconds between retries */
-   
-   while (1)
-   {
-       retry_attempt++;
-       ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, retry_wait);
-       if (ret == 0)
-       {
-           RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscription successful on attempt %d\n", 
-                   __FUNCTION__, __LINE__, retry_attempt);
-           break;
-       }
-       
-       RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, 
-               "[%s:%d]: Subscription attempt %d failed (%s), retrying in %d seconds...\n",
-               __FUNCTION__, __LINE__, retry_attempt, rbusError_ToString((rbusError_t)ret), retry_wait);
-       sleep(retry_wait);
-   }
+   /* Subscribe with large timeout to wait for providers to register
+    * The timeout parameter is how long to wait for the subscription to complete,
+    * not the subscription duration (duration=0 means forever).
+    * This will block until providers register, which is perfect for our testing scenario. */
+   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Subscribing to events (will wait for providers to register)...\n", 
+           __FUNCTION__, __LINE__);
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 6, 60000);  /* Wait up to 60000 seconds */
 #endif
 #endif
     if(ret != 0)
