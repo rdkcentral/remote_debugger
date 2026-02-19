@@ -20,6 +20,7 @@
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#include "rrdOpenTelemetry.h"
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
@@ -87,6 +88,34 @@ void processIssueTypeEvent(data_buf *rbuf)
                         cmdBuff->jsonPath = rbuf->jsonPath;
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
+                    
+                    /* ✅ Copy OpenTelemetry trace context from parent buffer */
+                    if (rbuf->traceParent)
+                    {
+                        cmdBuff->traceParent = (char *)malloc(strlen(rbuf->traceParent) + 1);
+                        if (cmdBuff->traceParent)
+                        {
+                            strcpy(cmdBuff->traceParent, rbuf->traceParent);
+                        }
+                    }
+                    if (rbuf->traceState)
+                    {
+                        cmdBuff->traceState = (char *)malloc(strlen(rbuf->traceState) + 1);
+                        if (cmdBuff->traceState)
+                        {
+                            strcpy(cmdBuff->traceState, rbuf->traceState);
+                        }
+                    }
+                    cmdBuff->spanHandle = rbuf->spanHandle;
+                    
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                            "[%s:%d]: Propagating trace context to command buffer\n"
+                            "         Trace Parent: %s\n"
+                            "         Span Handle: %llu\n",
+                            __FUNCTION__, __LINE__,
+                            cmdBuff->traceParent ? cmdBuff->traceParent : "none",
+                            (unsigned long long)cmdBuff->spanHandle);
+                    
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
                     if (cmdBuff->mdata)
                     {
@@ -140,6 +169,34 @@ static void processIssueType(data_buf *rbuf)
     issueData *staticprofiledata = NULL;    
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    
+    /* ✅ Restore trace context on this worker thread */
+    if (rbuf && rbuf->traceParent)
+    {
+        rrd_otel_context_t ctx;
+        strncpy(ctx.traceParent, rbuf->traceParent, RRD_OTEL_TRACE_PARENT_MAX - 1);
+        ctx.traceParent[RRD_OTEL_TRACE_PARENT_MAX - 1] = '\0';
+        
+        if (rbuf->traceState)
+        {
+            strncpy(ctx.traceState, rbuf->traceState, RRD_OTEL_TRACE_STATE_MAX - 1);
+            ctx.traceState[RRD_OTEL_TRACE_STATE_MAX - 1] = '\0';
+        }
+        else
+        {
+            ctx.traceState[0] = '\0';
+        }
+        
+        rrdOtel_SetContext(&ctx);
+        
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "[%s:%d]: Restored trace context on worker thread\n"
+                "         Trace Parent: %s\n"
+                "         Span Handle: %llu\n",
+                __FUNCTION__, __LINE__, ctx.traceParent,
+                (unsigned long long)rbuf->spanHandle);
+    }
+    
     if (rbuf->mdata != NULL) // issue data exits
     {
         pIssueNode = (issueNodeData *)malloc(sizeof(issueNodeData));
