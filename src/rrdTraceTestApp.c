@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 {
     rbusHandle_t handle;
     rbusError_t rc;
-    const char *issueValue = "SecurityPatch.0";  /* Default issue */
+    const char *issueValue = "System";  /* Default issue */
     char traceParent[256];
     char traceState[256];
 
