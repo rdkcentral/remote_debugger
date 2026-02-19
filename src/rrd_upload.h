@@ -25,7 +25,9 @@
 #include <stdbool.h>
 #include "rrdCommon.h"
 #ifndef GTEST_ENABLE
+#ifdef IARMBUS_SUPPORT
 #include <uploadstblogs.h>
+#endif
 #endif
 
 #ifdef __cplusplus
