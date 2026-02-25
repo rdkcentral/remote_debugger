@@ -96,7 +96,22 @@ char * readJsonFile(char *jsonfile)
     }
     fseek(fp, 0, SEEK_SET);
     jsonfile_content = (char *) malloc(sizeof(char) * (ch_count + 1));
-    fread(jsonfile_content, 1, ch_count,fp);
+    if (jsonfile_content == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for json file %s \n",__FUNCTION__,__LINE__,jsonfile);
+        fclose(fp);
+        return NULL;
+    }
+    
+    size_t bytes_read = fread(jsonfile_content, 1, ch_count, fp);
+    if (bytes_read != (size_t)ch_count)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to read json file %s. Expected %d bytes, read %zu bytes \n",__FUNCTION__,__LINE__,jsonfile,ch_count,bytes_read);
+        free(jsonfile_content);
+        fclose(fp);
+        return NULL;
+    }
+    
     jsonfile_content[ch_count] ='\0';
     fclose(fp);
 
@@ -312,6 +327,10 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             tmpCommand = cJSON_Print(elem);
             if(tmpCommand)
             {
+                if(issuestdata->command != NULL)
+                {
+                    free(issuestdata->command); // Free previous command before overwriting
+                }
                 issuestdata->command = strdup(tmpCommand);   // print command info from json file
                 cJSON_free(tmpCommand);
             }
@@ -322,6 +341,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Commands found, exiting.. \n",__FUNCTION__,__LINE__);
         free(issuestdata);
+        issuestdata = NULL;
     }
     else
     {
@@ -337,6 +357,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
             free(issuestdata->command);
             free(issuestdata);
+            issuestdata = NULL;
         }
         else
         {
@@ -415,6 +436,10 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
 	    tmpCommand = cJSON_Print(elem);
 	    if(tmpCommand)
 	    {
+               if(issuestdata->command != NULL)
+               {
+                   free(issuestdata->command); // Free previous command before overwriting
+               }
                issuestdata->command = strdup(tmpCommand);   // print command info from json file
                cJSON_free(tmpCommand);
 	    }
@@ -486,6 +511,14 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     struct tm *ltime;
     rfcbuf = strdup(buff->mdata);
 
+    if (rfcbuf == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
+        free(buff->mdata); // free rfc data
+        free(buff->jsonPath); // free rrd path info
+        return;
+    }
+
     // Creating Directory for MainNode under /tmp/rrd Folder
     ctime = time (NULL);
     ltime = localtime (&ctime);
@@ -500,6 +533,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     if (mkdir(outdir,0777) != 0)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
+        free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
         return;
@@ -552,12 +586,16 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Success...\n",__FUNCTION__,__LINE__);
                 }
             }
+            free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
 	}
 	else
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
+            free(rfcbuf); // free duplicated rfc data
+            free(buff->mdata); // free rfc data
+            free(buff->jsonPath); // free rrd path info
 	}
     }
 }
@@ -634,7 +672,8 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
 	         }
 	    }
         }
-        free(rfcbuf); // free rfc value
+        // Note: rfcbuf is owned by the caller; this function must not free it.
+        // The caller is responsible for freeing rfcbuf after this function returns.
     }
     else
     {

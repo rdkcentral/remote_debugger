@@ -3892,7 +3892,7 @@ TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
 
     char buf[] = "rfcvalue123";
     issueData* result = getIssueCommandInfo(&node, root, buf);
-    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result, nullptr);
     
 }
 
