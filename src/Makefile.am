@@ -15,7 +15,7 @@ remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h \
 remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdDynamic.c rrdExecuteScript.c rrdMsgPackDecoder.c rrdInterface.c uploadRRDLogs.c rrd_config.c rrd_sysinfo.c rrd_logproc.c rrd_archive.c rrd_upload.c
 
 remotedebugger_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} $(CJSON_CFLAGS)
-AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper "
+AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper -lrdk_otlp"
 remotedebugger_LDADD = -lfwutils -luploadstblogs -lz
 if IARMBUS_ENABLE
 remotedebugger_SOURCES += rrdIarmEvents.c
