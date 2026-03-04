@@ -23,7 +23,9 @@
 #include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
+#include "rdk_otlp_instrumentation.h"
 
+devicePropertiesData devPropData;
 
 devicePropertiesData devPropData;
 
@@ -145,6 +147,9 @@ int main(int argc, char *argv[])
 #endif
     /* Initialize Cache */
     initCache();
+	rdk_otlp_init("RRD", "1.0.0");
+	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:[OTEL] OTEL initialized\n", __FUNCTION__, __LINE__);
+	rdk_otlp_start_child_span("RRD_ctx", "set");
 
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
@@ -163,6 +168,8 @@ int main(int argc, char *argv[])
 
     RRD_subscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Started RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
+	rdk_otlp_finish_child_span();
+	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:[OTEL] Finish child span\n",__FUNCTION__,__LINE__);
 
     /* Create Thread for listening TR69 events */
     pthread_create (&RRDTR69ThreadID, NULL, RRDEventThreadFunc, NULL);
