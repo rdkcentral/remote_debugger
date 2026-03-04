@@ -27,8 +27,6 @@
 
 devicePropertiesData devPropData;
 
-devicePropertiesData devPropData;
-
 /*
  * @function RRDEventThreadFunc
  * @brief Infinite thread created from the main function to read messages received from the TR181 parameter 
