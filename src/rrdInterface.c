@@ -23,6 +23,7 @@
 #include "rrdRunCmdThread.h"
 #if !defined(GTEST_ENABLE)
 #include "webconfig_framework.h"
+#include "rdk_otlp_instrumentation.h"
 
 extern int msqid;
 #else
@@ -311,8 +312,11 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
+	rdk_otlp_start_child_span("RRD_ctx", "set");
     char *dataMsg = NULL;
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Started child span... \n", __FUNCTION__, __LINE__);
+
 
     (void)(handle);
     (void)(subscription);
@@ -344,6 +348,8 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
     }
 
+	rdk_otlp_finish_child_span();
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span...\n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 
