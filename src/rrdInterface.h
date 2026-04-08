@@ -29,6 +29,7 @@ extern "C"
 #include "rrdCommon.h"
 #if !defined(GTEST_ENABLE)
 #include "rbus.h"
+#include <cjson/cJSON.h>
 #ifdef IARMBUS_SUPPORT
 #include "libIARM.h"
 #include "libIBus.h"
@@ -45,6 +46,11 @@ extern "C"
 #define RRD_PROCESS_NAME "remotedebugger"
 #define RRD_RBUS_TIMEOUT 60
 
+// RDK Remote Debugger profile data parameter definitions
+#define RRD_SET_PROFILE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData"
+#define RRD_GET_PROFILE_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.getProfileData"
+#define RRD_PROFILE_CATEGORY_FILE "/tmp/rrd_profile_category"
+
 /*Enum for IARM Events*/
 typedef enum _RemoteDebugger_EventId_t {
         IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE = 0,
@@ -57,6 +63,8 @@ typedef enum _RemoteDebugger_EventId_t {
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
+rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
+rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
 #endif
 #if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
 int RRD_IARM_subscribe(void);
