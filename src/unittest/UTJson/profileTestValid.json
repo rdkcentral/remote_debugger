@@ -1,0 +1,60 @@
+{
+  "Video": [
+    {
+      "VideoDecodeFailure": {
+        "Commands": "cat /proc/cpuinfo; ps aux | grep video"
+      }
+    },
+    {
+      "VideoFreeze": {
+        "Commands": "dmesg | tail -50; cat /proc/meminfo"
+      }
+    },
+    {
+      "VideoArtifacts": {
+        "Commands": "glxinfo | grep renderer"
+      }
+    }
+  ],
+  "Audio": [
+    {
+      "AudioLoss": {
+        "Commands": "cat /proc/asound/cards; amixer"
+      }
+    },
+    {
+      "AudioDistortion": {
+        "Commands": "cat /proc/asound/version"
+      }
+    }
+  ],
+  "Network": [
+    {
+      "ConnectivityIssue": {
+        "Commands": "ifconfig -a; ping -c 3 8.8.8.8"
+      }
+    },
+    {
+      "SlowConnection": {
+        "Commands": "netstat -rn; iperf3 --version"
+      }
+    },
+    {
+      "DNSIssues": {
+        "Commands": "nslookup google.com; cat /etc/resolv.conf"
+      }
+    }
+  ],
+  "System": [
+    {
+      "HighCPUUsage": {
+        "Commands": "top -b -n 1; cat /proc/loadavg"
+      }
+    },
+    {
+      "MemoryLeak": {
+        "Commands": "free -m; cat /proc/meminfo"
+      }
+    }
+  ]
+}

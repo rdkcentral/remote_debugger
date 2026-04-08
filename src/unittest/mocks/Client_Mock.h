@@ -214,6 +214,7 @@ typedef enum _rbusError
     RBUS_ERROR_SUCCESS,
     RBUS_ERROR_NOT_INITIALIZED,
     RBUS_ERROR_BUS_ERROR,
+    RBUS_ERROR_INVALID_INPUT,
 } rbusError_t;
 
 char const * rbusError_ToString(rbusError_t e);
@@ -233,6 +234,54 @@ struct _rbusValue
 {
 };
 typedef struct _rbusValue *rbusValue_t;
+
+struct _rbusProperty
+{
+};
+typedef struct _rbusProperty *rbusProperty_t;
+
+typedef enum
+{
+    RBUS_STRING = 0,
+    RBUS_INT32,
+    RBUS_BOOLEAN
+} rbusValueType_t;
+
+typedef enum
+{
+    RBUS_ELEMENT_TYPE_PROPERTY = 0
+} rbusElementType_t;
+
+typedef struct
+{
+} rbusSetHandlerOptions_t;
+
+typedef struct
+{
+} rbusGetHandlerOptions_t;
+
+typedef void* rbusMethodAsyncHandle_t;
+
+typedef rbusError_t (*rbusMethodHandler_t)(rbusHandle_t handle, char const* methodName, rbusObject_t inParams, rbusObject_t outParams, rbusMethodAsyncHandle_t asyncHandle);
+typedef rbusError_t (*rbusGetHandler_t)(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* options);
+typedef rbusError_t (*rbusSetHandler_t)(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* options);
+
+typedef struct 
+{
+    rbusGetHandler_t getHandler;
+    rbusSetHandler_t setHandler;
+    void* tableGetHandler;
+    void* tableSetHandler;
+    void* tableAddRowHandler; 
+    void* tableRemoveRowHandler;
+} rbusDataElementHandler_t;
+
+typedef struct
+{
+    char const* name;
+    rbusElementType_t type;
+    rbusDataElementHandler_t handler;
+} rbusDataElement_t;
 
 typedef void (*rbusMethodAsyncRespHandler_t)(rbusHandle_t handle, char const *methodName, rbusError_t error, rbusObject_t params);
 
@@ -263,6 +312,14 @@ public:
     virtual rbusError_t rbusValue_SetString(rbusValue_t value, char const *str) = 0;
     virtual rbusError_t rbus_set(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
     virtual rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler) = 0;
+    virtual rbusError_t rbus_regDataElements(rbusHandle_t handle, int numElements, rbusDataElement_t* elements) = 0;
+    virtual rbusError_t rbus_unregDataElements(rbusHandle_t handle, int numElements, rbusDataElement_t* elements) = 0;
+    virtual char const* rbusProperty_GetName(rbusProperty_t property) = 0;
+    virtual rbusValue_t rbusProperty_GetValue(rbusProperty_t property) = 0;
+    virtual rbusValueType_t rbusValue_GetType(rbusValue_t value) = 0;
+    virtual char const* rbusValue_GetString(rbusValue_t value, int* len) = 0;
+    virtual void rbusProperty_SetValue(rbusProperty_t property, rbusValue_t value) = 0;
+    virtual void rbusValue_Release(rbusValue_t value) = 0;
 };
 
 class RBusApiWrapper
@@ -280,6 +337,14 @@ public:
     static rbusError_t rbusValue_SetString(rbusValue_t value, char const *str);
     static rbusError_t rbus_set(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
     static rbusError_t rbus_get(rbusHandle_t handle, char const *objectName, rbusValue_t value, rbusMethodAsyncRespHandler_t respHandler);
+    static rbusError_t rbus_regDataElements(rbusHandle_t handle, int numElements, rbusDataElement_t* elements);
+    static rbusError_t rbus_unregDataElements(rbusHandle_t handle, int numElements, rbusDataElement_t* elements);
+    static char const* rbusProperty_GetName(rbusProperty_t property);
+    static rbusValue_t rbusProperty_GetValue(rbusProperty_t property);
+    static rbusValueType_t rbusValue_GetType(rbusValue_t value);
+    static char const* rbusValue_GetString(rbusValue_t value, int* len);
+    static void rbusProperty_SetValue(rbusProperty_t property, rbusValue_t value);
+    static void rbusValue_Release(rbusValue_t value);
 };
 
 extern rbusError_t (*rbus_open)(rbusHandle_t *, char const *);
@@ -288,6 +353,14 @@ extern rbusError_t (*rbusValue_Init)(rbusValue_t *);
 extern rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *);
 extern rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
 extern rbusError_t (*rbus_get)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t);
+extern rbusError_t (*rbus_regDataElements)(rbusHandle_t, int, rbusDataElement_t*);
+extern rbusError_t (*rbus_unregDataElements)(rbusHandle_t, int, rbusDataElement_t*);
+extern char const* (*rbusProperty_GetName)(rbusProperty_t);
+extern rbusValue_t (*rbusProperty_GetValue)(rbusProperty_t);
+extern rbusValueType_t (*rbusValue_GetType)(rbusValue_t);
+extern char const* (*rbusValue_GetString)(rbusValue_t, int*);
+extern void (*rbusProperty_SetValue)(rbusProperty_t, rbusValue_t);
+extern void (*rbusValue_Release)(rbusValue_t);
 
 class MockRBusApi : public RBusApiInterface
 {
@@ -298,6 +371,14 @@ public:
     MOCK_METHOD2(rbusValue_SetString, rbusError_t(rbusValue_t, char const *));
     MOCK_METHOD4(rbus_set, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
     MOCK_METHOD4(rbus_get, rbusError_t(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t));
+    MOCK_METHOD3(rbus_regDataElements, rbusError_t(rbusHandle_t, int, rbusDataElement_t*));
+    MOCK_METHOD3(rbus_unregDataElements, rbusError_t(rbusHandle_t, int, rbusDataElement_t*));
+    MOCK_METHOD1(rbusProperty_GetName, char const*(rbusProperty_t));
+    MOCK_METHOD1(rbusProperty_GetValue, rbusValue_t(rbusProperty_t));
+    MOCK_METHOD1(rbusValue_GetType, rbusValueType_t(rbusValue_t));
+    MOCK_METHOD2(rbusValue_GetString, char const*(rbusValue_t, int*));
+    MOCK_METHOD2(rbusProperty_SetValue, void(rbusProperty_t, rbusValue_t));
+    MOCK_METHOD1(rbusValue_Release, void(rbusValue_t));
 };
 
 /* ------------------- WebConfig Impl ------------ */
