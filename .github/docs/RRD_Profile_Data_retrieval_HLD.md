@@ -15,11 +15,6 @@ This document outlines the High Level Design for implementing RFC parameters to 
 - **FR-4**: Support specific category-level queries returning filtered issue types
 - **FR-5**: Provide persistent category selection across device reboots
 
-### 2.2 Non-Functional Requirements
-- **NFR-1**: Use RBUS communication framework for RFC parameter implementation
-- **NFR-2**: Ensure thread-safe operations for concurrent access
-- **NFR-3**: Maintain backward compatibility with existing RRD functionality
-- **NFR-4**: Support JSON file size up to 32KB for profile data
 
 ## 3. Architecture Overview
 
