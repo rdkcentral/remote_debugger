@@ -606,29 +606,37 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
                         char *result_str = NULL;
                         
                         if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
-                            // Return category names as array
-                            cJSON *categories = cJSON_CreateArray();
-                            cJSON *item = json->child;
-                            while (item) {
-                                cJSON_AddItemToArray(categories, cJSON_CreateString(item->string));
-                                item = item->next;
-                            }
-                            result_str = cJSON_Print(categories);
-                            cJSON_Delete(categories);
-                        } else {
-                            // Return specific category issue types
-                            cJSON *category = cJSON_GetObjectItem(json, RRDProfileCategory);
-                            if (category) {
-                                cJSON *issueTypes = cJSON_CreateArray();
-                                cJSON *issue = category->child;
-                                while (issue) {
-                                    cJSON_AddItemToArray(issueTypes, cJSON_CreateString(issue->string));
-                                    issue = issue->next;
+                            // Return all issue types from all categories (only arrays, not nested objects)
+                            cJSON *allIssueTypes = cJSON_CreateArray();
+                            cJSON *category = json->child;
+                            while (category) {
+                                if (cJSON_IsArray(category)) {
+                                    int arraySize = cJSON_GetArraySize(category);
+                                    for (int i = 0; i < arraySize; i++) {
+                                        cJSON *issueType = cJSON_GetArrayItem(category, i);
+                                        if (cJSON_IsString(issueType)) {
+                                            cJSON_AddItemToArray(allIssueTypes, cJSON_CreateString(cJSON_GetStringValue(issueType)));
+                                        }
+                                    }
                                 }
-                                cJSON *result = cJSON_CreateObject();
-                                cJSON_AddItemToObject(result, RRDProfileCategory, issueTypes);
-                                result_str = cJSON_Print(result);
-                                cJSON_Delete(result);
+                                category = category->next;
+                            }
+                            result_str = cJSON_Print(allIssueTypes);
+                            cJSON_Delete(allIssueTypes);
+                        } else {
+                            // Return specific category issue types (only if it's an array structure)
+                            cJSON *category = cJSON_GetObjectItem(json, RRDProfileCategory);
+                            if (category && cJSON_IsArray(category)) {
+                                cJSON *issueTypes = cJSON_CreateArray();
+                                int arraySize = cJSON_GetArraySize(category);
+                                for (int i = 0; i < arraySize; i++) {
+                                    cJSON *issueType = cJSON_GetArrayItem(category, i);
+                                    if (cJSON_IsString(issueType)) {
+                                        cJSON_AddItemToArray(issueTypes, cJSON_CreateString(cJSON_GetStringValue(issueType)));
+                                    }
+                                }
+                                result_str = cJSON_Print(issueTypes);
+                                cJSON_Delete(issueTypes);
                             } else {
                                 result_str = cJSON_Print(cJSON_CreateArray());
                             }
