@@ -555,7 +555,7 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
             }
 
             strncpy(RRDProfileCategory, str, sizeof(RRDProfileCategory)-1);
-            RRDProfileCategory[sizeof(RRDProfileCategory)-1] = '\\0';
+            RRDProfileCategory[sizeof(RRDProfileCategory)-1] = '\0';
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: setProfileData value: %s\\n", __FUNCTION__, __LINE__, RRDProfileCategory);
 
             // Store the category selection to file
@@ -599,7 +599,7 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
                 char *jsonBuffer = malloc(fileSz + 1);
                 if (jsonBuffer) {
                     size_t bytesRead = fread(jsonBuffer, 1U, (size_t)fileSz, fp);
-                    jsonBuffer[bytesRead] = '\\0';
+                    jsonBuffer[bytesRead] = '\0';
                     
                     cJSON *json = cJSON_Parse(jsonBuffer);
                     if (json) {
