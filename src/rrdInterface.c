@@ -544,30 +544,30 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
     rbusValue_t value = rbusProperty_GetValue(prop);
     rbusValueType_t type = rbusValue_GetType(value);
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Set handler called for [%s]\\n", __FUNCTION__, __LINE__, propertyName);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Set handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
 
     if(strcmp(propertyName, RRD_SET_PROFILE_EVENT) == 0) {
         if (type == RBUS_STRING) {
             const char* str = rbusValue_GetString(value, NULL);
             if(strlen(str) > 255) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: String too long for setProfileData\\n", __FUNCTION__, __LINE__);
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: String too long for setProfileData\n", __FUNCTION__, __LINE__);
                 return RBUS_ERROR_INVALID_INPUT;
             }
 
             strncpy(RRDProfileCategory, str, sizeof(RRDProfileCategory)-1);
             RRDProfileCategory[sizeof(RRDProfileCategory)-1] = '\0';
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: setProfileData value: %s\\n", __FUNCTION__, __LINE__, RRDProfileCategory);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: setProfileData value: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
 
             // Store the category selection to file
             if(save_profile_category() != 0) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to store profile category\\n", __FUNCTION__, __LINE__);
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to store profile category\n", __FUNCTION__, __LINE__);
                 return RBUS_ERROR_BUS_ERROR;
             }
             
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Successfully set profile category to: %s\\n", __FUNCTION__, __LINE__, RRDProfileCategory);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Successfully set profile category to: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
             return RBUS_ERROR_SUCCESS;
         } else {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid type for setProfileData\\n", __FUNCTION__, __LINE__);
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid type for setProfileData\n", __FUNCTION__, __LINE__);
             return RBUS_ERROR_INVALID_INPUT;
         }
     }
@@ -584,7 +584,7 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
     (void)opts;
 
     char const* propertyName = rbusProperty_GetName(prop);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Get handler called for [%s]\\n", __FUNCTION__, __LINE__, propertyName);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Get handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
 
     if(strcmp(propertyName, RRD_GET_PROFILE_EVENT) == 0) {
         const char *filename = "/etc/rrd/remote_debugger.json";
@@ -641,12 +641,12 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
                             rbusProperty_SetValue(prop, rbusValue);
                             rbusValue_Release(rbusValue);
                             free(result_str);
-                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Successfully returned profile data\\n", __FUNCTION__, __LINE__);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Successfully returned profile data\n", __FUNCTION__, __LINE__);
                         }
                         
                         cJSON_Delete(json);
                     } else {
-                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to parse JSON from %s\\n", __FUNCTION__, __LINE__, filename);
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to parse JSON from %s\n", __FUNCTION__, __LINE__, filename);
                     }
                     
                     free(jsonBuffer);
@@ -654,7 +654,7 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
             }
             fclose(fp);
         } else {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\\n", __FUNCTION__, __LINE__, filename);
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
             return RBUS_ERROR_BUS_ERROR;
         }
         
