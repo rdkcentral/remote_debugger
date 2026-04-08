@@ -249,13 +249,13 @@ END IF
 #### 5.2.1 RBUS CLI Usage
 ```bash
 # Set category to "all" for complete profile data
-rbuscli set "all" Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData
+rbuscli set  Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData string "all"
 
 # Get complete profile data
 rbuscli get Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.getProfileData
 
 # Set specific category
-rbuscli set "Video" Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData
+rbuscli set Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData string "Video" 
 
 # Get Video category data
 rbuscli get Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.getProfileData
