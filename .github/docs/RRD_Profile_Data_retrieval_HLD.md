@@ -342,35 +342,9 @@ rbuscli get Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.get
 | Invalid category | `setProfileData="Invalid"` | Success, empty response on get |
 | Missing JSON file | `getProfileData` | Error response |
 
-## 11. Deployment Considerations
 
-### 11.1 Build Dependencies
-- **cJSON Library**: Required for JSON parsing functionality
-- **RBUS Framework**: Required for RFC parameter implementation
-- **File System**: Requires `/etc/rrd/` directory structure
 
-### 11.2 Runtime Requirements
-- **JSON Profile File**: Must be present at `/etc/rrd/remote_debugger.json`
-- **Directory Permissions**: Write access to category storage location
-- **RBUS Service**: RBUS daemon must be running
 
-### 11.3 Upgrade Compatibility
-- **Backward Compatibility**: Maintains existing RRD functionality
-- **Configuration Migration**: Category preferences preserved across upgrades
-- **JSON Schema**: Extensible JSON format for future enhancements
-
-## 12. Future Enhancements
-
-### 12.1 Potential Improvements
-- **Dynamic JSON Updates**: Support for runtime JSON file updates
-- **Category Validation**: Validate category names against available options
-- **Access Control**: Role-based access for different user types
-- **Performance Metrics**: Add timing and usage statistics
-
-### 12.2 Extensibility
-- **Additional Parameters**: Framework supports additional RFC parameters
-- **Custom Filters**: Support for more complex filtering beyond categories
-- **Event Notifications**: Notify on profile data changes or updates
 
 ---
 
