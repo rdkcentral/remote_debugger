@@ -604,40 +604,77 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
                     cJSON *json = cJSON_Parse(jsonBuffer);
                     if (json) {
                         char *result_str = NULL;
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: JSON parsed successfully, processing categories\n", __FUNCTION__, __LINE__);
                         
                         if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
-                            // Return all issue types from all categories (only arrays, not nested objects)
+                            // Return all issue types from all categories (exclude nested structures like DeepSleep)
                             cJSON *allIssueTypes = cJSON_CreateArray();
-                            cJSON *category = json->child;
-                            while (category) {
-                                if (cJSON_IsArray(category)) {
-                                    int arraySize = cJSON_GetArraySize(category);
-                                    for (int i = 0; i < arraySize; i++) {
-                                        cJSON *issueType = cJSON_GetArrayItem(category, i);
-                                        if (cJSON_IsString(issueType)) {
-                                            cJSON_AddItemToArray(allIssueTypes, cJSON_CreateString(cJSON_GetStringValue(issueType)));
+                            
+                            cJSON *category = NULL;
+                            cJSON_ArrayForEach(category, json) {
+                                if (cJSON_IsObject(category) && category->string) {
+                                    // Skip categories with nested subcategories (no direct Commands/Timeout)
+                                    bool hasDirectCommands = false;
+                                    cJSON *item = NULL;
+                                    cJSON_ArrayForEach(item, category) {
+                                        if (cJSON_IsObject(item)) {
+                                            cJSON *commands = cJSON_GetObjectItem(item, "Commands");
+                                            if (commands && cJSON_IsString(commands)) {
+                                                hasDirectCommands = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (hasDirectCommands) {
+                                        // Extract issue type names (object keys)
+                                        cJSON *issueType = NULL;
+                                        cJSON_ArrayForEach(issueType, category) {
+                                            if (cJSON_IsObject(issueType) && issueType->string) {
+                                                cJSON_AddItemToArray(allIssueTypes, cJSON_CreateString(issueType->string));
+                                            }
                                         }
                                     }
                                 }
-                                category = category->next;
                             }
+                            
                             result_str = cJSON_Print(allIssueTypes);
                             cJSON_Delete(allIssueTypes);
                         } else {
-                            // Return specific category issue types (only if it's an array structure)
+                            // Return specific category issue types
                             cJSON *category = cJSON_GetObjectItem(json, RRDProfileCategory);
-                            if (category && cJSON_IsArray(category)) {
-                                cJSON *issueTypes = cJSON_CreateArray();
-                                int arraySize = cJSON_GetArraySize(category);
-                                for (int i = 0; i < arraySize; i++) {
-                                    cJSON *issueType = cJSON_GetArrayItem(category, i);
-                                    if (cJSON_IsString(issueType)) {
-                                        cJSON_AddItemToArray(issueTypes, cJSON_CreateString(cJSON_GetStringValue(issueType)));
+                            if (category && cJSON_IsObject(category)) {
+                                // Check if this category has direct commands (not nested like DeepSleep)
+                                bool hasDirectCommands = false;
+                                cJSON *item = NULL;
+                                cJSON_ArrayForEach(item, category) {
+                                    if (cJSON_IsObject(item)) {
+                                        cJSON *commands = cJSON_GetObjectItem(item, "Commands");
+                                        if (commands && cJSON_IsString(commands)) {
+                                            hasDirectCommands = true;
+                                            break;
+                                        }
                                     }
                                 }
-                                result_str = cJSON_Print(issueTypes);
-                                cJSON_Delete(issueTypes);
+                                
+                                if (hasDirectCommands) {
+                                    cJSON *issueTypes = cJSON_CreateArray();
+                                    cJSON *issueType = NULL;
+                                    cJSON_ArrayForEach(issueType, category) {
+                                        if (cJSON_IsObject(issueType) && issueType->string) {
+                                            cJSON_AddItemToArray(issueTypes, cJSON_CreateString(issueType->string));
+                                        }
+                                    }
+                                    result_str = cJSON_Print(issueTypes);
+                                    cJSON_Delete(issueTypes);
+                                } else {
+                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s has nested structure, returning empty\n", 
+                                        __FUNCTION__, __LINE__, RRDProfileCategory);
+                                    result_str = cJSON_Print(cJSON_CreateArray());
+                                }
                             } else {
+                                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s not found\n", 
+                                    __FUNCTION__, __LINE__, RRDProfileCategory);
                                 result_str = cJSON_Print(cJSON_CreateArray());
                             }
                         }
