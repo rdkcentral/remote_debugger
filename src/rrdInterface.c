@@ -607,8 +607,8 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: JSON parsed successfully, processing categories\n", __FUNCTION__, __LINE__);
                         
                         if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
-                            // Return all issue types from all categories (exclude nested structures like DeepSleep)
-                            cJSON *allIssueTypes = cJSON_CreateArray();
+                            // Return all issue types grouped by categories (exclude nested structures like DeepSleep)
+                            cJSON *response = cJSON_CreateObject();
                             
                             cJSON *category = NULL;
                             cJSON_ArrayForEach(category, json) {
@@ -627,19 +627,27 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
                                     }
                                     
                                     if (hasDirectCommands) {
-                                        // Extract issue type names (object keys)
+                                        // Create array for this category's issue types
+                                        cJSON *issueTypesArray = cJSON_CreateArray();
                                         cJSON *issueType = NULL;
                                         cJSON_ArrayForEach(issueType, category) {
                                             if (cJSON_IsObject(issueType) && issueType->string) {
-                                                cJSON_AddItemToArray(allIssueTypes, cJSON_CreateString(issueType->string));
+                                                cJSON_AddItemToArray(issueTypesArray, cJSON_CreateString(issueType->string));
                                             }
+                                        }
+                                        
+                                        // Add this category and its issue types to response
+                                        if (cJSON_GetArraySize(issueTypesArray) > 0) {
+                                            cJSON_AddItemToObject(response, category->string, issueTypesArray);
+                                        } else {
+                                            cJSON_Delete(issueTypesArray);
                                         }
                                     }
                                 }
                             }
                             
-                            result_str = cJSON_Print(allIssueTypes);
-                            cJSON_Delete(allIssueTypes);
+                            result_str = cJSON_Print(response);
+                            cJSON_Delete(response);
                         } else {
                             // Return specific category issue types
                             cJSON *category = cJSON_GetObjectItem(json, RRDProfileCategory);
