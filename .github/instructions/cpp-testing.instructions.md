@@ -1,5 +1,5 @@
 ---
-applyTo: "unittest/**/*.cpp,unittest/**/*.h,uploadstblogs/unittest/**/*.cpp,uploadstblogs/unittest/**/*.h"
+applyTo: "src/unittest/**/*.cpp,src/unittest/**/*.h"
 ---
 
 # C++ Testing Standards (Google Test)
@@ -17,17 +17,17 @@ Use Google Test (gtest) and Google Mock (gmock) for all C++ test code.
 
 ```cpp
 // GOOD: Test file structure
-// filepath: unittest/dcm_utils_gtest.cpp
+// filepath: src/unittest/rrd_config_gtest.cpp
 
 extern "C" {
-#include "dcm_utils.h"
-#include "dcm_types.h"
+#include "rrd_config.h"
+#include "rrdCommon.h"
 }
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-class DcmUtilsTest : public ::testing::Test {
+class RrdConfigTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Initialize test resources
@@ -38,9 +38,9 @@ protected:
     }
 };
 
-TEST_F(DcmUtilsTest, ConfigFileReadWriteRoundTrip) {
+TEST_F(RrdConfigTest, ConfigFileReadWriteRoundTrip) {
     // Test configuration file parsing
-    const char* config = "/tmp/test.conf";
+    const char* config = "/tmp/rrd_test_profile.json";
     // verify read back value matches written value
     ASSERT_EQ(readConfigValue(config, "key"), "value");
 }
@@ -55,13 +55,13 @@ TEST_F(DcmUtilsTest, ConfigFileReadWriteRoundTrip) {
 
 ```cpp
 extern "C" {
-#include "dcm_parseconf.h"
-#include "dcm_rbus.h"
+#include "rrdJsonParser.h"
+#include "rrdRbus.h"
 }
 
 #include <gtest/gtest.h>
 
-class DcmParseConfTest : public ::testing::Test {
+class RrdJsonParserTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Initialize handler stubs
@@ -72,11 +72,11 @@ protected:
     }
 };
 
-TEST_F(DcmParseConfTest, ParseConfigReturnsExpected) {
-    DCMDHandle handle = {};
-    // Test configuration parsing
-    int result = dcmParseConfig(&handle, "/etc/dcmresponse.txt");
-    // verify handler returns success and populates configuration
+TEST_F(RrdJsonParserTest, ParseProfileReturnsExpected) {
+    rrdProfile_t profile = {};
+    // Test JSON profile parsing
+    int result = rrdParseProfile(&profile, "/etc/rrd_profile.json");
+    // verify handler returns success and populates profile
     ASSERT_EQ(result, 0);
 }
 ```
@@ -171,10 +171,7 @@ make check
 ### Memory Checking
 ```bash
 valgrind --leak-check=full --show-leak-kinds=all \
-         ./unittest/dcm_gtest
-
-valgrind --leak-check=full --show-leak-kinds=all \
-         ./uploadstblogs/unittest/uploadstblogs_gtest
+         ./src/unittest/rrdUnitTestRunner
 ```
 
 ### Test Output

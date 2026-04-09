@@ -37,16 +37,19 @@ AM_CONDITIONAL([WITH_GTEST_SUPPORT], [test "x$enable_gtest" = "xyes"])
 
 ```makefile
 # GOOD: Minimal linking
-bin_PROGRAMS = dcmd uploadstblogs uploadlogsnow
+bin_PROGRAMS = remotedebugger
 
-dcmd_SOURCES = dcm.c dcm_utils.c dcm_parseconf.c dcm_cronparse.c dcm_schedjob.c dcm_rbus.c
-dcmd_CFLAGS = -DFEATURE_SUPPORT_RDKLOG
-dcmd_LDADD = -lrbus -lpthread -ldl
+remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c \
+    rrdCommandSanity.c rrdDynamic.c rrdExecuteScript.c rrdMsgPackDecoder.c rrdInterface.c
+remotedebugger_CFLAGS = -DFEATURE_SUPPORT_RDKLOG
+remotedebugger_LDADD = -lrbus -lpthread -ldl
 
-uploadstblogs_SOURCES = uploadstblogs/src/uploadstblogs.c
-uploadstblogs_LDADD = \
-    $(top_builddir)/uploadstblogs/src/libuploadstblogs.la \
-    -lcurl -lssl -lcrypto -lrbus
+# Optional upload support (enabled with IARMBUS_ENABLE)
+if IARMBUS_ENABLE
+remotedebugger_SOURCES += rrdIarmEvents.c uploadRRDLogs.c rrd_config.c rrd_sysinfo.c \
+    rrd_logproc.c rrd_archive.c rrd_upload.c
+remotedebugger_LDADD += -luploadstblogs -lfwutils -lz
+endif
 
 # GOOD: Conditional compilation
 if WITH_GTEST_SUPPORT
@@ -97,11 +100,10 @@ AC_SUBST([DBUS_LIBS])
 ### Header Organization
 ```makefile
 # Include paths
-AM_CPPFLAGS = -I$(top_srcdir)/include \
-              -I$(top_srcdir)/uploadstblogs/include \
-              -I$(top_srcdir)/backup_logs/include \
-              -I$(top_srcdir)/usbLogUpload/include \
-              $(DBUS_CFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir)/src \
+              -I$(PKG_CONFIG_SYSROOT_DIR)$(includedir)/rbus \
+              -I$(PKG_CONFIG_SYSROOT_DIR)$(includedir) \
+              $(CJSON_CFLAGS)
 ```
 
 ## Build Performance

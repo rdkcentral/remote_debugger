@@ -688,6 +688,6 @@ return 0;
 ## References
 
 - Project follows RDK coding standards
-- See `uploadstblogs/include/` for uploadSTBLogs API header documentation
-- Review existing code in `uploadstblogs/src/` for patterns
+- See `src/rrd_config.h`, `src/rrdInterface.h` for remote debugger API header documentation
+- Review existing code in `src/` for patterns
 - Check `src/unittest/` directory for testing examples
