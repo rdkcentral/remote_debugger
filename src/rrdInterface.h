@@ -63,8 +63,6 @@ typedef enum _RemoteDebugger_EventId_t {
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
-rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
-rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
 
 // Helper functions for profile data processing
 bool has_direct_commands(cJSON *category);
@@ -88,6 +86,8 @@ void RRD_data_buff_deAlloc(data_buf *sbuf);
 void RRDMsgDeliver(int msgqid, data_buf *sbuf);
 int RRD_subscribe(void);
 int RRD_unsubscribe(void);
+rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
+rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
 
 #ifdef __cplusplus
 }
