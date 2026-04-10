@@ -30,10 +30,8 @@ int msqid = 0;
 key_t key = 1234;
 #endif
 #define RRD_TMP_DIR "/tmp/"
-#define MAX_PROFILE_JSON_SIZE 32768
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
-
 
 // Global storage for profile category
 char RRDProfileCategory[256] = "all";
@@ -577,10 +575,12 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
     return RBUS_ERROR_INVALID_INPUT;
 }
 
+#define MAX_PROFILE_JSON_SIZE 32768
+
 /**
  * @brief Check if a category has direct commands (not nested structure)
  */
-static bool has_direct_commands(cJSON *category)
+bool has_direct_commands(cJSON *category)
 {
     cJSON *item = NULL;
     cJSON_ArrayForEach(item, category) {
@@ -597,7 +597,7 @@ static bool has_direct_commands(cJSON *category)
 /**
  * @brief Read and validate JSON profile file
  */
-static char* read_profile_json_file(const char* filename, long* file_size)
+char* read_profile_json_file(const char* filename, long* file_size)
 {
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
@@ -633,7 +633,7 @@ static char* read_profile_json_file(const char* filename, long* file_size)
 /**
  * @brief Generate JSON for all categories
  */
-static char* get_all_categories_json(cJSON* json)
+char* get_all_categories_json(cJSON* json)
 {
     cJSON *response = cJSON_CreateObject();
     
@@ -668,7 +668,7 @@ static char* get_all_categories_json(cJSON* json)
 /**
  * @brief Generate JSON for specific category
  */
-static char* get_specific_category_json(cJSON* json, const char* category_name)
+char* get_specific_category_json(cJSON* json, const char* category_name)
 {
     cJSON *category = cJSON_GetObjectItem(json, category_name);
     if (!category || !cJSON_IsObject(category)) {
@@ -699,7 +699,7 @@ static char* get_specific_category_json(cJSON* json, const char* category_name)
 /**
  * @brief Set RBUS property response with JSON string
  */
-static rbusError_t set_rbus_response(rbusProperty_t prop, const char* json_str)
+rbusError_t set_rbus_response(rbusProperty_t prop, const char* json_str)
 {
     if (!json_str) {
         return RBUS_ERROR_BUS_ERROR;
