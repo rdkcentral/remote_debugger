@@ -65,6 +65,13 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
 rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
+
+// Helper functions for profile data processing (made non-static for unit testing)
+bool has_direct_commands(cJSON *category);
+char* read_profile_json_file(const char* filename, long* file_size);
+char* get_all_categories_json(cJSON* json);
+char* get_specific_category_json(cJSON* json, const char* category_name);
+rbusError_t set_rbus_response(rbusProperty_t prop, const char* json_str);
 #endif
 #if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
 int RRD_IARM_subscribe(void);
