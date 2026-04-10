@@ -30,8 +30,10 @@ int msqid = 0;
 key_t key = 1234;
 #endif
 #define RRD_TMP_DIR "/tmp/"
+#define MAX_PROFILE_JSON_SIZE 32768
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
+
 
 // Global storage for profile category
 char RRDProfileCategory[256] = "all";
@@ -574,8 +576,6 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
     
     return RBUS_ERROR_INVALID_INPUT;
 }
-
-#define MAX_PROFILE_JSON_SIZE 32768
 
 /**
  * @brief Check if a category has direct commands (not nested structure)
