@@ -210,22 +210,6 @@ char const* (*rbusValue_GetString)(rbusValue_t, int*) = &RBusApiWrapper::rbusVal
 void (*rbusProperty_SetValue)(rbusProperty_t, rbusValue_t) = &RBusApiWrapper::rbusProperty_SetValue;
 void (*rbusValue_Release)(rbusValue_t) = &RBusApiWrapper::rbusValue_Release;
 
-#ifdef GTEST_ENABLE
-// Mock implementations for profile handler functions when GTEST_ENABLE is defined
-extern "C" {
-    rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHandlerOptions_t* opts)
-    {
-        (void)handle; (void)prop; (void)opts;
-        return RBUS_ERROR_SUCCESS;
-    }
-
-    rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts)
-    {
-        (void)handle; (void)prop; (void)opts;
-        return RBUS_ERROR_SUCCESS;
-    }
-}
-#endif
 void (*rbusValue_Release)(rbusValue_t) = &RBusApiWrapper::rbusValue_Release;
 
 /* -------- RFC ---------------*/
