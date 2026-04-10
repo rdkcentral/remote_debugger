@@ -195,6 +195,7 @@ const char* rbusError_ToString(rbusError_t e)
   }
   return s;
 }
+
 rbusError_t (*rbus_open)(rbusHandle_t *, char const *) = &RBusApiWrapper::rbus_open;
 rbusError_t (*rbus_close)(rbusHandle_t) = &RBusApiWrapper::rbus_close;
 rbusError_t (*rbusValue_Init)(rbusValue_t *) = &RBusApiWrapper::rbusValue_Init;
@@ -208,8 +209,6 @@ rbusValue_t (*rbusProperty_GetValue)(rbusProperty_t) = &RBusApiWrapper::rbusProp
 rbusValueType_t (*rbusValue_GetType)(rbusValue_t) = &RBusApiWrapper::rbusValue_GetType;
 char const* (*rbusValue_GetString)(rbusValue_t, int*) = &RBusApiWrapper::rbusValue_GetString;
 void (*rbusProperty_SetValue)(rbusProperty_t, rbusValue_t) = &RBusApiWrapper::rbusProperty_SetValue;
-void (*rbusValue_Release)(rbusValue_t) = &RBusApiWrapper::rbusValue_Release;
-
 void (*rbusValue_Release)(rbusValue_t) = &RBusApiWrapper::rbusValue_Release;
 
 /* -------- RFC ---------------*/
