@@ -35,6 +35,7 @@ rbusHandle_t    rrdRbusHandle;
 
 // Global storage for profile category
 char RRDProfileCategory[256] = "all";
+#define MAX_PROFILE_JSON_SIZE 32768
 
 // Helper functions for profile category file-based storage
 int load_profile_category(void) {
