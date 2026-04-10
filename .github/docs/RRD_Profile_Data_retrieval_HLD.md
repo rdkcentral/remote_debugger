@@ -213,6 +213,13 @@ END IF
 #### 4.4.2 Response Formats
 
 **All Categories Response**:
+
+# Set category to "all" for complete profile data
+rbuscli set  Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData string "all"
+
+# Get complete profile data
+rbuscli get Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.getProfileData
+
 ```json
 {
   "Video": ["issueType1", "issueType2"],
@@ -221,6 +228,14 @@ END IF
 ```
 
 **Specific Category Response**:
+
+# Set specific category
+rbuscli set Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.setProfileData string "Video" 
+
+# Get Video category data
+rbuscli get Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.getProfileData
+```
+
 ```json
 ["issueType1", "issueType2"]
 ```
