@@ -66,7 +66,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
 rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
 
-// Helper functions for profile data processing (made non-static for unit testing)
+// Helper functions for profile data processing
 bool has_direct_commands(cJSON *category);
 char* read_profile_json_file(const char* filename, long* file_size);
 char* get_all_categories_json(cJSON* json);
