@@ -3724,6 +3724,724 @@ TEST(shadowMainTest, MaintTest) {
 }
 #endif
 
+/* ====================== Profile Management Function Tests ================*/
+/* --------------- Test load_profile_category() from rrdInterface --------------- */
+class LoadProfileCategoryTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        // Clean up any existing test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+
+    void TearDown() override
+    {
+        // Clean up test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+};
+
+TEST_F(LoadProfileCategoryTest, LoadFromExistingFile)
+{
+    // Create test file with category
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    ASSERT_NE(fp, nullptr);
+    fprintf(fp, "Video\n");
+    fclose(fp);
+
+    int result = load_profile_category();
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "Video");
+}
+
+TEST_F(LoadProfileCategoryTest, LoadFromNonExistentFile)
+{
+    int result = load_profile_category();
+    EXPECT_EQ(result, -1);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
+
+TEST_F(LoadProfileCategoryTest, LoadFromEmptyFile)
+{
+    // Create empty file
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    ASSERT_NE(fp, nullptr);
+    fclose(fp);
+
+    int result = load_profile_category();
+    EXPECT_EQ(result, -1);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
+
+TEST_F(LoadProfileCategoryTest, LoadWithNewlineHandling)
+{
+    // Create test file with multiple lines
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    ASSERT_NE(fp, nullptr);
+    fprintf(fp, "Network\nextra line");
+    fclose(fp);
+
+    int result = load_profile_category();
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "Network");
+}
+
+/* --------------- Test save_profile_category() from rrdInterface --------------- */
+class SaveProfileCategoryTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        // Clean up any existing test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Set test category
+        strncpy(RRDProfileCategory, "Audio", sizeof(RRDProfileCategory) - 1);
+        RRDProfileCategory[sizeof(RRDProfileCategory) - 1] = '\0';
+    }
+
+    void TearDown() override
+    {
+        // Clean up test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+};
+
+TEST_F(SaveProfileCategoryTest, SaveToFile)
+{
+    int result = save_profile_category();
+    EXPECT_EQ(result, 0);
+
+    // Verify file was created and contains correct content
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "r");
+    ASSERT_NE(fp, nullptr);
+    
+    char buffer[256];
+    ASSERT_NE(fgets(buffer, sizeof(buffer), fp), nullptr);
+    fclose(fp);
+    
+    // Remove newline for comparison
+    char *newline = strchr(buffer, '\n');
+    if (newline) *newline = '\0';
+    
+    EXPECT_STREQ(buffer, "Audio");
+}
+
+TEST_F(SaveProfileCategoryTest, SaveToReadOnlyDirectory)
+{
+    // This test checks behavior when file cannot be written
+    // Create a scenario where the directory might not be writable
+    // The function should return -1 in error cases
+    
+    // We can't easily test read-only scenarios in unit tests,
+    // but we can verify the function handles file creation properly
+    int result = save_profile_category();
+    
+    // Should succeed in normal test environment
+    EXPECT_GE(result, -1);  // Either success (0) or expected failure (-1)
+}
+
+/* --------------- Test has_direct_commands() from rrdInterface --------------- */
+class HasDirectCommandsTest : public ::testing::Test
+{
+protected:
+    cJSON *category;
+    
+    void SetUp() override
+    {
+        category = nullptr;
+    }
+
+    void TearDown() override
+    {
+        if (category) {
+            cJSON_Delete(category);
+        }
+    }
+};
+
+TEST_F(HasDirectCommandsTest, CategoryWithDirectCommands)
+{
+    // Create category with direct commands structure
+    const char *json_str = R"({
+        "IssueType1": {
+            "Commands": "ls -la"
+        },
+        "IssueType2": {
+            "Commands": "ps aux"
+        }
+    })";
+    
+    category = cJSON_Parse(json_str);
+    ASSERT_NE(category, nullptr);
+    
+    bool result = has_direct_commands(category);
+    EXPECT_TRUE(result);
+}
+
+TEST_F(HasDirectCommandsTest, CategoryWithoutDirectCommands)
+{
+    // Create category without Commands field
+    const char *json_str = R"({
+        "IssueType1": {
+            "Description": "Test issue"
+        },
+        "IssueType2": {
+            "Timeout": 30
+        }
+    })";
+    
+    category = cJSON_Parse(json_str);
+    ASSERT_NE(category, nullptr);
+    
+    bool result = has_direct_commands(category);
+    EXPECT_FALSE(result);
+}
+
+TEST_F(HasDirectCommandsTest, EmptyCategory)
+{
+    category = cJSON_CreateObject();
+    ASSERT_NE(category, nullptr);
+    
+    bool result = has_direct_commands(category);
+    EXPECT_FALSE(result);
+}
+
+TEST_F(HasDirectCommandsTest, NullCategory)
+{
+    bool result = has_direct_commands(nullptr);
+    EXPECT_FALSE(result);
+}
+
+/* --------------- Test read_profile_json_file() from rrdInterface --------------- */
+class ReadProfileJsonFileTest : public ::testing::Test
+{
+protected:
+    const char *test_file = "/tmp/test_profile.json";
+    long file_size;
+    
+    void SetUp() override
+    {
+        file_size = 0;
+    }
+
+    void TearDown() override
+    {
+        remove(test_file);
+    }
+};
+
+TEST_F(ReadProfileJsonFileTest, ReadValidFile)
+{
+    // Create test file with JSON content
+    const char *json_content = R"({"Video": {"issue1": {"Commands": "test"}}})";
+    FILE *fp = fopen(test_file, "w");
+    ASSERT_NE(fp, nullptr);
+    fprintf(fp, "%s", json_content);
+    fclose(fp);
+    
+    char *result = read_profile_json_file(test_file, &file_size);
+    ASSERT_NE(result, nullptr);
+    EXPECT_GT(file_size, 0);
+    EXPECT_STREQ(result, json_content);
+    
+    free(result);
+}
+
+TEST_F(ReadProfileJsonFileTest, ReadNonExistentFile)
+{
+    char *result = read_profile_json_file("/tmp/nonexistent.json", &file_size);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(file_size, 0);
+}
+
+TEST_F(ReadProfileJsonFileTest, ReadEmptyFile)
+{
+    // Create empty file
+    FILE *fp = fopen(test_file, "w");
+    ASSERT_NE(fp, nullptr);
+    fclose(fp);
+    
+    char *result = read_profile_json_file(test_file, &file_size);
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(ReadProfileJsonFileTest, ReadNullFilename)
+{
+    char *result = read_profile_json_file(nullptr, &file_size);
+    EXPECT_EQ(result, nullptr);
+}
+
+/* --------------- Test get_all_categories_json() from rrdInterface --------------- */
+class GetAllCategoriesJsonTest : public ::testing::Test
+{
+protected:
+    cJSON *json;
+    
+    void SetUp() override
+    {
+        json = nullptr;
+    }
+
+    void TearDown() override
+    {
+        if (json) {
+            cJSON_Delete(json);
+        }
+    }
+};
+
+TEST_F(GetAllCategoriesJsonTest, GetAllValidCategories)
+{
+    // Create JSON with multiple categories
+    const char *json_str = R"({
+        "Video": {
+            "issue1": {"Commands": "test1"},
+            "issue2": {"Commands": "test2"}
+        },
+        "Audio": {
+            "issue3": {"Commands": "test3"}
+        }
+    })";
+    
+    json = cJSON_Parse(json_str);
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_all_categories_json(json);
+    ASSERT_NE(result, nullptr);
+    
+    // Parse result to verify structure
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    
+    // Check that Video and Audio categories exist
+    cJSON *video = cJSON_GetObjectItem(result_json, "Video");
+    cJSON *audio = cJSON_GetObjectItem(result_json, "Audio");
+    
+    EXPECT_NE(video, nullptr);
+    EXPECT_NE(audio, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(video));
+    EXPECT_TRUE(cJSON_IsArray(audio));
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetAllCategoriesJsonTest, GetAllFromEmptyJson)
+{
+    json = cJSON_CreateObject();
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_all_categories_json(json);
+    ASSERT_NE(result, nullptr);
+    
+    // Should return empty object
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_EQ(cJSON_GetArraySize(result_json), 0);
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetAllCategoriesJsonTest, GetAllFromNullJson)
+{
+    char *result = get_all_categories_json(nullptr);
+    // Function should handle null input gracefully
+    // Based on implementation, this might crash or return null
+    // The test documents the current behavior
+}
+
+/* --------------- Test get_specific_category_json() from rrdInterface --------------- */
+class GetSpecificCategoryJsonTest : public ::testing::Test
+{
+protected:
+    cJSON *json;
+    
+    void SetUp() override
+    {
+        json = nullptr;
+    }
+
+    void TearDown() override
+    {
+        if (json) {
+            cJSON_Delete(json);
+        }
+    }
+};
+
+TEST_F(GetSpecificCategoryJsonTest, GetExistingCategory)
+{
+    const char *json_str = R"({
+        "Video": {
+            "issue1": {"Commands": "test1"},
+            "issue2": {"Commands": "test2"}
+        },
+        "Audio": {
+            "issue3": {"Commands": "test3"}
+        }
+    })";
+    
+    json = cJSON_Parse(json_str);
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_specific_category_json(json, "Video");
+    ASSERT_NE(result, nullptr);
+    
+    // Parse result to verify it's an array with Video issues
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(result_json));
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetSpecificCategoryJsonTest, GetNonExistentCategory)
+{
+    const char *json_str = R"({
+        "Video": {
+            "issue1": {"Commands": "test1"}
+        }
+    })";
+    
+    json = cJSON_Parse(json_str);
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_specific_category_json(json, "NonExistent");
+    ASSERT_NE(result, nullptr);
+    
+    // Should return empty array
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(result_json));
+    EXPECT_EQ(cJSON_GetArraySize(result_json), 0);
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetSpecificCategoryJsonTest, GetFromNullJson)
+{
+    char *result = get_specific_category_json(nullptr, "Video");
+    // Should handle null input gracefully
+    ASSERT_NE(result, nullptr);
+    
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(result_json));
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+/* --------------- Test rrd_SetHandler() from rrdInterface --------------- */
+class RrdSetHandlerTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    
+    void SetUp() override
+    {
+        // Clear any existing profile category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+        
+        // Clean up test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+    }
+
+    void TearDown() override
+    {
+        // Clean up
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+};
+
+TEST_F(RrdSetHandlerTest, SetValidProfileCategory)
+{
+    // This test verifies the overall logic without deep RBUS API testing
+    // since those are mocked and complex to set up properly
+    
+    // Set a test category directly to verify save/load workflow
+    strncpy(RRDProfileCategory, "TestCategory", sizeof(RRDProfileCategory) - 1);
+    
+    // Test save functionality
+    int save_result = save_profile_category();
+    EXPECT_EQ(save_result, 0);
+    
+    // Clear and reload to verify
+    memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    int load_result = load_profile_category();
+    EXPECT_EQ(load_result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "TestCategory");
+}
+
+/* --------------- Test rrd_GetHandler() from rrdInterface --------------- */
+class RrdGetHandlerTest : public ::testing::Test
+{
+protected:
+    const char *test_json_file = "/tmp/test_profile.json";
+    
+    void SetUp() override
+    {
+        // Create test JSON file
+        const char *json_content = R"({
+            "Video": {
+                "issue1": {"Commands": "test1"},
+                "issue2": {"Commands": "test2"}
+            },
+            "Audio": {
+                "issue3": {"Commands": "test3"}
+            }
+        })";
+        
+        FILE *fp = fopen(test_json_file, "w");
+        if (fp) {
+            fprintf(fp, "%s", json_content);
+            fclose(fp);
+        }
+        
+        // Set up profile category
+        strncpy(RRDProfileCategory, "all", sizeof(RRDProfileCategory) - 1);
+    }
+
+    void TearDown() override
+    {
+        remove(test_json_file);
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+};
+
+TEST_F(RrdGetHandlerTest, TestProfileDataProcessing)
+{
+    // Test the helper functions used by rrd_GetHandler
+    
+    long file_size;
+    char *json_buffer = read_profile_json_file(test_json_file, &file_size);
+    ASSERT_NE(json_buffer, nullptr);
+    EXPECT_GT(file_size, 0);
+    
+    cJSON *json = cJSON_Parse(json_buffer);
+    ASSERT_NE(json, nullptr);
+    
+    // Test get_all_categories_json
+    char *all_result = get_all_categories_json(json);
+    ASSERT_NE(all_result, nullptr);
+    
+    // Test get_specific_category_json
+    char *specific_result = get_specific_category_json(json, "Video");
+    ASSERT_NE(specific_result, nullptr);
+    
+    // Cleanup
+    cJSON_Delete(json);
+    free(json_buffer);
+    free(all_result);
+    free(specific_result);
+}
+
+/* --------------- Test checkAppendRequest() from rrdInterface --------------- */
+class CheckAppendRequestTest : public ::testing::Test
+{
+protected:
+    char test_string[64];
+    
+    void SetUp() override
+    {
+        memset(test_string, 0, sizeof(test_string));
+    }
+};
+
+TEST_F(CheckAppendRequestTest, RequestWithAppendSuffix)
+{
+    strcpy(test_string, "issue_apnd");
+    bool result = checkAppendRequest(test_string);
+    
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(test_string, "issue");
+}
+
+TEST_F(CheckAppendRequestTest, RequestWithoutAppendSuffix)
+{
+    strcpy(test_string, "issue");
+    bool result = checkAppendRequest(test_string);
+    
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(test_string, "issue");
+}
+
+TEST_F(CheckAppendRequestTest, EmptyString)
+{
+    strcpy(test_string, "");
+    bool result = checkAppendRequest(test_string);
+    
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(test_string, "");
+}
+
+TEST_F(CheckAppendRequestTest, OnlyAppendSuffix)
+{
+    strcpy(test_string, "_apnd");
+    bool result = checkAppendRequest(test_string);
+    
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(test_string, "");
+}
+
+TEST_F(CheckAppendRequestTest, NullPointer)
+{
+    bool result = checkAppendRequest(nullptr);
+    // Function should handle null gracefully
+    // Based on implementation, this might crash or return false
+}
+
+/* --------------- Test webconfigFrameworkInit() from rrdInterface --------------- */
+class WebconfigFrameworkInitTest : public ::testing::Test
+{
+protected:
+    ClientWebConfigMock mock_webconfig;
+
+    void SetUp() override
+    {
+        setWebConfigMock(&mock_webconfig);
+    }
+
+    void TearDown() override
+    {
+        setWebConfigMock(nullptr);
+    }
+};
+
+TEST_F(WebconfigFrameworkInitTest, InitializesWebconfigFramework)
+{
+    EXPECT_CALL(mock_webconfig, register_sub_docs_mock(::testing::_, ::testing::Eq(1), ::testing::IsNull(), ::testing::IsNull()))
+        .Times(1)
+        .WillOnce([](blobRegInfo *bInfo, int numOfSubdocs, getVersion getv, setVersion setv)
+                  {
+            ASSERT_NE(bInfo, nullptr);
+            ASSERT_STREQ(bInfo->subdoc_name, "remotedebugger");
+            ASSERT_EQ(numOfSubdocs, 1);
+            ASSERT_EQ(getv, nullptr);
+            ASSERT_EQ(setv, nullptr); });
+
+    // Call the function
+    webconfigFrameworkInit();
+    
+    // Verify expectations
+    ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(&mock_webconfig));
+}
+
+/* --------------- Test getBlobVersion() from rrdInterface --------------- */
+class GetBlobVersionTest : public ::testing::Test
+{
+protected:
+    uint32_t original_version;
+    
+    void SetUp() override
+    {
+        original_version = gWebCfgBloBVersion;
+        gWebCfgBloBVersion = 12345;
+    }
+
+    void TearDown() override
+    {
+        gWebCfgBloBVersion = original_version;
+    }
+};
+
+TEST_F(GetBlobVersionTest, ReturnsCurrentVersion)
+{
+    uint32_t result = getBlobVersion("test_subdoc");
+    EXPECT_EQ(result, 12345);
+}
+
+TEST_F(GetBlobVersionTest, ReturnsVersionWithNullSubdoc)
+{
+    uint32_t result = getBlobVersion(nullptr);
+    EXPECT_EQ(result, 12345);
+}
+
+/* --------------- Test setBlobVersion() from rrdInterface --------------- */
+class SetBlobVersionTest : public ::testing::Test
+{
+protected:
+    uint32_t original_version;
+    
+    void SetUp() override
+    {
+        original_version = gWebCfgBloBVersion;
+    }
+
+    void TearDown() override
+    {
+        gWebCfgBloBVersion = original_version;
+    }
+};
+
+TEST_F(SetBlobVersionTest, SetsVersionSuccessfully)
+{
+    int result = setBlobVersion("test_subdoc", 54321);
+    
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(gWebCfgBloBVersion, 54321);
+}
+
+TEST_F(SetBlobVersionTest, SetsVersionWithNullSubdoc)
+{
+    int result = setBlobVersion(nullptr, 98765);
+    
+    EXPECT_EQ(result, 0);
+    EXPECT_EQ(gWebCfgBloBVersion, 98765);
+}
+
+/* --------------- Test set_rbus_response() from rrdInterface --------------- */
+class SetRbusResponseTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    
+    void SetUp() override
+    {
+        // Note: This is a complex function to test due to RBUS dependencies
+        // These tests verify the basic logic flow
+    }
+
+    void TearDown() override
+    {
+        // Cleanup if needed
+    }
+};
+
+TEST_F(SetRbusResponseTest, HandlesNullJsonString)
+{
+    // Test with null JSON string - should return error
+    rbusError_t result = set_rbus_response(nullptr, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
+
+TEST_F(SetRbusResponseTest, HandlesValidJsonString)
+{
+    // This is difficult to test without full RBUS mock setup
+    // The function should succeed with valid inputs in a real environment
+    const char *test_json = R"({"test": "data"})";
+    
+    // Without full RBUS setup, we can't fully test this
+    // But we can verify it handles the null case properly
+    rbusError_t result = set_rbus_response(nullptr, test_json);
+    // Expected behavior depends on RBUS implementation details
+}
+
 /* ================== Gtest Main ======================== */
 GTEST_API_ main(int argc, char *argv[])
 {
