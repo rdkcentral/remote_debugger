@@ -576,8 +576,6 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
     return RBUS_ERROR_INVALID_INPUT;
 }
 
-#define MAX_PROFILE_JSON_SIZE 32768
-
 /**
  * @brief Check if a category has direct commands (not nested structure)
  */
