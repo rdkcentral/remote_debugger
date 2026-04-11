@@ -33,6 +33,72 @@ key_t key = 1234;
 uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
 
+// Global storage for profile category
+char RRDProfileCategory[256] = "all";
+
+// Helper functions for profile category file-based storage
+int load_profile_category(void) {
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "r");
+    if (fp) {
+        if (fgets(RRDProfileCategory, sizeof(RRDProfileCategory), fp)) {
+            // Remove trailing newline
+            char *newline = strchr(RRDProfileCategory, '\n');
+            if (newline) *newline = '\0';
+            fclose(fp);
+            return 0;
+        }
+        fclose(fp);
+    }
+    // Default to "all" if file doesn't exist or read fails
+    strncpy(RRDProfileCategory, "all", sizeof(RRDProfileCategory) - 1);
+    RRDProfileCategory[sizeof(RRDProfileCategory) - 1] = '\0';
+    return -1;
+}
+
+int save_profile_category(void) {
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    if (fp) {
+        fprintf(fp, "%s\n", RRDProfileCategory);
+        fclose(fp);
+        return 0;
+    }
+    return -1;
+}
+
+#define DATA_HANDLER_SET_MACRO \
+    { \
+        NULL, \
+        rrd_SetHandler, \
+        NULL, \
+        NULL, \
+        NULL, \
+        NULL \
+    }
+
+#define DATA_HANDLER_GET_MACRO \
+    { \
+        rrd_GetHandler, \
+        NULL, \
+        NULL, \
+        NULL, \
+        NULL, \
+        NULL \
+    }
+
+// Data elements for profile data RBUS provider
+rbusDataElement_t profileDataElements[2] = {
+    {
+        RRD_SET_PROFILE_EVENT,
+        RBUS_ELEMENT_TYPE_PROPERTY,
+        DATA_HANDLER_SET_MACRO
+    },
+    {
+        RRD_GET_PROFILE_EVENT,
+        RBUS_ELEMENT_TYPE_PROPERTY, 
+        DATA_HANDLER_GET_MACRO
+    }
+};
+
 /*Function: RRD_subscribe
  *Details: This helps to perform Bus init/connect and event handler registration for receiving
  *events from the TR181 parameter.
@@ -101,6 +167,21 @@ int RRD_subscribe()
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Event Subscribe for RRD done! \n", __FUNCTION__, __LINE__);
+    }
+
+    // Load profile category from file
+    if (load_profile_category() == 0) {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Loaded profile category: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
+    } else {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: No stored profile category, defaulting to 'all'\n", __FUNCTION__, __LINE__);
+    }
+
+    // Register RBUS data elements for profile data provider
+    ret = rbus_regDataElements(rrdRbusHandle, 2, profileDataElements);
+    if (ret != RBUS_ERROR_SUCCESS) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS regDataElements failed with error: %d\n", __FUNCTION__, __LINE__, ret);
+    } else {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements registered\n", __FUNCTION__, __LINE__);
     }
 
     webconfigFrameworkInit();
@@ -428,6 +509,14 @@ int RRD_unsubscribe()
         return ret;
     }
 
+    // Unregister RBUS data elements for profile data provider
+    ret = rbus_unregDataElements(rrdRbusHandle, 2, profileDataElements);
+    if (ret != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS unregDataElements failed with error: %d\n", __FUNCTION__, __LINE__, ret);
+    } else {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements unregistered\n", __FUNCTION__, __LINE__);
+    }
+
     ret = rbus_close(rrdRbusHandle);
     if (ret != 0)
     {
@@ -442,4 +531,188 @@ int RRD_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 #endif
     return ret;
+}
+/**
+ * @brief Set handler for RDK Remote Debugger profile category selection
+ */
+rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHandlerOptions_t* opts)
+{
+    (void)handle;
+    (void)opts;
+
+    char const* propertyName = rbusProperty_GetName(prop);
+    rbusValue_t value = rbusProperty_GetValue(prop);
+    rbusValueType_t type = rbusValue_GetType(value);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Set handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
+
+    if(strcmp(propertyName, RRD_SET_PROFILE_EVENT) == 0) {
+        if (type == RBUS_STRING) {
+            const char* str = rbusValue_GetString(value, NULL);
+            if(strlen(str) > 255) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: String too long for setProfileData\n", __FUNCTION__, __LINE__);
+                return RBUS_ERROR_INVALID_INPUT;
+            }
+
+            strncpy(RRDProfileCategory, str, sizeof(RRDProfileCategory)-1);
+            RRDProfileCategory[sizeof(RRDProfileCategory)-1] = '\0';
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: setProfileData value: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
+
+            // Store the category selection to file
+            if(save_profile_category() != 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to store profile category\n", __FUNCTION__, __LINE__);
+                return RBUS_ERROR_BUS_ERROR;
+            }
+            
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Successfully set profile category to: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
+            return RBUS_ERROR_SUCCESS;
+        } else {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid type for setProfileData\n", __FUNCTION__, __LINE__);
+            return RBUS_ERROR_INVALID_INPUT;
+        }
+    }
+    
+    return RBUS_ERROR_INVALID_INPUT;
+}
+
+/**
+ * @brief Get handler for RDK Remote Debugger profile data retrieval
+ */
+rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts)
+{
+    (void)handle;
+    (void)opts;
+
+    char const* propertyName = rbusProperty_GetName(prop);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Get handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
+
+    if(strcmp(propertyName, RRD_GET_PROFILE_EVENT) == 0) {
+        const char *filename = "/etc/rrd/remote_debugger.json";
+        
+        FILE *fp = fopen(filename, "rb");
+        if (fp) {
+            fseek(fp, 0L, SEEK_END);
+            long fileSz = ftell(fp);
+            rewind(fp);
+            
+            if (fileSz > 0 && fileSz < 32768) {
+                char *jsonBuffer = malloc(fileSz + 1);
+                if (jsonBuffer) {
+                    size_t bytesRead = fread(jsonBuffer, 1U, (size_t)fileSz, fp);
+                    jsonBuffer[bytesRead] = '\0';
+                    
+                    cJSON *json = cJSON_Parse(jsonBuffer);
+                    if (json) {
+                        char *result_str = NULL;
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: JSON parsed successfully, processing categories\n", __FUNCTION__, __LINE__);
+                        
+                        if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
+                            // Return all issue types grouped by categories (exclude nested structures like DeepSleep)
+                            cJSON *response = cJSON_CreateObject();
+                            
+                            cJSON *category = NULL;
+                            cJSON_ArrayForEach(category, json) {
+                                if (cJSON_IsObject(category) && category->string) {
+                                    // Skip categories with nested subcategories (no direct Commands/Timeout)
+                                    bool hasDirectCommands = false;
+                                    cJSON *item = NULL;
+                                    cJSON_ArrayForEach(item, category) {
+                                        if (cJSON_IsObject(item)) {
+                                            cJSON *commands = cJSON_GetObjectItem(item, "Commands");
+                                            if (commands && cJSON_IsString(commands)) {
+                                                hasDirectCommands = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (hasDirectCommands) {
+                                        // Create array for this category's issue types
+                                        cJSON *issueTypesArray = cJSON_CreateArray();
+                                        cJSON *issueType = NULL;
+                                        cJSON_ArrayForEach(issueType, category) {
+                                            if (cJSON_IsObject(issueType) && issueType->string) {
+                                                cJSON_AddItemToArray(issueTypesArray, cJSON_CreateString(issueType->string));
+                                            }
+                                        }
+                                        
+                                        // Add this category and its issue types to response
+                                        if (cJSON_GetArraySize(issueTypesArray) > 0) {
+                                            cJSON_AddItemToObject(response, category->string, issueTypesArray);
+                                        } else {
+                                            cJSON_Delete(issueTypesArray);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            result_str = cJSON_Print(response);
+                            cJSON_Delete(response);
+                        } else {
+                            // Return specific category issue types
+                            cJSON *category = cJSON_GetObjectItem(json, RRDProfileCategory);
+                            if (category && cJSON_IsObject(category)) {
+                                // Check if this category has direct commands (not nested like DeepSleep)
+                                bool hasDirectCommands = false;
+                                cJSON *item = NULL;
+                                cJSON_ArrayForEach(item, category) {
+                                    if (cJSON_IsObject(item)) {
+                                        cJSON *commands = cJSON_GetObjectItem(item, "Commands");
+                                        if (commands && cJSON_IsString(commands)) {
+                                            hasDirectCommands = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                if (hasDirectCommands) {
+                                    cJSON *issueTypes = cJSON_CreateArray();
+                                    cJSON *issueType = NULL;
+                                    cJSON_ArrayForEach(issueType, category) {
+                                        if (cJSON_IsObject(issueType) && issueType->string) {
+                                            cJSON_AddItemToArray(issueTypes, cJSON_CreateString(issueType->string));
+                                        }
+                                    }
+                                    result_str = cJSON_Print(issueTypes);
+                                    cJSON_Delete(issueTypes);
+                                } else {
+                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s has nested structure, returning empty\n", 
+                                        __FUNCTION__, __LINE__, RRDProfileCategory);
+                                    result_str = cJSON_Print(cJSON_CreateArray());
+                                }
+                            } else {
+                                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s not found\n", 
+                                    __FUNCTION__, __LINE__, RRDProfileCategory);
+                                result_str = cJSON_Print(cJSON_CreateArray());
+                            }
+                        }
+                        
+                        if (result_str) {
+                            rbusValue_t rbusValue;
+                            rbusValue_Init(&rbusValue);
+                            rbusValue_SetString(rbusValue, result_str);
+                            rbusProperty_SetValue(prop, rbusValue);
+                            rbusValue_Release(rbusValue);
+                            free(result_str);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Successfully returned profile data\n", __FUNCTION__, __LINE__);
+                        }
+                        
+                        cJSON_Delete(json);
+                    } else {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to parse JSON from %s\n", __FUNCTION__, __LINE__, filename);
+                    }
+                    
+                    free(jsonBuffer);
+                }
+            }
+            fclose(fp);
+        } else {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
+            return RBUS_ERROR_BUS_ERROR;
+        }
+        
+        return RBUS_ERROR_SUCCESS;
+    }
+    
+    return RBUS_ERROR_INVALID_INPUT;
 }
