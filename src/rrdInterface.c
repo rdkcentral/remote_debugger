@@ -192,7 +192,17 @@ int RRD_subscribe()
 
 bool checkAppendRequest(char *issueRequest)
 {
+    if (!issueRequest) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL issueRequest parameter\n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    
     size_t issuestr_len = strlen(issueRequest);
+    if (issuestr_len == 0) {
+        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: Empty issueRequest string\n", __FUNCTION__, __LINE__);
+        return false;
+    }
+    
     size_t suffixstr_len = strlen(APPEND_SUFFIX);
     char *suffixptr = NULL;
 
@@ -729,6 +739,12 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
         return RBUS_ERROR_INVALID_INPUT;
     }
     
+    // Check if RRDProfileCategory is empty - if empty, don't continue
+    if (strlen(RRDProfileCategory) == 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RRDProfileCategory is empty, cannot continue\n", __FUNCTION__, __LINE__);
+        return RBUS_ERROR_BUS_ERROR;
+    }
+    
     const char *filename = "/etc/rrd/remote_debugger.json";
     long file_size;
     
@@ -758,6 +774,12 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
     
     // Set RBUS response
     rbusError_t error = set_rbus_response(prop, result_str);
+    
+    // Log success if getHandler completed successfully
+    if (error == RBUS_ERROR_SUCCESS) {
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: getHandler completed successfully for property [%s] with category [%s]\n", 
+                __FUNCTION__, __LINE__, propertyName, RRDProfileCategory);
+    }
     
     // Cleanup
     cJSON_Delete(json);
