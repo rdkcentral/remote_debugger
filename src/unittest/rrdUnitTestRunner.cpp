@@ -5414,8 +5414,10 @@ protected:
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
         strcpy(RRDProfileCategory, "all");
         
-        // Reset global mock property
-        memset(&g_mockRbusProperty, 0, sizeof(g_mockRbusProperty));
+        // Reset global mock property properly (don't use memset on C++ objects)
+        g_mockRbusProperty.name.clear();
+        g_mockRbusProperty.value.clear();
+        g_mockRbusProperty.type = RBUS_STRING;
         
         // Restore original function pointers
         rbusProperty_GetName = orig_rbusProperty_GetName;
