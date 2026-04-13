@@ -192,9 +192,7 @@ int RRD_subscribe()
 
 bool checkAppendRequest(char *issueRequest)
 {
-
     size_t issuestr_len = strlen(issueRequest);
-    
     size_t suffixstr_len = strlen(APPEND_SUFFIX);
     char *suffixptr = NULL;
 
