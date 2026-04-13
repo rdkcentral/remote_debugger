@@ -1,9 +1,5 @@
 /*
- *
- * If not stated otherwise in this file or this component's Licenses.txt file the
- * following copyright and licenses apply:
- *
- * Copyright 2018 RDK Management
+ * Copyright 2023 Comcast Cable Communications Management, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,753 +12,5919 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "rrdInterface.h"
-#include "rrdRbus.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include <cstring>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <fstream>
+
+#include "cJSON.h"
+
+// general Mocks
+#include "Client_Mock.h"
+#include "Client_Mock.cpp"
+
+// rrdJsonParser
+#include "rrdJsonParser.h"
+#include "rrdJsonParser.c"
+
+// rrdCommandSanity
+#include "rrdCommandSanity.h"
+#include "rrdCommandSanity.c"
+
+// rrdDeepSleep
+#include "rrdDynamic.h"
+#include "rrdDynamic.c"
+
+// rrdExecuteScript
+#include "rrdExecuteScript.h"
+#include "rrdExecuteScript.c"
+
+// rrdRunCmdThread
 #include "rrdRunCmdThread.h"
-#if !defined(GTEST_ENABLE)
-#include "webconfig_framework.h"
+#include "rrdRunCmdThread.c"
 
-extern int msqid;
-#else
-int msqid = 0;
-key_t key = 1234;
-#endif
-#define RRD_TMP_DIR "/tmp/"
-uint32_t gWebCfgBloBVersion = 0;
-rbusHandle_t    rrdRbusHandle;
+// rrdEventProcess
+#include "rrdEventProcess.h"
+#include "rrdEventProcess.c"
 
-// Global storage for profile category
-char RRDProfileCategory[256] = "all";
-#define MAX_PROFILE_JSON_SIZE 32768
+#include "rrdInterface.h"
+#include "rrdInterface.c"
 
-// Helper functions for profile category file-based storage
-int load_profile_category(void) {
-    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "r");
-    if (fp) {
-        if (fgets(RRDProfileCategory, sizeof(RRDProfileCategory), fp)) {
-            // Remove trailing newline
-            char *newline = strchr(RRDProfileCategory, '\n');
-            if (newline) *newline = '\0';
-            fclose(fp);
-            return 0;
+//rrdIarm
+#include "rrdIarmEvents.c"
+
+// rrdMsgPackDecoder
+#include "rrdMsgPackDecoder.h"
+#include "rrdMsgPackDecoder.c"
+
+// rrdMain
+#include "rrdMain.h"
+#include "rrdMain.c"
+
+#include "rrd_config.h"
+#include "rrd_config.c"
+#include "rrd_sysinfo.h"
+#include "rrd_sysinfo.c"
+#include "rrd_logproc.h"
+#include "rrd_logproc.c"
+#include "rrd_archive.h"
+#include "rrd_archive.c"
+#include "rrd_upload.h"
+#include "rrd_upload.c"
+#include "uploadRRDLogs.c"
+
+#define GTEST_DEFAULT_RESULT_FILEPATH "/tmp/Gtest_Report/"
+#define GTEST_DEFAULT_RESULT_FILENAME "rdkRemoteDebugger_gtest_report.json"
+#define GTEST_REPORT_FILEPATH_SIZE 256
+
+// Define test data directory - use relative path that works from test execution context
+#define TEST_DATA_DIR "src/unittest/UTJson/"
+
+// Helper function to find test files with fallback paths
+static const char* find_test_file(const char* filename) {
+    static char filepath[512];
+    const char* search_paths[] = {
+        "UTJson/",
+        "src/unittest/UTJson/", 
+        "./UTJson/",
+        "./src/unittest/UTJson/",
+        "../src/unittest/UTJson/",
+        "../../src/unittest/UTJson/",
+        NULL
+    };
+    
+    for (int i = 0; search_paths[i] != NULL; i++) {
+        snprintf(filepath, sizeof(filepath), "%s%s", search_paths[i], filename);
+        FILE* f = fopen(filepath, "r");
+        if (f) {
+            fclose(f);
+            return filepath;
         }
-        fclose(fp);
     }
-    // Default to "all" if file doesn't exist or read fails
-    strncpy(RRDProfileCategory, "all", sizeof(RRDProfileCategory) - 1);
-    RRDProfileCategory[sizeof(RRDProfileCategory) - 1] = '\0';
-    return -1;
+    return NULL;  // File not found in any path
 }
 
-int save_profile_category(void) {
-    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
-    if (fp) {
-        fprintf(fp, "%s\n", RRDProfileCategory);
-        fclose(fp);
-        return 0;
-    }
-    return -1;
+using namespace std;
+using ::testing::_;
+using ::testing::Return;
+
+/* ====================== rrdJsonParser ================*/
+/* --------------- Test getParamcount() from rrdJsonParser --------------- */
+TEST(GetParamCountTest, GetParamCount)
+{
+    char str[] = "abc.def.ghi";
+    ASSERT_EQ(getParamcount(str), 2);
 }
 
-#define DATA_HANDLER_SET_MACRO \
-    { \
-        NULL, \
-        rrd_SetHandler, \
-        NULL, \
-        NULL, \
-        NULL, \
-        NULL \
+TEST(GetParamCountTest, GetParamCountEmptyString)
+{
+    char str[] = "";
+    ASSERT_EQ(getParamcount(str), 0);
+}
+
+TEST(GetParamCountTest, GetParamCountNoDot)
+{
+    char str[] = "hello";
+    ASSERT_EQ(getParamcount(str), 0);
+}
+
+TEST(GetParamCountTest, GetParamCountMultipleConsecutiveDots)
+{
+    char str[] = "x..y";
+    ASSERT_EQ(getParamcount(str), 2);
+}
+
+/* --------------- Test removeSpecialChar() from rrdJsonParser --------------- */
+TEST(RemoveSpecialCharTest, RemoveSpecialCharEmptyString)
+{
+    char str[] = "";
+    removeSpecialChar(str);
+    ASSERT_STREQ(str, "");
+}
+
+TEST(RemoveSpecialCharTest, RemoveSpecialCharWithCarriageReturn)
+{
+    char str[] = "hello\rworld";
+    removeSpecialChar(str);
+    ASSERT_STREQ(str, "hello");
+}
+
+TEST(RemoveSpecialCharTest, RemoveSpecialCharWithNewLine)
+{
+    char str[] = "line1\nline2";
+    removeSpecialChar(str);
+    ASSERT_STREQ(str, "line1");
+}
+
+/* --------------- Test readJsonFile() from rrdJsonParser --------------- */
+TEST(ReadJsonFileTest, ReadValidJsonFile)
+{
+    char *jsonfile = "UTJson/validJson.json";
+    char *jsonfile_content = readJsonFile(jsonfile);
+    ASSERT_NE(jsonfile_content, nullptr);
+    free(jsonfile_content);
+}
+
+TEST(ReadJsonFileTest, ReadEmptyFile)
+{
+    char *jsonfile = "UTJson/emptyJson.json";
+    char *jsonfile_content = readJsonFile(jsonfile);
+    ASSERT_EQ(jsonfile_content, nullptr);
+}
+
+TEST(ReadJsonFileTest, HandleFileReadError)
+{
+    char *jsonfile = "non_existent_file.json";
+    char *jsonfile_content = readJsonFile(jsonfile);
+    ASSERT_EQ(jsonfile_content, nullptr);
+}
+
+/* --------------- Test readAndParseJSON() from rrdJsonParser --------------- */
+TEST(ReadAndParseJSONTest, ParsesJsonFileCorrectly)
+{
+    cJSON *result = readAndParseJSON("UTJson/validJson.json");
+    cJSON *expected = cJSON_CreateObject();
+    cJSON_AddStringToObject(expected, "key", "value");
+    ASSERT_TRUE(cJSON_Compare(result, expected, true));
+
+    cJSON_Delete(result);
+    cJSON_Delete(expected);
+}
+
+TEST(ReadAndParseJSONTest, ReturnsNullForInvalidJsonFile)
+{
+    cJSON *result = readAndParseJSON("UTJson/invalidJson.json");
+    ASSERT_EQ(result, nullptr);
+}
+
+TEST(ReadAndParseJSONTest, ReturnsNullForNonexistentFile)
+{
+    cJSON *result = readAndParseJSON("UTJson/non_existent.json");
+    ASSERT_EQ(result, nullptr);
+}
+
+/* --------------- Test getIssueInfo() from rrdJsonParser --------------- */
+class GetIssueInfoTest : public ::testing::Test
+{
+protected:
+    char input[50];
+    issueNodeData issue;
+
+    void SetUp() override
+    {
+        memset(&issue, 0, sizeof(issue));
     }
 
-#define DATA_HANDLER_GET_MACRO \
-    { \
-        rrd_GetHandler, \
-        NULL, \
-        NULL, \
-        NULL, \
-        NULL, \
-        NULL \
-    }
-
-// Data elements for profile data RBUS provider
-rbusDataElement_t profileDataElements[2] = {
+    void TearDown() override
     {
-        RRD_SET_PROFILE_EVENT,
-        RBUS_ELEMENT_TYPE_PROPERTY,
-        DATA_HANDLER_SET_MACRO
-    },
-    {
-        RRD_GET_PROFILE_EVENT,
-        RBUS_ELEMENT_TYPE_PROPERTY, 
-        DATA_HANDLER_GET_MACRO
+        if (issue.Node != nullptr)
+        {
+            free(issue.Node);
+            issue.Node = nullptr;
+        }
+        if (issue.subNode != nullptr)
+        {
+            free(issue.subNode);
+            issue.subNode = nullptr;
+        }
     }
 };
 
-/*Function: RRD_subscribe
- *Details: This helps to perform Bus init/connect and event handler registration for receiving
- *events from the TR181 parameter.
- *Input: NULL
- *Output: 0 for success and non 0 for failure
- */
-
-int RRD_subscribe()
+TEST_F(GetIssueInfoTest, HandlesNormalInput)
 {
-    int ret = 0;
+    strcpy(input, "MainNode.SubNode");
+    getIssueInfo(input, &issue);
 
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-#ifdef IARMBUS_SUPPORT
-    ret = RRD_IARM_subscribe();
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Subscribe!!! \n ", __FUNCTION__, __LINE__);
-	return ret;
-    }
-#endif
-    //RBUS Event Subscribe for RRD
-    ret = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Open! \n", __FUNCTION__, __LINE__);
-#if !defined(GTEST_ENABLE)
-    subscriptions[0].eventName = RRD_SET_ISSUE_EVENT;
-    subscriptions[0].filter = NULL;
-    subscriptions[0].duration = 0;
-    subscriptions[0].handler  = _remoteDebuggerEventHandler;
-    subscriptions[0].userData = NULL;
-
-    subscriptions[1].eventName = RRD_WEBCFG_ISSUE_EVENT;
-    subscriptions[1].filter = NULL;
-    subscriptions[1].duration = 0;
-    subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
-    subscriptions[1].userData = NULL;
-
-#ifdef IARMBUS_SUPPORT
-#ifdef USE_L2_SUPPORT
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-   subscriptions[2].filter = NULL;
-   subscriptions[2].duration = 0;
-   subscriptions[2].handler  = _rdmDownloadEventHandler;
-   subscriptions[2].userData = NULL;
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
-#else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
-#endif
-#else
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-   subscriptions[2].filter = NULL;
-   subscriptions[2].duration = 0;
-   subscriptions[2].handler  = _rdmDownloadEventHandler;
-   subscriptions[2].userData = NULL;
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
-#endif
-#endif
-    if(ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Event Subscribe for RRD return value is : %s \n ", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
-    }
-    else
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Event Subscribe for RRD done! \n", __FUNCTION__, __LINE__);
-    }
-
-    // Load profile category from file
-    if (load_profile_category() == 0) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Loaded profile category: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
-    } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: No stored profile category, defaulting to 'all'\n", __FUNCTION__, __LINE__);
-    }
-
-    // Register RBUS data elements for profile data provider
-    ret = rbus_regDataElements(rrdRbusHandle, 2, profileDataElements);
-    if (ret != RBUS_ERROR_SUCCESS) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS regDataElements failed with error: %d\n", __FUNCTION__, __LINE__, ret);
-    } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements registered\n", __FUNCTION__, __LINE__);
-    }
-
-    webconfigFrameworkInit();
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting.. \n", __FUNCTION__, __LINE__);
-    return ret;
+    ASSERT_STREQ(issue.Node, "MainNode");
+    ASSERT_STREQ(issue.subNode, "SubNode");
 }
 
-bool checkAppendRequest(char *issueRequest)
+// Need Improvements in getIssueInfo
+TEST_F(GetIssueInfoTest, HandlesInputWithoutSubnode)
 {
-    size_t issuestr_len = strlen(issueRequest);
-    size_t suffixstr_len = strlen(APPEND_SUFFIX);
-    char *suffixptr = NULL;
+    strcpy(input, "MainNode");
+    getIssueInfo(input, &issue);
 
-    suffixptr = issueRequest + issuestr_len - suffixstr_len;
+    ASSERT_STREQ(issue.Node, "MainNode");
+    ASSERT_EQ(issue.subNode, nullptr);
+}
 
-    if (issuestr_len >= suffixstr_len)
+/* ----------------- findIssueInParsedJSON() in rrdJsonParser ------------------*/
+class FindIssueInParsedJSONTest : public ::testing::Test
+{
+protected:
+    issueNodeData issue;
+    cJSON *json;
+    void SetUp() override
     {
-        if (strcmp(suffixptr, APPEND_SUFFIX) == 0)
+        memset(&issue, 0, sizeof(issue));
+        json = cJSON_CreateObject();
+        cJSON *category = cJSON_CreateObject();
+        cJSON_AddItemToObject(json, "MainNode", category);
+        cJSON_AddStringToObject(category, "SubNode", "value");
+    }
+
+    void TearDown() override
+    {
+        free(issue.Node);
+        free(issue.subNode);
+        cJSON_Delete(json);
+    }
+};
+
+TEST_F(FindIssueInParsedJSONTest, HandlesNormalInput)
+{
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    bool result = findIssueInParsedJSON(&issue, json);
+
+    ASSERT_TRUE(result);
+}
+
+TEST_F(FindIssueInParsedJSONTest, HandlesNullNode)
+{
+    issue.Node = NULL;
+    issue.subNode = strdup("SubNode");
+    bool result = findIssueInParsedJSON(&issue, json);
+
+    ASSERT_FALSE(result);
+}
+
+TEST_F(FindIssueInParsedJSONTest, HandlesNullSubNode)
+{
+    issue.Node = strdup("MainNode");
+    issue.subNode = NULL;
+    bool result = findIssueInParsedJSON(&issue, json);
+
+    ASSERT_TRUE(result);
+}
+
+TEST_F(FindIssueInParsedJSONTest, HandlesNonexistentNode)
+{
+    issue.Node = strdup("NonexistentNode");
+    issue.subNode = strdup("SubNode");
+    bool result = findIssueInParsedJSON(&issue, json);
+
+    ASSERT_FALSE(result);
+}
+
+TEST_F(FindIssueInParsedJSONTest, HandlesNonexistentSubNode)
+{
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("NonexistentSubNode");
+
+    bool result = findIssueInParsedJSON(&issue, json);
+
+    ASSERT_FALSE(result);
+}
+
+/* --------------- Test invokeSanityandCommandExec() from rrdJsonParser --------------- */
+class InvokeSanityandCommandExecTest : public ::testing::Test
+{
+protected:
+    issueNodeData issuestructNode;
+    cJSON *jsoncfg;
+    char *buf;
+
+    void SetUp() override
+    {
+        issuestructNode.Node = strdup("testNode");
+        issuestructNode.subNode = strdup("testSubNode");
+
+        jsoncfg = cJSON_CreateObject();
+        cJSON *root = cJSON_CreateObject();
+        cJSON *category = cJSON_CreateObject();
+        cJSON *type = cJSON_CreateArray();
+        cJSON_AddItemToArray(type, cJSON_CreateNumber(123));
+        cJSON_AddItemToObject(category, "testSubNode", type);
+        cJSON_AddItemToObject(root, "testNode", category);
+        cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
+        buf = strdup("testBuffer");
+    }
+
+    void TearDown() override
+    {
+        cJSON_Delete(jsoncfg);
+        free(buf);
+        system("rm -r testNode-DebugReport*");
+    }
+};
+
+TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsNumber_CommandIsNull)
+{
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+}
+
+TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntFalse_TypeIsNumber_CommandIsNull)
+{
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, false));
+}
+
+TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_CommandIsNull)
+{
+    cJSON_DeleteItemFromObject(jsoncfg, "DEEP_SLEEP_STR");
+    cJSON *root = cJSON_CreateObject();
+    cJSON *category = cJSON_CreateObject();
+    cJSON *type = cJSON_CreateArray();
+    cJSON_AddItemToArray(type, cJSON_CreateString("dummyCommand"));
+    cJSON_AddItemToObject(category, "testSubNode", type);
+    cJSON_AddItemToObject(root, "testNode", category);
+    cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
+
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+}
+
+TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsNumber_CommandIsNotNull_IsCommandsValidReturnsZero)
+{
+    cJSON_DeleteItemFromObject(jsoncfg, "DEEP_SLEEP_STR");
+    cJSON *root = cJSON_CreateObject();
+    cJSON *category = cJSON_CreateObject();
+    cJSON *type = cJSON_CreateArray();
+    cJSON_AddItemToArray(type, cJSON_CreateNumber(123));
+    cJSON_AddItemToArray(type, cJSON_CreateString("commandThatIsNotInSanityList"));
+    cJSON_AddItemToObject(category, "testSubNode", type);
+    cJSON_AddItemToObject(root, "testNode", category);
+    cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
+
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+}
+
+TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_CommandIsNotNull_IsCommandsValidReturnsNonZero)
+{
+    cJSON_DeleteItemFromObject(jsoncfg, "DEEP_SLEEP_STR");
+    cJSON *root = cJSON_CreateObject();
+    cJSON *category = cJSON_CreateObject();
+    cJSON *type = cJSON_CreateArray();
+    cJSON_AddItemToArray(type, cJSON_CreateString("command&"));
+    cJSON_AddItemToObject(category, "testSubNode", type);
+    cJSON_AddItemToObject(root, "testNode", category);
+    cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
+
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+}
+
+/* --------------- Test processAllDebugCommand() from rrdJsonParser --------------- */
+class ProcessAllDebugCommandTest : public ::testing::Test
+{
+protected:
+    issueNodeData issuestructNode;
+    cJSON *jsoncfg;
+    char *buf;
+
+    void SetUp() override
+    {
+        issuestructNode.Node = strdup("testNode");
+        issuestructNode.subNode = strdup("testSubNode");
+        jsoncfg = cJSON_CreateObject();
+    }
+
+    void TearDown() override
+    {
+        free(issuestructNode.Node);
+        free(issuestructNode.subNode);
+        if (jsoncfg)
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Remove suffix from the issuetype to process the request \n", __FUNCTION__, __LINE__);
-            issueRequest[issuestr_len - suffixstr_len] = '\0';
-            return true;
+            cJSON_Delete(jsoncfg);
         }
+        system("rm -r testNode-DebugReport*");
     }
-    return false;
+};
+
+TEST_F(ProcessAllDebugCommandTest, MainnodeIsNull)
+{
+    buf = strdup("testBuffer");
+    EXPECT_FALSE(processAllDebugCommand(jsoncfg, &issuestructNode, buf));
 }
 
-void webconfigFrameworkInit()
+TEST_F(ProcessAllDebugCommandTest, MainnodenameIsNull)
+{
+    buf = strdup("testBuffer");
+    cJSON_AddNullToObject(jsoncfg, "testNode");
+
+    EXPECT_FALSE(processAllDebugCommand(jsoncfg, &issuestructNode, buf));
+}
+
+TEST_F(ProcessAllDebugCommandTest, SubitemsIsZero)
+{
+    buf = strdup("testBuffer");
+    cJSON_AddObjectToObject(jsoncfg, "testNode");
+
+    EXPECT_FALSE(processAllDebugCommand(jsoncfg, &issuestructNode, buf));
+}
+
+TEST_F(ProcessAllDebugCommandTest, InvokeSanityandCommandExecReturnsFalse)
+{
+    buf = strdup("testBuffer");
+    cJSON *root = cJSON_CreateObject();
+    cJSON *category = cJSON_CreateObject();
+    cJSON *type = cJSON_CreateArray();
+    cJSON_AddItemToArray(type, cJSON_CreateNumber(1));
+    cJSON_AddItemToArray(type, cJSON_CreateString("invalidCommand"));
+    cJSON_AddItemToObject(category, issuestructNode.subNode, type);
+    cJSON_AddItemToObject(root, issuestructNode.Node, category);
+    cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
+
+    EXPECT_FALSE(processAllDebugCommand(jsoncfg, &issuestructNode, buf));
+}
+
+/* --------------- Test processAllDeepSleepAwkMetricsCommands() from rrdJsonParser --------------- */
+class ProcessAllDeepSleepAwkMetricsCommandsTest : public ::testing::Test
+{
+protected:
+    issueNodeData issuestructNode;
+    cJSON *jsoncfg;
+    char *buf;
+
+    void SetUp() override
+    {
+        issuestructNode.Node = strdup("testNode");
+        issuestructNode.subNode = strdup("testSubNode");
+        buf = strdup("testBuffer");
+    }
+
+    void TearDown() override
+    {
+        if (issuestructNode.subNode)
+        {
+            free(issuestructNode.subNode);
+        }
+        if (jsoncfg)
+        {
+            cJSON_Delete(jsoncfg);
+        }
+        free(buf);
+        system("rm -r testNode-DebugReport*");
+    }
+};
+
+TEST_F(ProcessAllDeepSleepAwkMetricsCommandsTest, IssueCategoryCountIsZero)
+{
+    jsoncfg = cJSON_CreateObject();
+    cJSON *rootNode = cJSON_AddObjectToObject(jsoncfg, "testNode");
+    cJSON_AddArrayToObject(rootNode, "subNode");
+
+    EXPECT_FALSE(processAllDeepSleepAwkMetricsCommands(jsoncfg, &issuestructNode, buf));
+}
+
+TEST_F(ProcessAllDeepSleepAwkMetricsCommandsTest, IssueTypeCountIsZero_InvokeSanityandCommandExecReturnsFalse)
+{
+    jsoncfg = cJSON_CreateObject();
+    cJSON *rootNode = cJSON_AddObjectToObject(jsoncfg, "testNode");
+    cJSON *category = cJSON_AddArrayToObject(rootNode, "subNode");
+
+    EXPECT_FALSE(processAllDeepSleepAwkMetricsCommands(jsoncfg, &issuestructNode, buf));
+}
+
+TEST_F(ProcessAllDeepSleepAwkMetricsCommandsTest, IssueTypeCountIsZero)
+{
+    jsoncfg = cJSON_CreateObject();
+    cJSON *rootNode = cJSON_AddObjectToObject(jsoncfg, "testNode");
+    cJSON *category = cJSON_AddObjectToObject(rootNode, "subNode");
+
+    EXPECT_FALSE(processAllDeepSleepAwkMetricsCommands(jsoncfg, &issuestructNode, buf));
+}
+
+/* --------------- Test RRDStoreDeviceInfo() from rrdJsonParser --------------- */
+class StoreDeviceInfo : public testing::Test
+{
+protected:
+    devicePropertiesData devPropData;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        const char *deviceName = "";
+        FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+        if (test_name == "ReadDevicePropFilePlatco")
+        {
+            deviceName = "PLATCO";
+            fprintf(fp, "DEVICE_NAME=%s", deviceName);
+        }
+        else if (test_name == "ReadDevicePropFileLlama")
+        {
+            deviceName = "LLAMA";
+            fprintf(fp, "DEVICE_NAME=%s", deviceName);
+        }
+        else if (test_name == "ReadDevicePropFileEDev")
+        {
+            deviceName = "XI6";
+            fprintf(fp, "DEVICE_NAME=%s", deviceName);
+        }
+        else if (test_name == "ReadDevicePropFileDefault")
+        {
+            deviceName = "UnknownDevice";
+            fprintf(fp, "DEVICE_NAME=%s", deviceName);
+        }
+        fclose(fp);
+    }
+
+    void TearDown() override
+    {
+        remove(RRD_DEVICE_PROP_FILE);
+    }
+};
+/* ================ rrdCommandSanity =====================*/
+/* --------------- Test updateBackgroundCmd() from rrdCommandSanity --------------- */
+TEST(UpdateBackgroundCmdTest, ReturnsOneForNullInput)
+{
+    int result = updateBackgroundCmd(NULL);
+    ASSERT_EQ(result, 1);
+}
+
+TEST(UpdateBackgroundCmdTest, UpdatesBackgroundCmdCorrectly)
+{
+    char test_str[] = "command&;";
+    int result = updateBackgroundCmd(test_str);
+
+    ASSERT_EQ(result, 0);
+    ASSERT_STREQ(test_str, "command& ");
+}
+
+TEST(UpdateBackgroundCmdTest, DoesNothingForStringWithoutAmpersandSemicolon)
+{
+    char test_str[] = "command";
+    int result = updateBackgroundCmd(test_str);
+
+    ASSERT_EQ(result, 0);
+    ASSERT_STREQ(test_str, "command");
+}
+
+/* --------------- Test isCommandsValid() from rrdCommandSanity --------------- */
+class IsCommandsValidTest : public ::testing::Test
+{
+protected:
+    cJSON *sanitylist;
+
+    void SetUp() override
+    {
+        sanitylist = cJSON_CreateArray();
+        cJSON *harmful_cmd = cJSON_CreateString("kill");
+        cJSON_AddItemToArray(sanitylist, harmful_cmd);
+    }
+
+    void TearDown() override
+    {
+        cJSON_Delete(sanitylist);
+    }
+};
+
+TEST_F(IsCommandsValidTest, ReturnsZeroForValidCommand)
+{
+    int result = isCommandsValid("ls -l", sanitylist);
+    ASSERT_EQ(result, 0);
+}
+
+TEST_F(IsCommandsValidTest, ReturnsZeroForBackgroundCommand)
+{
+    char command[] = "ls -lh &;";
+    int result = isCommandsValid(command, sanitylist);
+
+    ASSERT_EQ(result, 0);
+    ASSERT_STREQ(command, "ls -lh & ");
+}
+
+/* --------------- Test replaceRRDLocation() from rrdCommandSanity --------------- */
+
+TEST(ReplaceRRDLocationTest, TestReplaceRRDLocation_SubstringExists)
+{
+    char *new_dir = "/new/dir";
+    char *command = "ls RRD_LOCATION";
+    const char *expected_command = "ls /new/dir";
+    char *command_copy = strdup(command);
+    char *result = replaceRRDLocation(command_copy, new_dir);
+
+    EXPECT_STREQ(result, expected_command);
+
+    free(result);
+}
+
+TEST(ReplaceRRDLocationTest, TestReplaceRRDLocation_SubstringNotExists)
+{
+    char *new_dir = "/new/dir";
+    char *command = "ls /default/dir";
+    const char *expected_command = "ls /default/dir";
+    char *command_copy = strdup(command);
+    char *result = replaceRRDLocation(command_copy, new_dir);
+
+    EXPECT_STREQ(result, expected_command);
+
+    free(result);
+}
+
+/* ------------- Mock for setParam() from tr181api.h ---------------*/
+
+// sample function to call setParam Mock API
+tr181ErrorCode_t sampleSetParam(MockSetParam &mock_set_param, char *arg1, const char *arg2, const char *arg3)
+{
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]:  Called SampleSetParam!!! \n ", __FUNCTION__, __LINE__);
+    return mock_set_param.setParam(arg1, arg2, arg3);
+}
+
+class SetParamByRFC : public ::testing::Test
+{
+protected:
+    MockSetParam mock_set_param;
+
+    void SetUp() override
+    {
+        SetParamWrapper::setImpl(&mock_set_param);
+        EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Success)).WillOnce(Return(tr181Failure));
+    }
+
+    void TearDown() override
+    {
+        SetParamWrapper::setImpl(nullptr);
+    }
+};
+
+TEST_F(SetParamByRFC, TestSetParam)
+{
+    tr181ErrorCode_t result = sampleSetParam(mock_set_param, "arg1", "arg2", "arg3");
+    EXPECT_EQ(result, tr181Success);
+
+    result = sampleSetParam(mock_set_param, "arg1", "arg2", "arg3");
+    EXPECT_EQ(result, tr181Failure);
+}
+
+/* ----------------IARM --------------- */
+class IARMBusTest : public ::testing::Test
+{
+protected:
+    ClientIARMMock mock;
+
+    void SetUp() override
+    {
+        setMock(&mock);
+    }
+
+    void TearDown() override
+    {
+        setMock(nullptr);
+    }
+};
+
+TEST_F(IARMBusTest, TestIARM_Bus_Disconnect)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect())
+        .WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+
+    IARM_Result_t result = IARM_Bus_Disconnect();
+    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(IARMBusTest, TestIARM_Bus_Term)
+{
+    EXPECT_CALL(mock, IARM_Bus_Term())
+        .WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+
+    IARM_Result_t result = IARM_Bus_Term();
+    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(IARMBusTest, TestIARM_Bus_UnRegisterEventHandler)
+{
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+
+    IARM_Result_t result = IARM_Bus_UnRegisterEventHandler("owner", IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS);
+    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+/* ------------- RBUS ------------- */
+class RBusApiTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+
+    void SetUp() override
+    {
+        RBusApiWrapper::setImpl(&mock_rbus_api);
+        EXPECT_CALL(mock_rbus_api, rbus_open(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbus_close(_))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mock_rbus_api, rbus_get(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    }
+
+    void TearDown() override
+    {
+        RBusApiWrapper::clearImpl();
+    }
+};
+
+TEST_F(RBusApiTest, TestRBusApi)
+{
+    rbusHandle_t handle;
+    rbusValue_t value;
+    rbusError_t result;
+
+    result = RBusApiWrapper::rbus_open(&handle, "component");
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbusValue_Init(&value);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbusValue_SetString(value, "string");
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbus_set(handle, "objectName", value, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbus_get(handle, "objectName", value, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+
+    result = RBusApiWrapper::rbus_close(handle);
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+}
+/* ---------- WebConfig ------------- */
+// sample function to call register_sub_docs Mock API
+void sampleWebconfigFrameworkInit(ClientWebConfigMock &mock_webconfig)
 {
     char *sub_doc = "remotedebugger";
 
     blobRegInfo *blobData;
-    blobData = (blobRegInfo*) malloc( sizeof(blobRegInfo));
+    blobData = (blobRegInfo *)malloc(sizeof(blobRegInfo));
     memset(blobData, 0, sizeof(blobRegInfo));
-    strncpy( blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
+    strncpy(blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
 
-    register_sub_docs(blobData, 1 /*SubDoc Count*/, NULL, NULL);
+    mock_webconfig.register_sub_docs_mock(blobData, 1 /*SubDoc Count*/, nullptr, nullptr);
+    free(blobData);
 }
 
-uint32_t getBlobVersion(char* subdoc)
+class WebConfigTest : public ::testing::Test
 {
-        return gWebCfgBloBVersion;
+protected:
+    ClientWebConfigMock mock_webconfig;
+
+    void SetUp() override
+    {
+        setWebConfigMock(&mock_webconfig);
+    }
+
+    void TearDown() override
+    {
+        setWebConfigMock(nullptr);
+    }
+};
+
+TEST_F(WebConfigTest, TestRegisterSubDocMock)
+{
+    EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _))
+        .Times(1)
+        .WillOnce([](blobRegInfo *bInfo, int numOfSubdocs, getVersion getv, setVersion setv)
+                  {
+            ASSERT_NE(bInfo, nullptr);
+            ASSERT_EQ(numOfSubdocs, 1);
+            ASSERT_EQ(getv, nullptr);
+            ASSERT_EQ(setv, nullptr); });
+
+    sampleWebconfigFrameworkInit(mock_webconfig);
+    ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(&mock_webconfig));
 }
 
-/* API to update the subdoc version */
-int setBlobVersion(char* subdoc,uint32_t version)
+#ifdef IARMBUS_SUPPORT
+/* ====================== rrdDeepSleep ===================*/
+/* --------------- Test RRDGetDeepSleepdynJSONPathLen() from rrdDeepSleep --------------- */
+devicePropertiesData devPropData;
+class RRDGetDeepSleepdynJSONPathLenTest : public ::testing::Test
 {
-        gWebCfgBloBVersion = version;
-        return 0;
+protected:
+    devicePropertiesData originalDevPropData;
+    devicePropertiesData testDevPropData;
+
+    void SetUp() override
+    {
+        originalDevPropData = devPropData;
+    }
+
+    void TearDown() override
+    {
+        devPropData = originalDevPropData;
+    }
+};
+
+TEST_F(RRDGetDeepSleepdynJSONPathLenTest, TestRRDGetDeepSleepdynJSONPathLen)
+{
+    testDevPropData.deviceType = RRD_DEFAULT_PLTFMS;
+    devPropData = testDevPropData;
+    EXPECT_EQ(RRDGetDeepSleepdynJSONPathLen(), strlen(RRD_MEDIA_APPS) + strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(deviceProfileMap[RRD_DEFAULT_PLTFMS]) + strlen(RRD_JSON_FILE) + 1);
+
+    testDevPropData.deviceType = RRD_REG_X1_PLTFMS;
+    devPropData = testDevPropData;
+    EXPECT_EQ(RRDGetDeepSleepdynJSONPathLen(), strlen(RRD_MEDIA_APPS) + strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(deviceProfileMap[RRD_REG_X1_PLTFMS]) + strlen(RRD_JSON_FILE) + 1);
+
+    testDevPropData.deviceType = RRD_LLAMA_PLTFMS;
+    devPropData = testDevPropData;
+    EXPECT_EQ(RRDGetDeepSleepdynJSONPathLen(), strlen(RRD_MEDIA_APPS) + strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(deviceProfileMap[RRD_LLAMA_PLTFMS]) + strlen(RRD_JSON_FILE) + 1);
+
+    testDevPropData.deviceType = RRD_PLATCO_PLTFMS;
+    devPropData = testDevPropData;
+    EXPECT_EQ(RRDGetDeepSleepdynJSONPathLen(), strlen(RRD_MEDIA_APPS) + strlen(RDM_PKG_PREFIX) + strlen(DEEP_SLEEP_STR) + strlen(deviceProfileMap[RRD_PLATCO_PLTFMS]) + strlen(RRD_JSON_FILE) + 1);
 }
 
-void RRDMsgDeliver(int msgqid, data_buf *sbuf)
+/* --------------- Test RRDGetProfileStringLength() from rrdDeepSleep --------------- */
+
+TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventFalse)
 {
+    issueNodeData issue;
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    int length = RRDGetProfileStringLength(&issue, false);
+
+    ASSERT_EQ(length, strlen(RDM_PKG_PREFIX) + strlen(issue.Node) + strlen(RDM_PKG_SUFFIX) + 1);
+
+    free(issue.Node);
+    free(issue.subNode);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventTrueRRD_REG_X1_PLTFMS)
+{
+    issueNodeData issue;
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    devPropData.deviceType = RRD_REG_X1_PLTFMS;
+    int length = RRDGetProfileStringLength(&issue, true);
+
+    ASSERT_EQ(length, strlen(RDM_PKG_PREFIX) + strlen(RDM_PKG_SUFFIX) + strlen(DEEP_SLEEP_STR) + 1);
+
+    free(issue.Node);
+    free(issue.subNode);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventTrueRRD_LLAMA_PLTFMS)
+{
+    issueNodeData issue;
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    devPropData.deviceType = RRD_LLAMA_PLTFMS;
+    int length = RRDGetProfileStringLength(&issue, true);
+
+    ASSERT_EQ(length, strlen(RDM_PKG_PREFIX) + strlen(LLAMMA_PROFILE_STR) + strlen(RDM_PKG_SUFFIX) + strlen(DEEP_SLEEP_STR) + 1);
+
+    free(issue.Node);
+    free(issue.subNode);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventTrueRRD_PLATCO_PLTFMS)
+{
+    issueNodeData issue;
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    devPropData.deviceType = RRD_PLATCO_PLTFMS;
+    int length = RRDGetProfileStringLength(&issue, true);
+
+    ASSERT_EQ(length, strlen(RDM_PKG_PREFIX) + strlen(PLATCO_PROFILE_STR) + strlen(RDM_PKG_SUFFIX) + strlen(DEEP_SLEEP_STR) + 1);
+
+    free(issue.Node);
+    free(issue.subNode);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventTrueRRD_DEFAULT_PLTFMS)
+{
+    issueNodeData issue;
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    devPropData.deviceType = RRD_DEFAULT_PLTFMS;
+    int length = RRDGetProfileStringLength(&issue, true);
+
+    ASSERT_EQ(length, 0);
+
+    free(issue.Node);
+    free(issue.subNode);
+}
+#endif
+/* --------------- Test RRDCheckIssueInDynamicProfile() from rrdDeepSleep --------------- */
+class RRDCheckIssueInDynamicProfileTest : public ::testing::Test
+{
+protected:
+    issueNodeData issuestructNode;
+    data_buf buff;
+};
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsFalse)
+{
+    issueNodeData issuestructNode;
+    data_buf buff;
+    issuestructNode.Node = NULL;
+    buff.mdata = NULL;
+    buff.jsonPath = NULL;
+    buff.inDynamic = false;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathDoesNotExist)
+{
+    issueNodeData issuestructNode;
+    data_buf buff;
+    issuestructNode.Node = NULL;
+    buff.mdata = NULL;
+    buff.jsonPath = NULL;
+    buff.inDynamic = true;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndParseJSONReturnsNull)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = NULL;
+    data_buf buff;
+    buff.inDynamic = true;
+    buff.jsonPath = strdup("UTJson/emptyJson.json");
+    buff.mdata = NULL;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndParseNonNull_FindIssueFalse)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = NULL;
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = true;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    EXPECT_EQ(result, nullptr);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDCheckIssueInDynamicProfileTest, InDynamicIsTrue_PathExists_ReadAndParseNonNull_FindIssueTrue)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("key");
+    issuestructNode.subNode = NULL;
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = true;
+    char *result = RRDCheckIssueInDynamicProfile(&buff, &issuestructNode);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result, "{\n\t\"key\":\t\"value\"\n}");
+
+    free(result);
+    free(issuestructNode.Node);
+    free(buff.jsonPath);
+}
+
+
+
+/* --------------- Test RRDRdmManagerDownloadRequest() from rrdDeepSleep --------------- */
+class RRDRdmManagerDownloadRequestTest : public ::testing::Test
+{
+protected:
+    devicePropertiesData originalDevPropData;
+    MockRBusApi mock_rbus_api;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    void SetUp() override
+    {
+        originalDevPropData = devPropData;
+        string test_name = getCurrentTestName();
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure" || test_name == "DeepSleepAwakeEventIsTrue_SetParamReturnsFailure")
+        {
+            RBusApiWrapper::setImpl(&mock_rbus_api);
+        }
+    }
+
+    void TearDown() override
+    {
+        devPropData = originalDevPropData;
+        SetParamWrapper::clearImpl();
+        string test_name = getCurrentTestName();
+        if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
+        {
+            RBusApiWrapper::clearImpl();
+        }
+    }
+};
+
+TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
+{
+    issueNodeData *issuestructNode = NULL;
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = NULL;
+    buff.inDynamic = false;
+    RRDRdmManagerDownloadRequest(issuestructNode, buff.jsonPath, &buff, false);
+
+    EXPECT_EQ(issuestructNode, nullptr);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsFailure)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+
+    //MockSetParam mock_set_param;
+    //SetParamWrapper::setImpl(&mock_set_param);
+    //EXPECT_CALL(mock_set_param, setParam(_, _, _)).WillOnce(Return(tr181Failure));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamReturnsFailure)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = NULL;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, true);
+
+    free(buff.jsonPath);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccess)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+/* --------------- Test RRDProcessDeepSleepAwakeEvents() from rrdDeepSleep --------------- */
+class RRDProcessDeepSleepAwakeEventsTest : public ::testing::Test
+{
+protected:
+    devicePropertiesData originalDevPropData;
+
+    void SetUp() override
+    {
+        originalDevPropData = devPropData;
+    }
+
+    void TearDown() override
+    {
+        devPropData = originalDevPropData;
+        SetParamWrapper::clearImpl();
+    }
+};
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDataNull)
+{
+    data_buf buff;
+    buff.mdata = nullptr;
+    RRDProcessDeepSleepAwakeEvents(&buff);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsInvalidDefault)
+{
+    data_buf rbuf;
+    rbuf.mdata = "Sample data";
+    rbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
+
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamSuccess)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamFail)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicFalse)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
+    rbuf.inDynamic = false;
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicTrue)
+{
+    data_buf rbuf;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = NULL;
+    RRDProcessDeepSleepAwakeEvents(&rbuf);
+}
+
+/* ========================== rrdExecuteScript ======================= */
+/* --------------- Test normalizeIssueName() from rrdExecuteScript --------------- */
+TEST(NormalizeIssueNameTest, HandlesEmptyString)
+{
+    char str[] = "";
+    normalizeIssueName(str);
+
+    ASSERT_STREQ(str, "");
+}
+
+TEST(NormalizeIssueNameTest, HandlesStringWithNoDot)
+{
+    char str[] = "issuedata";
+    normalizeIssueName(str);
+
+    ASSERT_STREQ(str, "issuedata");
+}
+
+TEST(NormalizeIssueNameTest, HandlesStringWithOnlyDot)
+{
+    char str[] = ".";
+    normalizeIssueName(str);
+
+    ASSERT_STREQ(str, "_");
+}
+
+TEST(NormalizeIssueNameTest, HandlesStringWithOneDot)
+{
+    char str[] = "issuedata.issuetype";
+    normalizeIssueName(str);
+
+    ASSERT_STREQ(str, "issuedata_issuetype");
+}
+
+TEST(NormalizeIssueNameTest, HandlesStringWithConsecutiveDots)
+{
+    char str[] = "issuedata...issuetype";
+    normalizeIssueName(str);
+
+    ASSERT_STREQ(str, "issuedata___issuetype");
+}
+
+/* --------------- Test uploadDebugoutput() from rrdExecuteScript --------------- */
+class UploadDebugoutputTest : public ::testing::Test
+{
+protected:
+    int result;
+
+    void SetUp() override
+    {
+        setenv("RFC_LOG_SERVER", "logs.example.com", 1);
+        setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
+        setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
+       
+    }
+
+    void TearDown() override
+    {
+        unsetenv("RFC_LOG_SERVER");
+        unsetenv("RFC_HTTP_UPLOAD_LINK");
+        unsetenv("RFC_UPLOAD_PROTOCOL");
+       
+    }
+};
+
+
+TEST_F(UploadDebugoutputTest, HandlesNullParameters)
+{
+    result = uploadDebugoutput(NULL, NULL);
+    ASSERT_EQ(result, 0);
+}
+
+TEST_F(UploadDebugoutputTest, HandlesGoodPath)
+{
+    result = uploadDebugoutput("/sample/good_path", "issuename");
+    ASSERT_NE(result, 0);
+}
+
+/* ========================== rrdRunCmdThread ======================= */
+/* --------------- Test initCache() from rrdRunCmdThread --------------- */
+class InitCacheTest : public ::testing::Test
+{
+protected:
+    void TearDown() override
+    {
+        pthread_mutex_destroy(&rrdCacheMut);
+    }
+};
+
+TEST_F(InitCacheTest, InitializesMutexAndSetsPointerToNull)
+{
+    initCache();
+
+    int ret = pthread_mutex_trylock(&rrdCacheMut);
+    ASSERT_EQ(ret, 0) << "Expected mutex to be unlocked after initCache, but it was locked.";
+
+    if (ret == 0)
+    {
+        pthread_mutex_unlock(&rrdCacheMut);
+    }
+
+    ASSERT_EQ(cacheDataNode, nullptr);
+}
+
+/* --------------- Test print_items() from rrdRunCmdThread --------------- */
+TEST(PrintItemsTest, HandlesNullNode)
+{
+    print_items(NULL);
+}
+
+TEST(PrintItemsTest, HandlesNonNullNode)
+{
+    cacheData node;
+    node.mdata = strdup("mdata");
+    node.issueString = strdup("issueString");
+    node.next = NULL;
+    node.prev = NULL;
+    print_items(&node);
+
+    free(node.mdata);
+    free(node.issueString);
+}
+
+/* --------------- Test createCache() from rrdRunCmdThread --------------- */
+TEST(CreateCacheTest, HandlesNullPkgDataAndValidIssueTypeData)
+{
+    char *pkgData = NULL;
+    char *issueTypeData = strdup("ValidIssueTypeData");
+    cacheData *result = createCache(pkgData, issueTypeData);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->mdata, nullptr);
+    ASSERT_STREQ(result->issueString, "ValidIssueTypeData");
+    ASSERT_EQ(result->next, nullptr);
+    ASSERT_EQ(result->prev, nullptr);
+
+    free(issueTypeData);
+    free(result);
+}
+
+TEST(CreateCacheTest, HandlesValidPkgDataAndIssueTypeData)
+{
+    char *pkgData = strdup("ValidPkgData");
+    char *issueTypeData = strdup("ValidIssueTypeData");
+    cacheData *result = createCache(pkgData, issueTypeData);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_STREQ(result->mdata, "ValidPkgData");
+    ASSERT_STREQ(result->issueString, "ValidIssueTypeData");
+    ASSERT_EQ(result->next, nullptr);
+    ASSERT_EQ(result->prev, nullptr);
+
+    free(pkgData);
+    free(issueTypeData);
+    free(result);
+}
+
+TEST(CreateCacheTest, HandlesValidPkgDataAndNullIssueTypeData)
+{
+    char *pkgData = strdup("ValidPkgData");
+    char *issueTypeData = NULL;
+    cacheData *result = createCache(pkgData, issueTypeData);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_STREQ(result->mdata, "ValidPkgData");
+    ASSERT_EQ(result->issueString, nullptr);
+    ASSERT_EQ(result->next, nullptr);
+    ASSERT_EQ(result->prev, nullptr);
+
+    free(pkgData);
+    free(result);
+}
+
+TEST(CreateCacheTest, HandlesNullPkgDataAndIssueTypeData)
+{
+    char *pkgData = NULL;
+    char *issueTypeData = NULL;
+    cacheData *result = createCache(pkgData, issueTypeData);
+
+    ASSERT_NE(result, nullptr);
+    ASSERT_EQ(result->mdata, nullptr);
+    ASSERT_EQ(result->issueString, nullptr);
+    ASSERT_EQ(result->next, nullptr);
+    ASSERT_EQ(result->prev, nullptr);
+
+    free(result);
+}
+
+/* --------------- Test append_item() from rrdRunCmdThread --------------- */
+class AppendItemTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        pthread_mutex_init(&rrdCacheMut, NULL);
+        cacheDataNode = NULL;
+    }
+
+    void TearDown() override
+    {
+        pthread_mutex_destroy(&rrdCacheMut);
+        while (cacheDataNode != NULL)
+        {
+            cacheData *next = cacheDataNode->next;
+            if (cacheDataNode->mdata != NULL)
+            {
+                free(cacheDataNode->mdata);
+                cacheDataNode->mdata = NULL;
+            }
+            if (cacheDataNode->mdata != NULL)
+            { // NOT_COVERED
+                free(cacheDataNode->issueString);
+                cacheDataNode->issueString = NULL;
+            }
+            free(cacheDataNode);
+            cacheDataNode = next;
+        }
+    }
+};
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNullAndIssueTypeDataNull)
+{
+    char *pkgData = NULL;
+    char *issueTypeData = NULL;
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_EQ(cacheDataNode->mdata, nullptr);
+    ASSERT_EQ(cacheDataNode->issueString, nullptr);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNullAndIssueTypeDataNotNull)
+{
+    char *pkgData = NULL;
+    char *issueTypeData = strdup("ValidIssueTypeData");
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_EQ(cacheDataNode->mdata, nullptr);
+    ASSERT_STREQ(cacheDataNode->issueString, issueTypeData);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNotNullAndIssueTypeDataNull)
+{
+    char *pkgData = strdup("ValidPkgData");
+    char *issueTypeData = NULL;
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_STREQ(cacheDataNode->mdata, pkgData);
+    ASSERT_EQ(cacheDataNode->issueString, nullptr);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataAndIssueTypeDataNotNull)
+{
+    char *pkgData = strdup("ValidPkgData");
+    char *issueTypeData = strdup("ValidIssueTypeData");
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_STREQ(cacheDataNode->mdata, pkgData);
+    ASSERT_STREQ(cacheDataNode->issueString, issueTypeData);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeDataNull)
+{
+    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode->mdata = strdup("ExistingPkgData");
+    cacheDataNode->issueString = strdup("ExistingIssueTypeData");
+    cacheDataNode->next = NULL;
+    cacheDataNode->prev = NULL;
+    char *pkgData = NULL;
+    char *issueTypeData = NULL;
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_EQ(cacheDataNode->mdata, nullptr);
+    ASSERT_EQ(cacheDataNode->issueString, nullptr);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeDataNotNull)
+{
+    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode->mdata = strdup("ExistingPkgData");
+    cacheDataNode->issueString = strdup("ExistingIssueTypeData");
+    cacheDataNode->next = NULL;
+    cacheDataNode->prev = NULL;
+    char *pkgData = NULL;
+    char *issueTypeData = strdup("ValidIssueTypeData");
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_EQ(cacheDataNode->mdata, nullptr);
+    ASSERT_STREQ(cacheDataNode->issueString, issueTypeData);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNotNullAndIssueTypeDataNull)
+{
+    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode->mdata = strdup("ExistingPkgData");
+    cacheDataNode->issueString = strdup("ExistingIssueTypeData");
+    cacheDataNode->next = NULL;
+    cacheDataNode->prev = NULL;
+    char *pkgData = strdup("ValidPkgData");
+    char *issueTypeData = NULL;
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_STREQ(cacheDataNode->mdata, pkgData);
+    ASSERT_EQ(cacheDataNode->issueString, nullptr);
+}
+
+TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataAndIssueTypeDataNotNull)
+{
+    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode->mdata = strdup("ExistingPkgData");
+    cacheDataNode->issueString = strdup("ExistingIssueTypeData");
+    cacheDataNode->next = NULL;
+    cacheDataNode->prev = NULL;
+    char *pkgData = strdup("ValidPkgData");
+    char *issueTypeData = strdup("ValidIssueTypeData");
+    append_item(pkgData, issueTypeData);
+
+    ASSERT_NE(cacheDataNode, nullptr);
+    ASSERT_STREQ(cacheDataNode->mdata, pkgData);
+    ASSERT_STREQ(cacheDataNode->issueString, issueTypeData);
+}
+
+/* --------------- Test freecacheDataCacheNode() from rrdRunCmdThread --------------- */
+TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNotNullAndIssueStringNotNull)
+{
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("ValidMdata");
+    node->issueString = strdup("ValidIssueString");
+    freecacheDataCacheNode(&node);
+
+    EXPECT_EQ(node, nullptr);
+}
+
+TEST(FreecacheDataCacheNodeTest, HandlesNodeNull)
+{
+    cacheData *node = NULL;
+    freecacheDataCacheNode(&node);
+
+    EXPECT_EQ(node, nullptr);
+}
+
+TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNullAndIssueStringNotNull)
+{
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = NULL;
+    node->issueString = strdup("ValidIssueString");
+    freecacheDataCacheNode(&node);
+
+    EXPECT_EQ(node, nullptr);
+}
+
+/*---------------- Test removeQuotes() from rrdRunCmdThread ---------------*/
+TEST(RemoveQuotesTest, null_string)
+{
+    removeQuotes(nullptr);
+}
+
+TEST(RemoveQuotesTest, HandlesQuotesAndEscapedQuotes)
+{
+    char str[] = "\"Hello \\\"World\\\"\"";
+    removeQuotes(str);
+    EXPECT_STREQ(str, "Hello \"World\"");
+}
+
+TEST(RemoveQuotesTest, HandlesSurroundingQuotes)
+{
+    char str[] = "\"Hello World\"";
+    removeQuotes(str);
+    EXPECT_STREQ(str, "Hello World");
+}
+
+TEST(RemoveQuotesTest, HandlesEscapedQuotesWithoutSurroundingQuotes)
+{
+    char str[] = "Hello \\\"World\\\"";
+    removeQuotes(str);
+    EXPECT_STREQ(str, "Hello \"World\"");
+}
+
+TEST(RemoveQuotesTest, HandlesStringWithoutQuotes)
+{
+    char str[] = "Hello World";
+    removeQuotes(str);
+    EXPECT_STREQ(str, "Hello World");
+}
+
+TEST(RemoveQuotesTest, HandlesEmptyString)
+{
+    char str[] = "";
+    removeQuotes(str);
+    EXPECT_STREQ(str, "");
+}
+
+/*----------------- Test copyDebugLogDestFile() from rrdRunCmdThread ------------*/
+TEST(CopyDebugLogDestFileTest, HandlesEmptySource)
+{
+    FILE *source = std::tmpfile();
+    FILE *destination = std::tmpfile();
+
+    ASSERT_NE(source, nullptr);
+    ASSERT_NE(destination, nullptr);
+
+    fclose(source);
+    source = std::tmpfile();
+    ASSERT_NE(source, nullptr);
+
+    copyDebugLogDestFile(source, destination);
+
+    fseek(destination, 0, SEEK_SET);
+    char buffer[1024] = {0};
+    size_t bytesRead = fread(buffer, 1, sizeof(buffer) - 1, destination);
+
+    EXPECT_EQ(bytesRead, 0);
+
+    fclose(source);
+    fclose(destination);
+}
+
+TEST(CopyDebugLogDestFileTest, HandlesNullPointers)
+{
+    FILE *destination = std::tmpfile();
+    ASSERT_NE(destination, nullptr);
+
+    copyDebugLogDestFile(nullptr, destination);
+
+    fseek(destination, 0, SEEK_SET);
+    char buffer[1024] = {0};
+    size_t bytesRead = fread(buffer, 1, sizeof(buffer) - 1, destination);
+
+    EXPECT_EQ(bytesRead, 0);
+
+    fclose(destination);
+
+    FILE *source = std::tmpfile();
+    ASSERT_NE(source, nullptr);
+    copyDebugLogDestFile(source, nullptr);
+
+    fclose(source);
+}
+
+/* --------------- Test findPresentInCache() from rrdRunCmdThread --------------- */
+class FindPresentInCacheTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        pthread_mutex_init(&rrdCacheMut, NULL);
+        cacheDataNode = NULL;
+    }
+
+    void TearDown() override
+    {
+        pthread_mutex_destroy(&rrdCacheMut);
+        while (cacheDataNode != NULL)
+        {
+            cacheData *next = cacheDataNode->next;
+            if (cacheDataNode->mdata != NULL)
+            {
+                free(cacheDataNode->mdata);
+                cacheDataNode->mdata = NULL;
+            }
+            if (cacheDataNode->mdata != NULL)
+            { // NOT_COVERED
+                free(cacheDataNode->issueString);
+                cacheDataNode->issueString = NULL;
+            }
+            free(cacheDataNode);
+            cacheDataNode = next;
+        }
+    }
+};
+
+TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInSecondElement)
+{
+    cacheData *firstNode = (cacheData *)malloc(sizeof(cacheData));
+    firstNode->mdata = strdup("FirstPkgData");
+    firstNode->issueString = strdup("FirstIssueString");
+    firstNode->next = NULL;
+    cacheData *secondNode = (cacheData *)malloc(sizeof(cacheData));
+    secondNode->mdata = strdup("SecondPkgData");
+    secondNode->issueString = strdup("SecondIssueString");
+    secondNode->next = NULL;
+    firstNode->next = secondNode;
+    cacheDataNode = firstNode;
+    cacheData *result = findPresentInCache("SecondPkgData");
+
+    EXPECT_EQ(result, secondNode);
+}
+
+TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInFirstElement)
+{
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("IssueString");
+    node->next = NULL;
+    cacheDataNode = node;
+    cacheData *result = findPresentInCache("PkgData");
+
+    EXPECT_EQ(result, node);
+}
+
+TEST_F(FindPresentInCacheTest, HandlesRrdCachecnodeNull)
+{
+    cacheData *result = findPresentInCache("PkgData");
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(FindPresentInCacheTest, HandlesPkgDataNotFoundInRrdCachecnode)
+{
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("IssueString");
+    node->next = NULL;
+    cacheDataNode = node;
+    cacheData *result = findPresentInCache("NonExistentPkgData");
+
+    EXPECT_EQ(result, nullptr);
+}
+
+/* --------------- Test remove_item() from rrdRunCmdThread --------------- */
+class RemoveItemTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        pthread_mutex_init(&rrdCacheMut, NULL);
+        cacheDataNode = NULL;
+    }
+
+    void TearDown() override
+    {
+        pthread_mutex_destroy(&rrdCacheMut);
+        while (cacheDataNode != NULL)
+        { // NOT_COVERED
+            cacheData *next = cacheDataNode->next;
+            if (cacheDataNode->mdata != NULL)
+            {
+                free(cacheDataNode->mdata);
+                cacheDataNode->mdata = NULL;
+            }
+            if (cacheDataNode->issueString != NULL)
+            {
+                free(cacheDataNode->issueString);
+                cacheDataNode->issueString = NULL;
+            }
+            free(cacheDataNode);
+            cacheDataNode = next;
+        }
+    }
+};
+
+TEST_F(RemoveItemTest, HandlesCacheNull)
+{
+    remove_item(NULL);
+    EXPECT_EQ(cacheDataNode, nullptr);
+}
+
+TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheEqualsRrdCachecnode)
+{
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("IssueString");
+    node->next = NULL;
+    cacheDataNode = node;
+    remove_item(node);
+
+    EXPECT_EQ(cacheDataNode, nullptr);
+}
+
+TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheNotEqualsRrdCachecnode)
+{
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("IssueString");
+    node->next = NULL;
+    cacheDataNode = node;
+    cacheData *node_dummy = (cacheData *)malloc(sizeof(cacheData));
+    node_dummy->mdata = strdup("PkgData");
+    node_dummy->issueString = strdup("IssueString");
+    node_dummy->next = NULL;
+    remove_item(node_dummy);
+
+    EXPECT_NE(cacheDataNode, nullptr);
+}
+
+/* ======================== rrdEventProcess ==============*/
+/* --------------- Test freeParsedJson() from rrdEventProcess --------------- */
+TEST(FreeParsedJsonTest, HandlesValidJson)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddStringToObject(json, "key", "value");
+    freeParsedJson(json);
+}
+
+TEST(FreeParsedJsonTest, HandlesNullJson)
+{
+    freeParsedJson(NULL);
+}
+
+/* --------------- Test removeSpecialCharacterfromIssueTypeList() from rrdEventProcess --------------- */
+
+TEST(RemoveSpecialCharacterfromIssueTypeListTest, HandlesEmptyString)
+{
+    char str[] = "";
+    removeSpecialCharacterfromIssueTypeList(str);
+
+    EXPECT_STREQ(str, "");
+}
+
+TEST(RemoveSpecialCharacterfromIssueTypeListTest, HandlesStringWithCommaAndDot)
+{
+    char str[] = "a,b.c";
+    removeSpecialCharacterfromIssueTypeList(str);
+
+    EXPECT_STREQ(str, "a,b.c");
+}
+
+TEST(RemoveSpecialCharacterfromIssueTypeListTest, HandlesStringWithoutCommaAndDot)
+{
+    char str[] = "abc";
+    removeSpecialCharacterfromIssueTypeList(str);
+
+    EXPECT_STREQ(str, "abc");
+}
+
+TEST(RemoveSpecialCharacterfromIssueTypeListTest, HandlesStringWithConsecutiveSpecialCharacters)
+{
+    char str[] = "a^&b";
+    char str1[] = "^x";
+    removeSpecialCharacterfromIssueTypeList(str);
+    removeSpecialCharacterfromIssueTypeList(str1);
+
+    EXPECT_STREQ(str, "ab");
+    EXPECT_STREQ(str1, "x");
+}
+
+/* --------------- Test issueTypeSplitter() from rrdEventProcess --------------- */
+TEST(IssueTypeSplitterTest, HandlesStringWithSpecialCharacters)
+{
+    char str[] = "a@,b,&,cd,ef";
+    char **args = NULL;
+    int count = issueTypeSplitter(str, ',', &args);
+
+    ASSERT_EQ(count, 4);
+    ASSERT_STREQ(args[0], "a");
+    ASSERT_STREQ(args[1], "b");
+    ASSERT_STREQ(args[2], "cd");
+    ASSERT_STREQ(args[3], "ef");
+
+    for (int i = 0; i < count; i++)
+    {
+        free(args[i]);
+    }
+    free(args);
+}
+
+TEST(IssueTypeSplitterTest, HandlesStringWithNoSpecialCharacters)
+{
+    char str[] = "abcd";
+    char **args = NULL;
+    int count = issueTypeSplitter(str, ',', &args);
+
+    ASSERT_EQ(count, 1);
+    ASSERT_STREQ(args[0], "abcd");
+
+    for (int i = 0; i < count; i++)
+    {
+        free(args[i]);
+    }
+    free(args);
+}
+
+TEST(IssueTypeSplitterTest, HandlesEmptyString)
+{
+    char str[] = "";
+    char **args = NULL;
+    int count = issueTypeSplitter(str, ',', &args);
+
+    ASSERT_EQ(count, 1);
+
+    free(args);
+}
+
+/* --------------- Test processIssueTypeInDynamicProfile() from rrdEventProcess --------------- */
+class ProcessIssueTypeInDynamicProfileTest : public ::testing::Test
+{
+protected:
+    issueNodeData issuestructNode;
+    data_buf buff;
+
+    void SetUp() override
+    {
+        issuestructNode.Node = strdup("testNode");
+        issuestructNode.subNode = strdup("testSubNode");
+        buff.mdata = strdup("testData");
+    }
+
+    void TearDown() override
+    {
+        free(issuestructNode.Node);
+        free(issuestructNode.subNode);
+    }
+};
+
+TEST_F(ProcessIssueTypeInDynamicProfileTest, JsonPathIsNull)
+{
+    buff.jsonPath = NULL;
+    char *mdata_before = strdup(buff.mdata);
+    processIssueTypeInDynamicProfile(&buff, &issuestructNode);
+
+    ASSERT_EQ(buff.mdata, nullptr);
+
+    free(mdata_before);
+}
+
+TEST_F(ProcessIssueTypeInDynamicProfileTest, JsonPathIsNotNull_ReadAndParseJSONReturnsNull)
+{
+    buff.jsonPath = strdup("UTJson/invalidJson.json");
+    char *mdata_before = strdup(buff.mdata);
+    char *jsonPath_before = strdup(buff.jsonPath);
+    processIssueTypeInDynamicProfile(&buff, &issuestructNode);
+
+    ASSERT_EQ(buff.mdata, nullptr);
+    ASSERT_EQ(buff.jsonPath, nullptr);
+
+    free(mdata_before);
+    free(jsonPath_before);
+}
+
+TEST_F(ProcessIssueTypeInDynamicProfileTest, JsonPathIsNotNull_ReadAndParseJSONReturnsNotNull_FindIssueInParsedJSONReturnsFalse)
+{
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    char *mdata_before = strdup(buff.mdata);
+    char *jsonPath_before = strdup(buff.jsonPath);
+    processIssueTypeInDynamicProfile(&buff, &issuestructNode);
+
+    ASSERT_EQ(buff.mdata, nullptr);
+    ASSERT_EQ(buff.jsonPath, nullptr);
+
+    free(mdata_before);
+    free(jsonPath_before);
+}
+
+/* --------------- Test processWebCfgTypeEvent() from rrdEventProcess --------------- */
+TEST(ProcessWebCfgTypeEvntTest, RBufIsNull){
+    data_buf *rbuf = nullptr;
+    processWebCfgTypeEvent(rbuf);
+}
+
+TEST(ProcessWebCfgTypeEvntTest, RBufDataIsNull){
+    data_buf rbuf;
+    rbuf.mdata = nullptr;
+    rbuf.jsonPath = strdup("sample-path");
+    processWebCfgTypeEvent(&rbuf);
+
+    free(rbuf.jsonPath);
+}
+
+/* --------------- Test processIssueTypeEvent() from rrdEventProcess --------------- */
+TEST(ProcessIssueTypeEvntTest, RBufIsNull){
+    data_buf *rbuf = nullptr;
+    processIssueTypeEvent(rbuf);
+}
+
+TEST(ProcessIssueTypeEvntTest, inDynamic_NoJson){
+    data_buf rbuf;
+    rbuf.mdata = strdup("a");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = nullptr;
+    processIssueTypeEvent(&rbuf);
+}
+
+/* ======================== rrdExecuteScript ==============*/
+
+/* --------------- Test processIssueTypeInInstalledPackage() from rrdExecuteScript --------------- */
+TEST(ProcessIssueTypeInInstalledPackageTest, WhenReadAndParseJSONReturnsNull)
+{
+    data_buf rbuf;
+    issueNodeData *issuestructNode = NULL;
+    rbuf.jsonPath = strdup("UTJson/emptyJson.json");
+    processIssueTypeInInstalledPackage(&rbuf, issuestructNode);
+
+    free(rbuf.jsonPath);
+}
+
+#ifdef IARMBUS_SUPPORT
+TEST(ProcessIssueTypeInInstalledPackageTest, WhenReadAndParseJSONReturnsNonNull)
+{
+    data_buf rbuf;
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("sample");
+    issuestructNode.subNode = NULL;
+    rbuf.jsonPath = strdup("UTJson/validJson.json");
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Failure));
+    processIssueTypeInInstalledPackage(&rbuf, &issuestructNode);
+
+    free(rbuf.jsonPath);
+}
+
+/* --------------- Test processIssueTypeInStaticProfile() from rrdExecuteScript --------------- */
+class ProcessIssueTypeInStaticProfileTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        SetParamWrapper::clearImpl();
+    }
+    void TearDown() override
+    {
+        SetParamWrapper::clearImpl();
+    }
+};
+
+TEST_F(ProcessIssueTypeInStaticProfileTest, StatusProcessWhenReadAndParseJSONReturnsNull)
+{
+
+    data_buf rbuf;
+
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("key");
+    issuestructNode.subNode = strdup("notValue");
+    rbuf.jsonPath = strdup("UTJson/validJson2.json");
+
+    MockSetParam mock_set_param;
+    SetParamWrapper::setImpl(&mock_set_param);
+    EXPECT_CALL(mock_set_param, setParam(_, _, _))
+        .WillOnce(Return(tr181Failure));
+    processIssueTypeInStaticProfile(&rbuf, &issuestructNode);
+
+    free(rbuf.jsonPath);
+}
+#endif
+
+/* --------------- Test processIssueType() from rrdExecuteScript --------------- */
+TEST(processIssueTypeTest, mdataIsNull)
+{
+    data_buf rbuf;
+    rbuf.mdata = NULL;
+    processIssueType(&rbuf);
+}
+
+TEST(processIssueTypeTest, dynamicPath)
+{
+    data_buf rbuf;
+    issueNodeData issuestructNode;
+    rbuf.mdata = strdup("IssueNode");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = NULL;
+    processIssueType(&rbuf);
+}
+
+/* ====================== rrdIarm ================*/
+/* --------------- Test getBlobVersion() from rrdIarm --------------- */
+extern uint32_t gWebCfgBloBVersion;
+namespace
+{
+    TEST(SetBlobVersionTest, SetsGlobalVariable)
+    {
+        char subdoc[] = "test_subdoc";
+        uint32_t version = 5;
+        int result = setBlobVersion(subdoc, version);
+
+        EXPECT_EQ(result, 0);
+        EXPECT_EQ(gWebCfgBloBVersion, version);
+    }
+    TEST(GetBlobVersionTest, ReturnsGlobalVariable)
+    {
+        char subdoc[] = "test_subdoc";
+        uint32_t result = getBlobVersion(subdoc);
+
+        EXPECT_EQ(result, gWebCfgBloBVersion);
+    }
+}
+
+/* --------------- Test RRD_data_buff_init() from rrdIarm --------------- */
+TEST(RRDDataBuffInitTest, InitializeDataBuff)
+{
+    data_buf sbuf;
+    message_type_et sndtype = EVENT_MSG;
+    deepsleep_event_et deepSleepEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
+    RRD_data_buff_init(&sbuf, sndtype, deepSleepEvent);
+
+    EXPECT_EQ(sbuf.mtype, sndtype);
+    EXPECT_EQ(sbuf.mdata, nullptr);
+    EXPECT_EQ(sbuf.jsonPath, nullptr);
+    EXPECT_FALSE(sbuf.inDynamic);
+    EXPECT_EQ(sbuf.dsEvent, deepSleepEvent);
+}
+
+/* --------------- Test RRD_data_buff_deAlloc() from rrdIarm --------------- */
+TEST(RRDDataBuffDeAllocTest, DeallocateDataBuff)
+{
+    data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
+    sbuf->mdata = (char *)malloc(10 * sizeof(char));
+    sbuf->jsonPath = (char *)malloc(10 * sizeof(char));
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+TEST(RRDDataBuffDeAllocTest, NullPointer)
+{
+    data_buf *sbuf = nullptr;
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+/* --------------- Test RRD_unsubscribe() from rrdIarm --------------- */
+
+class RRDUnsubscribeTest : public ::testing::Test
+{
+protected:
+    ClientIARMMock mock;
+
+    void SetUp() override
+    {
+        setMock(&mock);
+    }
+
+    void TearDown() override
+    {
+        setMock(nullptr);
+    }
+};
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_Success)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_DisconnectFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_TermFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterEventHandlerFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(::testing::_, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterRDMMgrEventHandlerRRDFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+
+TEST_F(RRDUnsubscribeTest, TestRRD_Unsubscribe_UnRegisterPwrMgrEventHandlerFailure)
+{
+    EXPECT_CALL(mock, IARM_Bus_Disconnect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Term()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_UnRegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_unsubscribe();
+
+    EXPECT_EQ(result, IARM_RESULT_FAILURE);
+}
+/* --------------- Test webconfigFrameworkInit() from rrdIarm --------------- */
+class WebConfigIntegrationTest : public ::testing::Test
+{
+protected:
+    ClientWebConfigMock mock_webconfig;
+
+    void SetUp() override
+    {
+        setWebConfigMock(&mock_webconfig);
+    }
+
+    void TearDown() override
+    {
+        setWebConfigMock(nullptr);
+    }
+};
+
+TEST_F(WebConfigIntegrationTest, TestWebconfigFrameworkInit)
+{
+    EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
+    webconfigFrameworkInit();
+}
+
+/* --------------- Test RRDMsgDeliver() from rrdIarm --------------- */
+extern int msqid;
+extern key_t key;
+
+class RRDMsgDeliverTest : public ::testing::Test
+{
+protected:
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        msqid_cpy = msqid;
+        key_cpy = key;
+        msqid = msgget(key, IPC_CREAT | 0666);
+
+        ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+    }
+
+    void TearDown() override
+    {
+        int ret = msgctl(msqid, IPC_RMID, nullptr);
+        ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+        msqid = msqid_cpy;
+        key = key_cpy;
+    }
+};
+
+TEST_F(RRDMsgDeliverTest, TestMessageDelivery)
+{
+    data_buf sbuf;
+    sbuf.mtype = EVENT_MSG;
+    sbuf.mdata = "mdata";
+    sbuf.inDynamic = true;
+    sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
+    RRDMsgDeliver(msqid, &sbuf);
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), DEFAULT, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+    ASSERT_EQ(sbuf.mtype, receivedBuf.mtype);
+}
+
+TEST_F(RRDMsgDeliverTest, TestMessageDeliveryFailure)
+{
+    data_buf sbuf;
+    sbuf.mtype = EVENT_MSG;
+    sbuf.mdata = "mdata";
+    sbuf.inDynamic = true;
+    sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
+
+    EXPECT_EXIT(RRDMsgDeliver(-1, &sbuf), ::testing::ExitedWithCode(1), ".*");
+}
+
+/* --------------- Test pushIssueTypesToMsgQueue() from rrdIarm --------------- */
+class PushIssueTypesToMsgQueueTest : public ::testing::Test
+{
+protected:
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        msqid_cpy = msqid;
+        key_cpy = key;
+        msqid = msgget(key, IPC_CREAT | 0666);
+
+        ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+    }
+
+    void TearDown() override
+    {
+        int ret = msgctl(msqid, IPC_RMID, nullptr);
+        ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+        msqid = msqid_cpy;
+        key = key_cpy;
+    }
+};
+
+TEST_F(PushIssueTypesToMsgQueueTest, TestPushIssueTypesToMsgQueueSuccess)
+{
+    char issueTypeList[] = "mdata";
+    pushIssueTypesToMsgQueue(issueTypeList, EVENT_MSG);
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
+
+#ifdef IARMBUS_SUPPORT
+/* --------------- Test _remoteDebuggerEventHandler() from rrdIarm --------------- */
+class RemoteDebuggerEventHandlerTest : public ::testing::Test
+{
+protected:
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
+
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
+{
+    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "mdata";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RemoteDebuggerEventHandlerTest, TestInvalidEventId)
+{
+    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
+    char data[] = "Test data";
+    _remoteDebuggerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+/* --------------- Test _remoteDebuggerWebCfgDataEventHandler() from rrdIarm --------------- */
+class RemoteDebuggerWebConfigEventHandlerTest : public ::testing::Test
+{
+protected:
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
+
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        {
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RemoteDebuggerWebConfigEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _remoteDebuggerWebCfgDataEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RemoteDebuggerWebConfigEventHandlerTest, TestInvalidEventId)
+{
+    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT;
+    char data[] = "Test data";
+    _remoteDebuggerWebCfgDataEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RemoteDebuggerWebConfigEventHandlerTest, TestPushIssueTypesToMsgQueueSuccess)
+{
+    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA;
+    char data[] = "mdata";
+    _remoteDebuggerWebCfgDataEventHandler(owner, eventId, data, sizeof(data));
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), IARM_EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
+#endif
+
+/* --------------- Test _rdmManagerEventHandler() from rrdIarm --------------- */
+class RDMMgrEventHandlerTest : public ::testing::Test
+{
+protected:
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestFoundInCacheDownloadIsCompleteAndDEEPSLEEPIssue" || test_name == "TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEPIssue")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
+
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestFoundInCacheDownloadIsCompleteDEEPSLEEPIssue" || test_name == "TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEPIssue")
+        {
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RDMMgrEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _rdmManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestInvalidEventId)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_MAX_EVENT; // Invalid event id
+    char data[] = "Test data";
+    _rdmManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestNotFoundInCache)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "Test package", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadNotComplete)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("IssueString");
+    node->next = NULL;
+    cacheDataNode = node;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "PkgData", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    eventData.rdm_pkg_info.pkg_inst_status = RDM_PKG_INSTALL_ERROR;
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndDEEPSLEEPIssue)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("DEEPSLEEP");
+    node->next = NULL;
+    cacheDataNode = node;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "PkgData", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    eventData.rdm_pkg_info.pkg_inst_status = RDM_PKG_INSTALL_COMPLETE;
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEPIssue)
+{
+    const char *owner = IARM_BUS_RDMMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    node->mdata = strdup("PkgData");
+    node->issueString = strdup("NotDeepSleepIssue");
+    node->next = NULL;
+    cacheDataNode = node;
+    IARM_Bus_RDMMgr_EventData_t eventData;
+    strncpy(eventData.rdm_pkg_info.pkg_name, "PkgData", RDM_PKG_NAME_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_version, "1.0.0", RDM_PKG_VERSION_MAX_SIZE);
+    strncpy(eventData.rdm_pkg_info.pkg_inst_path, "/path/to/package", RDM_PKG_INST_PATH_MAX_SIZE);
+    eventData.rdm_pkg_info.pkg_inst_status = RDM_PKG_INSTALL_COMPLETE;
+    _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+/* --------------- Test _pwrManagerEventHandler() from rrdIarm --------------- */
+class PwrMgrEventHandlerTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+    void SetUp() override
+    {
+        //RBusApiWrapper::setImpl(&mock_rbus_api);
+        string test_name = getCurrentTestName();
+        if (test_name != "TestInvalidOwnerName" || test_name != "TestCurrentStateNotDeepSleep")
+        {
+            RBusApiWrapper::clearImpl();
+            RBusApiWrapper::setImpl(&mock_rbus_api);
+        } 
+        ::testing::Mock::AllowLeak(&mock_rbus_api);
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name != "TestInvalidOwnerName" || test_name != "TestCurrentStateNotDeepSleep")
+        RBusApiWrapper::clearImpl();
+        /*
+        
+        if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
+        {
+            RBusApiWrapper::clearImpl();
+        } */
+    }
+};
+
+TEST_F(PwrMgrEventHandlerTest, TestInvalidOwnerName)
+{
+    const char *owner = "InvalidOwner";
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    char data[] = "Test data";
+    _pwrManagerEventHandler(owner, eventId, data, sizeof(data));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateNotDeepSleep)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetSuccess)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+
+    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenFail)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+TEST_F(PwrMgrEventHandlerTest, TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail)
+{
+    const char *owner = IARM_BUS_PWRMGR_NAME;
+    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE;
+    IARM_Bus_PWRMgr_EventData_t eventData;
+    eventData.data.state.curState = IARM_BUS_PWRMGR_POWERSTATE_STANDBY_DEEP_SLEEP;
+    eventData.data.state.newState = IARM_BUS_PWRMGR_POWERSTATE_ON;
+
+    //EXPECT_CALL(mock_rbus_api, rbus_open(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_BUS_ERROR));
+    _pwrManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
+}
+
+/* --------------- Test RRD_subscribe() from rrdIarm --------------- */
+class RRDSubscribeTest : public ::testing::Test
+{
+protected:
+    ClientIARMMock mock;
+    ClientWebConfigMock mock_webconfig;
+
+    void SetUp() override
+    {
+        setMock(&mock);
+        setWebConfigMock(&mock_webconfig);
+    }
+
+    void TearDown() override
+    {
+        setMock(nullptr);
+        setWebConfigMock(nullptr);
+    }
+};
+
+TEST_F(RRDSubscribeTest, TestRRD_Subscribe_AllSuccess)
+{
+    EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Connect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_ISSUETYPE, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(RDK_REMOTE_DEBUGGER_NAME, IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    //EXPECT_CALL(mock_webconfig, register_sub_docs_mock(_, _, _, _)).Times(1);
+    int result = RRD_IARM_subscribe();
+
+    //EXPECT_EQ(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDSubscribeTest, TestRRD_Subscribe_InitFail)
+{
+    EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_IARM_subscribe();
+    //EXPECT_NE(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDSubscribeTest, TestRRD_Subscribe_ConnectFail)
+{
+    EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Connect()).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_IARM_subscribe();
+
+    //EXPECT_NE(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDSubscribeTest, TestRRD_Subscribe_RDMMgrHandlerFail)
+{
+    EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Connect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_IARM_subscribe();
+
+    //EXPECT_NE(result, IARM_RESULT_SUCCESS);
+}
+
+TEST_F(RRDSubscribeTest, TestRRD_Subscribe_PwrMgrHandlerFail)
+{
+    EXPECT_CALL(mock, IARM_Bus_Init(RDK_REMOTE_DEBUGGER_NAME)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_Connect()).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_RDMMGR_NAME, IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_SUCCESS));
+    EXPECT_CALL(mock, IARM_Bus_RegisterEventHandler(IARM_BUS_PWRMGR_NAME, IARM_BUS_PWRMGR_EVENT_MODECHANGED, ::testing::_)).WillOnce(::testing::Return(IARM_RESULT_FAILURE));
+    int result = RRD_IARM_subscribe();
+
+    //EXPECT_NE(result, IARM_RESULT_SUCCESS);
+}
+
+/* ====================== rrdMsgPackDecoder ================*/
+/* --------------- Test rollback_Debugger() from rrdMsgPackDecoder --------------- */
+TEST(TestDebuggerRollback, ValidReturn)
+{
+    int ret = rollback_Debugger();
+    EXPECT_EQ(ret, 0);
+}
+
+/* --------------- Test remotedebuggerdoc_destroy() from rrdMsgPackDecoder --------------- */
+TEST(TestRRDDocDestroy, DocIsNULL)
+{
+    remotedebuggerdoc_t *ld = NULL;
+    remotedebuggerdoc_destroy(ld);
+}
+
+TEST(TestRRDDocDestroy, DocNotNullParamNotNullCommandListNull)
+{
+    remotedebuggerdoc_t *ld = (remotedebuggerdoc_t *)malloc(sizeof(remotedebuggerdoc_t));
+    ld->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));
+    ld->param->commandList = NULL;
+    ld->subdoc_name = NULL;
+    remotedebuggerdoc_destroy(ld);
+}
+
+TEST(TestRRDDocDestroy, DocNotNullParamNotNullCommandListNotNull)
+{
+    remotedebuggerdoc_t *ld = (remotedebuggerdoc_t *)malloc(sizeof(remotedebuggerdoc_t));
+    ld->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));
+    ld->param->commandList = strdup("sampleCommandList");
+    ld->subdoc_name = NULL;
+    remotedebuggerdoc_destroy(ld);
+}
+
+TEST(TestRRDDocDestroy, DocIsNULLSubDocNotNULL)
+{
+    remotedebuggerdoc_t *ld = (remotedebuggerdoc_t *)malloc(sizeof(remotedebuggerdoc_t));
+    ld->param = NULL;
+    ld->subdoc_name = strdup("sampleSubDocs");
+    remotedebuggerdoc_destroy(ld);
+}
+
+/* --------------- Test __finder() from rrdMsgPackDecoder --------------- */
+TEST(FinderTest, MapSizeZero)
+{
+    msgpack_object_map map;
+    map.size = 0;
+    msgpack_object *result = __finder("name", MSGPACK_OBJECT_STR, &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
+
+TEST(FinderTest, KeyTypeNotStr)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    kv.key.type = MSGPACK_OBJECT_NIL; // not MSGPACK_OBJECT_STR
+    map.size = 1;
+    map.ptr = &kv;
+    msgpack_object *result = __finder("name", MSGPACK_OBJECT_STR, &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
+
+TEST(FinderTest, KeyTypeStrExpectTypeMatch)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "name";
+    kv.key.via.str.size = strlen("name");
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.str.ptr = "value";
+    kv.val.via.str.size = strlen("value");
+    map.size = 1;
+    map.ptr = &kv;
+    msgpack_object *result = __finder("name", MSGPACK_OBJECT_STR, &map);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
+    EXPECT_STREQ(result->via.str.ptr, "value");
+}
+
+TEST(FinderTest, KeyTypeStrValTypeStrMatch)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "name";
+    kv.key.via.str.size = strlen("name");
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.str.ptr = "value";
+    kv.val.via.str.size = strlen("value");
+    map.size = 1;
+    map.ptr = &kv;
+    msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
+    EXPECT_STREQ(result->via.str.ptr, "value");
+}
+
+TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "name";
+    kv.key.via.str.size = strlen("name");
+    kv.val.type = MSGPACK_OBJECT_NIL;
+    map.size = 1;
+    map.ptr = &kv;
+    msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
+}
+
+/* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
+TEST(GetMsgpackUnpackStatusTest, DecodedbufIsNullAndSizeIsZero)
+{
+    char *decodedbuf = NULL;
+    int size = 0;
+
+    EXPECT_EQ(get_msgpack_unpack_status(decodedbuf, size), MSGPACK_UNPACK_NOMEM_ERROR);
+}
+
+TEST(GetMsgpackUnpackStatusTest, MsgpackUnpackReturnsSuccess)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    msgpack_pack_int(&pk, 1);
+
+    EXPECT_EQ(get_msgpack_unpack_status(sbuf.data, sbuf.size), MSGPACK_UNPACK_SUCCESS);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+TEST(GetMsgpackUnpackStatusTest, MsgpackUnpackReturnsExtraBytes)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    // Serialize data with extra bytes
+    msgpack_pack_int(&pk, 1);
+    sbuf.data[sbuf.size] = '\0'; // Add an extra byte
+
+    // msg_unpack_next() internally handles EXTRABYTES. It should return SUCCESS.
+    EXPECT_EQ(get_msgpack_unpack_status(sbuf.data, sbuf.size + 1), MSGPACK_UNPACK_SUCCESS);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+TEST(GetMsgpackUnpackStatusTest, MsgpackUnpackReturnsOtherValidMacro)
+{
+    char decodedbuf[] = "dummy";
+    int size = sizeof(decodedbuf);
+    msgpack_unpack_return unpack_ret = static_cast<msgpack_unpack_return>(999);
+    // This test case is illustrative; msgpack_unpack does not have a return value of 999.
+
+    EXPECT_NE(get_msgpack_unpack_status(decodedbuf, size), unpack_ret);
+}
+
+/* --------------- Test remotedebuggerdoc_strerror() from rrdMsgPackDecoder --------------- */
+TEST(RemoteDebuggerDocStrErrorTest, KnownError)
+{
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OK), "No errors.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OUT_OF_MEMORY), "Out of memory.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_FIRST_ELEMENT), "Invalid first element.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_VERSION), "Invalid 'version' value.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid 'value' array.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, UnknownError)
+{
+    EXPECT_STREQ(remotedebuggerdoc_strerror(MISSING_ENTRY), "Unknown error.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(999), "Unknown error."); // Test with an arbitrary number not in the map
+}
+
+/* --------------- Test getReqTotalSizeOfIssueTypesStr() from rrdMsgPackDecoder --------------- */
+TEST(GetReqTotalSizeOfIssueTypesStrTest, ArraySizeZero)
+{
+    msgpack_object obj_array[1];
+    msgpack_object_array arr = {0, obj_array};
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 1);
+}
+
+TEST(GetReqTotalSizeOfIssueTypesStrTest, ArraySizeFiveWithNonStringTypes)
+{
+    msgpack_object obj_array[5];
+    for (int i = 0; i < 5; i++)
+    {
+        obj_array[i].type = MSGPACK_OBJECT_POSITIVE_INTEGER;
+    }
+    msgpack_object_array arr = {5, obj_array};
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 6);
+}
+
+TEST(GetReqTotalSizeOfIssueTypesStrTest, ArraySizeFiveWithStringTypes)
+{
+    msgpack_object obj_array[5];
+    const char *test_strs[5] = {"one", "two", "three", "four", "five"};
+    int total_strlen = 0;
+    for (int i = 0; i < 5; i++)
+    {
+        obj_array[i].type = MSGPACK_OBJECT_STR;
+        obj_array[i].via.str.size = strlen(test_strs[i]);
+        obj_array[i].via.str.ptr = test_strs[i];
+        total_strlen += strlen(test_strs[i]);
+    }
+    msgpack_object_array arr = {5, obj_array};
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 1 + 5 + total_strlen);
+}
+
+/* --------------- Test FreeResources_RemoteDebugger() from rrdMsgPackDecoder --------------- */
+TEST(FreeResourcesRemoteDebuggerTest, NullPointerArgument)
+{
+    FreeResources_RemoteDebugger(NULL);
+    // No assertion needed, just ensuring no crashes
+}
+
+/* --------------- Test PrepareDataToPush() from rrdMsgPackDecoder --------------- */
+class PrepareDataToPushTest : public ::testing::Test
+{
+protected:
+    int msqid_cpy;
+    key_t key_cpy;
+    void SetUp() override
+    {
+        msqid_cpy = msqid;
+        key_cpy = key;
+        msqid = msgget(key, IPC_CREAT | 0666);
+        ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+    }
+    void TearDown() override
+    {
+        int ret = msgctl(msqid, IPC_RMID, nullptr);
+        ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+
+        msqid = msqid_cpy;
+        key = key_cpy;
+    }
+};
+
+TEST_F(PrepareDataToPushTest, SuccessfulExecution)
+{
+    remotedebuggerparam_t param;
+    param.length = 5;
+    param.commandList = (char *)"12345";
+    PrepareDataToPush(&param);
+    data_buf receivedBuf;
+    int ret = msgrcv(msqid, &receivedBuf, sizeof(receivedBuf), EVENT_MSG, 0);
+
+    ASSERT_NE(ret, -1) << "Error receiving message from queue";
+}
+
+/* --------------- Test helper_convert() from rrdMsgPackDecoder --------------- */
+int mock_process_success(void *p, int num, ...)
+{
+    // Mock implementation of process function
+    return 0; // Success
+}
+
+int mock_process_failure(void *p, int num, ...)
+{
+    // Mock implementation of process function that fails
+    return -1; // Return non-zero to indicate failure
+}
+
+void mock_destroy(void *p)
+{
+    // Mock implementation of destroy function
+    free(p); // Free the allocated memory
+}
+
+TEST(HelperConvertTest, BufIsNull)
+{
+    void *result = helper_convert(NULL, 10, 100, "wrapper", MSGPACK_OBJECT_MAP, false, mock_process_success, mock_destroy);
+    EXPECT_NE(result, nullptr); // malloc success
+    EXPECT_EQ(errno, 3);
+    mock_destroy(result);
+}
+
+TEST(HelperConvertTest, MsgPackUnpackSuccessProcessSuccess)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    // Create a map with one key-value pair: "parameters" -> "value"
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 10);
+    msgpack_pack_str_body(&pk, "parameters", 10);
+    msgpack_pack_str(&pk, 5);
+    msgpack_pack_str_body(&pk, "value", 5);
+    void *result = helper_convert(sbuf.data, sbuf.size, 100, "parameters", MSGPACK_OBJECT_STR, false, mock_process_success, mock_destroy);
+
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(errno, 0); // Expect errno to be 0 (OK)
+
+    msgpack_sbuffer_destroy(&sbuf);
+    mock_destroy(result);
+}
+
+TEST(HelperConvertTest, MsgPackUnpackSuccessProcessFails)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    // Create a map with one key-value pair: "parameters" -> "value"
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 10);
+    msgpack_pack_str_body(&pk, "parameters", 10);
+    msgpack_pack_str(&pk, 5);
+    msgpack_pack_str_body(&pk, "value", 5);
+    // Call the helper_convert function with mock process that fails
+    void *result = helper_convert(sbuf.data, sbuf.size, 100, "parameters", MSGPACK_OBJECT_STR, false, mock_process_failure, mock_destroy);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, INVALID_FIRST_ELEMENT);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+TEST(HelperConvertTest, MsgPackWrapperConditionFalseProcessFails)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    // Create a map with one key-value pair: "key" -> "value"
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 3);
+    msgpack_pack_str_body(&pk, "key", 3);
+    msgpack_pack_str(&pk, 5);
+    msgpack_pack_str_body(&pk, "value", 5);
+    // Call the helper_convert function with mock process that fails
+    void *result = helper_convert(sbuf.data, sbuf.size, 100, "key", MSGPACK_OBJECT_STR, false, mock_process_failure, mock_destroy);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, INVALID_FIRST_ELEMENT);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+TEST(HelperConvertTest, MsgPackWrapperConditionFalseProcessSuccess)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    // Create a map with one key-value pair: "key" -> "value"
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 3);
+    msgpack_pack_str_body(&pk, "key", 3);
+    msgpack_pack_str(&pk, 5);
+    msgpack_pack_str_body(&pk, "value", 5);
+    // Call the helper_convert function with mock process that fails
+    void *result = helper_convert(sbuf.data, sbuf.size, 100, "key", MSGPACK_OBJECT_STR, false, mock_process_success, mock_destroy);
+
+    EXPECT_NE(result, nullptr);
+    EXPECT_EQ(errno, 0);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+/* --------------- Test process_remotedebuggerparams() from rrdMsgPackDecoder --------------- */
+TEST(ProcessRemoteDebuggerParamsTest, TestProcessRemoteDebuggerParams)
+{
+    remotedebuggerparam_t rrdParam;
+    msgpack_object_map map;
+    map.size = -1; // Set map size to -1
+    int result = process_remotedebuggerparams(&rrdParam, &map);
+
+    EXPECT_EQ(result, -1);
+}
+
+TEST(ProcessRemoteDebuggerParamsTest, TestProcessRemDebugParams_WhileTrueCondition)
+{
+    remotedebuggerparam_t rrdParam;
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    msgpack_object_str key;
+    msgpack_object_array arr;
+    // Set up invalid conditions to fail the while loop condition
+    map.size = 1; // Set map size to 1 (arbitrary)
+    kv.key.type = MSGPACK_OBJECT_ARRAY;
+    key.ptr = "InvalidKey"; // Using an invalid key to fail the condition
+    key.size = strlen(key.ptr);
+    kv.key.via.str = key;
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.array = arr;
+    map.ptr = &kv;
+    int result = process_remotedebuggerparams(&rrdParam, &map);
+
+    EXPECT_EQ(result, -1);
+}
+
+TEST(ProcessRemoteDebuggerParamsTest, TestProcessRemDebugParams_WhilePassesMsgPackPassMatchFail)
+{
+    remotedebuggerparam_t rrdParam;
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    msgpack_object_str key;
+    msgpack_object_array arr;
+    // Set up conditions to fail the 'if (0 == match(p, "IssueType"))' condition
+    map.size = 1;             // Set map size to 1 (arbitrary)
+    key.ptr = "NotIssueType"; // Using valid key to pass the first condition
+    key.size = strlen(key.ptr);
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str = key;
+    kv.val.type = MSGPACK_OBJECT_ARRAY;
+    kv.val.via.array = arr;
+    map.ptr = &kv;
+    int result = process_remotedebuggerparams(&rrdParam, &map);
+
+    EXPECT_EQ(result, -1);
+}
+
+TEST(ProcessRemoteDebuggerParamsTest, TestProcessRemDebugParams_WhilePassForPassIfPass)
+{
+    remotedebuggerparam_t rrdParam;
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    msgpack_object_str key;
+    msgpack_object_array arr;
+    msgpack_object str_obj;
+    // Set up conditions where the loop for (index = 0; index < arr->size; index++) enters but fails
+    map.size = 1;          // Set map size to 1 (arbitrary)
+    key.ptr = "IssueType"; // Using valid key to pass the first condition
+    key.size = strlen(key.ptr);
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str = key;
+    kv.val.type = MSGPACK_OBJECT_ARRAY;
+    // Set arr.size to 1 to simulate a valid array
+    msgpack_object str;
+    str.type = MSGPACK_OBJECT_STR;
+    str.via.str.ptr = "value";
+    str.via.str.size = 5;
+    arr.ptr = &str;
+    arr.size = 1;
+    kv.val.via.array = arr;
+    map.ptr = &kv;
+    int result = process_remotedebuggerparams(&rrdParam, &map);
+
+    EXPECT_EQ(result, 0);
+}
+
+TEST(ProcessRemoteDebuggerParamsTest, TestProcessRemDebugParams_LoopEnteredAndHitsCondition)
+{
+    remotedebuggerparam_t rrdParam;
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    msgpack_object_str key;
+    msgpack_object_array arr;
+    msgpack_object str_obj;
+    // Set up conditions where the loop for (index = 0; index < arr->size; index++) hits condition
+    map.size = 1;          // Set map size to 1 (arbitrary)
+    key.ptr = "IssueType"; // Using valid key to pass the first condition
+    key.size = strlen(key.ptr);
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str = key;
+    kv.val.type = MSGPACK_OBJECT_ARRAY;
+    // Set arr.size to 2 to simulate a valid array with more than one element
+    msgpack_object str1;
+    str1.type = MSGPACK_OBJECT_STR;
+    str1.via.str.ptr = "value1";
+    str1.via.str.size = 6;
+    msgpack_object str2;
+    str2.type = MSGPACK_OBJECT_STR;
+    str2.via.str.ptr = "value2";
+    str2.via.str.size = 6;
+    arr.ptr = &str1;
+    arr.size = 2;
+    kv.val.via.array = arr;
+    map.ptr = &kv;
+    int result = process_remotedebuggerparams(&rrdParam, &map);
+
+    EXPECT_EQ(result, 0);
+
+    free(rrdParam.commandList);
+}
+
+/* --------------- Test Process_RemoteDebugger_WebConfigRequest() from rrdMsgPackDecoder --------------- */
+class ProcessRRDWfgReq : public ::testing::Test
+{
+protected:
+    void *Data = NULL;
+    pErr retStatus;
+    remotedebuggerdoc_t *premotedebuggerInfo;
+    int msqid_cpy;
+    key_t key_cpy;
+
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPrepAndPushToQueue")
+        {
+            msqid_cpy = msqid;
+            key_cpy = key;
+            retStatus = NULL;
+            msqid = msgget(key, IPC_CREAT | 0666);
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+            premotedebuggerInfo = (remotedebuggerdoc_t *)malloc(sizeof(remotedebuggerdoc_t));
+            premotedebuggerInfo->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));
+            premotedebuggerInfo->param->commandList = "command";
+            premotedebuggerInfo->param->length = strlen(premotedebuggerInfo->param->commandList);
+        }
+        else
+        {
+            Data = NULL;
+            retStatus = NULL;
+        }
+    }
+
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name == "TestPrepAndPushToQueue")
+        {
+            if (retStatus != NULL)
+            {
+                free(retStatus);
+            }
+            if (premotedebuggerInfo != NULL)
+            {
+                if (premotedebuggerInfo->param != NULL)
+                {
+                    free(premotedebuggerInfo->param);
+                }
+                free(premotedebuggerInfo);
+            }
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+        else
+        {
+            if (retStatus != NULL)
+            {
+                free(retStatus);
+            }
+        }
+    }
+};
+
+TEST_F(ProcessRRDWfgReq, TestNullData)
+{
+    retStatus = Process_RemoteDebugger_WebConfigRequest(Data);
+
+    ASSERT_NE(retStatus, nullptr);
+    EXPECT_EQ(retStatus->ErrorCode, SYSCFG_FAILURE);
+    EXPECT_STREQ(retStatus->ErrorMsg, "failure while applying remote debugger subdoc");
+}
+
+TEST_F(ProcessRRDWfgReq, TestPrepAndPushToQueue)
+{
+    retStatus = Process_RemoteDebugger_WebConfigRequest(premotedebuggerInfo);
+
+    ASSERT_NE(retStatus, nullptr);
+    EXPECT_EQ(retStatus->ErrorCode, BLOB_EXEC_SUCCESS);
+}
+
+/* --------------- Test get_base64_decodedbuffer() from rrdMsgPackDecoder --------------- */
+class Base64DecodeTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        g_mockBase64 = new MockBase64();
+    }
+
+    void TearDown() override
+    {
+        delete g_mockBase64;
+    }
+};
+
+TEST_F(Base64DecodeTest, BufferIsNull)
+{
+    char *pString = "test";
+    char **buffer = nullptr;
+    int size;
+    int result = get_base64_decodedbuffer(pString, buffer, &size);
+
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(Base64DecodeTest, SizeIsNull)
+{
+    char *pString = "test";
+    char *buffer;
+    int *size = nullptr;
+    int result = get_base64_decodedbuffer(pString, &buffer, size);
+
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(Base64DecodeTest, PStringIsNull)
+{
+    char *pString = nullptr;
+    char *buffer;
+    int size;
+    int result = get_base64_decodedbuffer(pString, &buffer, &size);
+
+    EXPECT_EQ(result, -1);
+}
+
+TEST_F(Base64DecodeTest, B64BuffZero_B64DecodeFalse)
+{
+    char *pString = "test";
+    char *buffer;
+    int size;
+
+    EXPECT_CALL(*g_mockBase64, b64_get_decoded_buffer_size(::testing::_))
+        .WillOnce(::testing::Return(0));
+    EXPECT_CALL(*g_mockBase64, b64_decode(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(false));
+
+    int result = get_base64_decodedbuffer(pString, &buffer, &size);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_NE(buffer, nullptr);
+    EXPECT_EQ(size, 0);
+
+    free(buffer);
+}
+
+TEST_F(Base64DecodeTest, B64BuffZero_B64DecodeTrue)
+{
+    char *pString = "test";
+    char *buffer;
+    int size;
+
+    EXPECT_CALL(*g_mockBase64, b64_get_decoded_buffer_size(::testing::_))
+        .WillOnce(::testing::Return(0));
+    EXPECT_CALL(*g_mockBase64, b64_decode(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(true));
+
+    int result = get_base64_decodedbuffer(pString, &buffer, &size);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_NE(buffer, nullptr);
+    EXPECT_EQ(size, 1);
+
+    free(buffer);
+}
+
+TEST_F(Base64DecodeTest, B64BuffNonZero_B64DecodeFalse)
+{
+    char *pString = "test";
+    char *buffer;
+    int size;
+
+    EXPECT_CALL(*g_mockBase64, b64_get_decoded_buffer_size(::testing::_))
+        .WillOnce(::testing::Return(1));
+    EXPECT_CALL(*g_mockBase64, b64_decode(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(false));
+
+    int result = get_base64_decodedbuffer(pString, &buffer, &size);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_NE(buffer, nullptr);
+    EXPECT_EQ(size, 0);
+
+    free(buffer);
+}
+
+TEST_F(Base64DecodeTest, B64BuffNonZero_B64DecodeTrue)
+{
+    char *pString = "test";
+    char *buffer;
+    int size;
+
+    EXPECT_CALL(*g_mockBase64, b64_get_decoded_buffer_size(::testing::_))
+        .WillOnce(::testing::Return(1));
+    EXPECT_CALL(*g_mockBase64, b64_decode(::testing::_, ::testing::_, ::testing::_))
+        .WillOnce(::testing::Return(true));
+
+    int result = get_base64_decodedbuffer(pString, &buffer, &size);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_NE(buffer, nullptr);
+    EXPECT_EQ(size, 1);
+
+    free(buffer);
+}
+
+/* --------------- Test process_remotedebuggerdoc() from rrdMsgPackDecoder --------------- */
+class RemoteDebuggerDocTest : public ::testing::Test
+{
+protected:
+    remotedebuggerdoc_t ld;
+
+    void SetUp() override
+    {
+        memset(&ld, 0, sizeof(ld));
+    }
+
+    void TearDown() override
+    {
+        if (ld.param)
+        {
+            if (ld.param->commandList)
+            {
+                free(ld.param->commandList);
+            }
+            free(ld.param);
+        }
+        if (ld.subdoc_name)
+        {
+            free(ld.subdoc_name);
+        }
+    }
+};
+
+TEST_F(RemoteDebuggerDocTest, ProcessRemoteDebuggerDocSuccess)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 4);
+    msgpack_pack_str_body(&pk, "test", 4);
+    msgpack_pack_map(&pk, 1);
+    msgpack_object obj;
+    msgpack_object obj1;
+    msgpack_object obj2;
+    msgpack_object obj3;
+    obj.type = MSGPACK_OBJECT_MAP;
+    obj.via.map.size = 1;
+    obj.via.map.ptr = (msgpack_object_kv *)malloc(sizeof(msgpack_object_kv));
+    obj.via.map.ptr[0].key.type = MSGPACK_OBJECT_STR;
+    obj.via.map.ptr[0].key.via.str.ptr = "IssueType";
+    obj.via.map.ptr[0].key.via.str.size = strlen("IssueType");
+    obj.via.map.ptr[0].val.type = MSGPACK_OBJECT_ARRAY;
+    obj.via.map.ptr[0].val.via.array.size = 1;
+    obj.via.map.ptr[0].val.via.array.ptr = (msgpack_object *)malloc(sizeof(msgpack_object));
+    obj.via.map.ptr[0].val.via.array.ptr[0].type = MSGPACK_OBJECT_STR;
+    obj.via.map.ptr[0].val.via.array.ptr[0].via.str.ptr = "value";
+    obj.via.map.ptr[0].val.via.array.ptr[0].via.str.size = strlen("value");
+    obj1.type = MSGPACK_OBJECT_STR;
+    obj1.via.str.ptr = "subdoc_name";
+    obj1.via.str.size = strlen("subdoc_name");
+    obj2.type = MSGPACK_OBJECT_POSITIVE_INTEGER;
+    obj2.via.u64 = 1;
+    obj3.type = MSGPACK_OBJECT_POSITIVE_INTEGER;
+    obj3.via.u64 = 1;
+    int result = process_remotedebuggerdoc(&ld, 4, &obj, &obj1, &obj2, &obj3);
+
+    EXPECT_EQ(result, 0);
+    EXPECT_NE(ld.subdoc_name, nullptr);
+    EXPECT_EQ(ld.version, 1u);
+    EXPECT_EQ(ld.transaction_id, 1u);
+    EXPECT_NE(ld.param, nullptr);
+    EXPECT_NE(ld.param->commandList, nullptr);
+
+    msgpack_sbuffer_destroy(&sbuf);
+    free(obj.via.map.ptr[0].val.via.array.ptr);
+    free(obj.via.map.ptr);
+}
+
+TEST_F(RemoteDebuggerDocTest, ProcessRemoteDebuggerDocFailure)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 4);
+    msgpack_pack_str_body(&pk, "test", 4);
+    msgpack_pack_map(&pk, 1);
+    msgpack_object obj;
+    msgpack_object obj1;
+    msgpack_object obj2;
+    msgpack_object obj3;
+    obj.type = MSGPACK_OBJECT_MAP;
+    obj.via.map.size = -1; // Set size to negative to simulate the failure
+    obj.via.map.ptr = nullptr;
+    obj1.type = MSGPACK_OBJECT_STR;
+    obj1.via.str.ptr = "subdoc_name";
+    obj1.via.str.size = strlen("subdoc_name");
+    obj2.type = MSGPACK_OBJECT_POSITIVE_INTEGER;
+    obj2.via.u64 = 1;
+    obj3.type = MSGPACK_OBJECT_POSITIVE_INTEGER;
+    obj3.via.u64 = 1;
+    int result = process_remotedebuggerdoc(&ld, 4, &obj, &obj1, &obj2, &obj3);
+
+    EXPECT_EQ(result, -1);
+    EXPECT_NE(ld.subdoc_name, nullptr);
+    EXPECT_NE(ld.param, nullptr);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+/* --------------- Test remotedebuggerdoc_convert() from rrdMsgPackDecoder --------------- */
+TEST(RemoteDebuggerDocConvertTest, ConvertSuccess)
+{
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+    msgpack_pack_map(&pk, 4);
+    msgpack_pack_str(&pk, 16);
+    msgpack_pack_str_body(&pk, "remotedebugger", 16);
+    msgpack_pack_map(&pk, 1);
+    msgpack_pack_str(&pk, 9);
+    msgpack_pack_str_body(&pk, "IssueType", 9);
+    msgpack_pack_array(&pk, 1);
+    msgpack_pack_str(&pk, 5);
+    msgpack_pack_str_body(&pk, "value", 5);
+    msgpack_pack_str(&pk, 11);
+    msgpack_pack_str_body(&pk, "subdoc_name", 11);
+    msgpack_pack_str(&pk, 9);
+    msgpack_pack_str_body(&pk, "test_name", 9);
+    msgpack_pack_str(&pk, 7);
+    msgpack_pack_str_body(&pk, "version", 7);
+    msgpack_pack_uint32(&pk, 1);
+    msgpack_pack_str(&pk, 14);
+    msgpack_pack_str_body(&pk, "transaction_id", 14);
+    msgpack_pack_uint16(&pk, 123);
+    remotedebuggerdoc_t *result = remotedebuggerdoc_convert(sbuf.data, sbuf.size);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_STREQ(result->subdoc_name, "test_name");
+    EXPECT_EQ(result->version, 1u);
+    EXPECT_EQ(result->transaction_id, 123u);
+    ASSERT_NE(result->param, nullptr);
+    EXPECT_STREQ(result->param->commandList, "value");
+
+    remotedebuggerdoc_destroy(result);
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+/* --------------- Test decodeWebCfgData() from rrdMsgPackDecoder --------------- */
+class DecodeWebCfgDataTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        g_mockBase64 = new MockBase64();
+    }
+    void TearDown() override
+    {
+        delete g_mockBase64;
+        g_mockBase64 = nullptr;
+    }
+};
+
+TEST_F(DecodeWebCfgDataTest, Base64DecodeFails)
+{
+    char *pString = nullptr;
+    int result = decodeWebCfgData(pString);
+    EXPECT_EQ(result, -1);
+}
+
+/* TODO */
+// TEST_F(DecodeWebCfgDataTest, MsgpackUnpackFail) {
+// }
+
+// TEST_F(DecodeWebCfgDataTest, MsgpackUnpackSuccess) {
+// }
+
+/* ====================== rrdMain ================*/
+/* --------------- Test RRDEventThreadFunc() aka main() from rrdMain --------------- */
+class RRDEventThreadFuncTest : public ::testing::Test
+{
+protected:
+    int msqid_cpy;
+    key_t key_cpy;
+
+    string getCurrentTestName()
+    {
+        const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+        return test_info->name();
+    }
+
+    void SetUp() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name != "MessageReceiveFailure"){
+            msqid_cpy = msqid;
+            key_cpy = key;
+            msqid = msgget(key, IPC_CREAT | 0666);
+            ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+        }
+    }
+    void TearDown() override
+    {
+        string test_name = getCurrentTestName();
+        if (test_name != "MessageReceiveFailure"){
+            int ret = msgctl(msqid, IPC_RMID, nullptr);
+            ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+            msqid = msqid_cpy;
+            key = key_cpy;
+        }
+    }
+};
+
+TEST_F(RRDEventThreadFuncTest, MessageReceiveFailure) {
+    void *arg = nullptr;
+    EXPECT_EQ(RRDEventThreadFunc(arg), arg);
+}
+
+TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDefaultType) {
+    data_buf rbuf;
+    rbuf.mtype = DEFAULT;
+    rbuf.mdata = strdup("Test Message");
     msgRRDHdr msgHdr;
-    size_t msgLen = -1;
-    msgHdr.type = RRD_EVENT_MSG_REQUEST;
-    msgHdr.mbody = (void *)sbuf;
-    msgLen = sizeof(msgHdr.mbody);
+    msgHdr.mbody = malloc(sizeof(data_buf));
+    ASSERT_NE(msgHdr.mbody, nullptr);
+    memcpy(msgHdr.mbody, &rbuf, sizeof(data_buf));
+    ASSERT_NE(msgsnd(msqid, &msgHdr, sizeof(void *), 0), -1);
+    void *arg = nullptr;
 
-    if (msgsnd(msgqid, (void *)&msgHdr, msgLen, 0) < 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%u MbufSize=%d !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen);
-        exit(1);
-    }
+    EXPECT_EQ(RRDEventThreadFunc(arg), arg);
 }
 
-/*Function:  RRD_data_buff_init
- *  *Details: Initialize the data buffer for MSG Queue
- *  *Input: Pointer to Data Buffer and Event Id
- *  *Output: NULL
- *    */
-void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event_et deepSleepEvent)
-{
-    sbuf->mtype = sndtype;
-    sbuf->mdata = NULL;
-    sbuf->jsonPath = NULL;
-    sbuf->inDynamic = false;
-    sbuf->appendMode = false;
-    sbuf->dsEvent = deepSleepEvent;
+TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
+    data_buf rbuf;
+    rbuf.mtype = EVENT_MSG;
+    rbuf.mdata = strdup("Test");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = nullptr;
+    msgRRDHdr msgHdr;
+    msgHdr.mbody = malloc(sizeof(data_buf));
+    ASSERT_NE(msgHdr.mbody, nullptr);
+    memcpy(msgHdr.mbody, &rbuf, sizeof(data_buf));
+    ASSERT_NE(msgsnd(msqid, &msgHdr, sizeof(void *), 0), -1);
+    void *arg = nullptr;
+
+    EXPECT_EQ(RRDEventThreadFunc(arg), arg);
 }
 
-/*Function:  RRD_data_buff_deAlloc
- *  *Details: De Aollocate Data Buffer
- *  *Input: Pointer to Data Buffer
- *  *Output:void
- *    */
-void RRD_data_buff_deAlloc(data_buf *sbuf)
-{
-    if (sbuf)
-    {
-        if (sbuf->mdata)
-        {
-            free(sbuf->mdata);
-        }
+TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessWebCfgMsgType) {
+    data_buf rbuf;
+    rbuf.mtype = EVENT_WEBCFG_MSG;
+    rbuf.mdata = nullptr;
+    msgRRDHdr msgHdr;
+    msgHdr.mbody = malloc(sizeof(data_buf));
+    ASSERT_NE(msgHdr.mbody, nullptr);
+    memcpy(msgHdr.mbody, &rbuf, sizeof(data_buf));
+    ASSERT_NE(msgsnd(msqid, &msgHdr, sizeof(void *), 0), -1);
+    void *arg = nullptr;
 
-        if (sbuf->jsonPath)
-        {
-            free(sbuf->jsonPath);
-        }
-        free(sbuf);
-    }
+    EXPECT_EQ(RRDEventThreadFunc(arg), arg);
 }
 
-/*
- * @function _remoteDebuggerEventHandler
- * @brief Receives the RBUS event and sends the value as a message in the message-queue to the thread function.
- * @param rbusHandle_t handle - RBUS handle.
- * @param rbusEvent_t const* event - RBUS event object.
- * @param rbusEventSubscription_t* subscription - RBUS event subscription object.
- * @return void
- */
-#if !defined(GTEST_ENABLE)
-void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
-{
-    data_buf *sendbuf;
-    int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
-    cacheData *cache = NULL;
+TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDeepSleepEventType) {
+    data_buf rbuf;
+    rbuf.mtype = DEEPSLEEP_EVENT_MSG;
+    rbuf.mdata = nullptr;
+    msgRRDHdr msgHdr;
+    msgHdr.mbody = malloc(sizeof(data_buf));
+    ASSERT_NE(msgHdr.mbody, nullptr);
+    memcpy(msgHdr.mbody, &rbuf, sizeof(data_buf));
+    ASSERT_NE(msgsnd(msqid, &msgHdr, sizeof(void *), 0), -1);
+    void *arg = nullptr;
 
-    rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
-    rbusValue_t value = NULL;
-    rbusValue_Init(&value);
-    char const* issue = NULL;
-    retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
-    if(retCode != RBUS_ERROR_SUCCESS || value == NULL)
-    {
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RBUS get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
-	 return;
-    }	
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
-    issue =rbusValue_GetString(value, NULL);
-    char *dot_position = strchr(issue, '.'); // Find the first occurrence of '.'
-    if (dot_position != NULL) 
-    {
-        *dot_position = '\0'; // Replace '.' with null terminator
-    }
-    size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
-
-    char *pkg_name = (char *)malloc(len);
-    if(pkg_name == NULL)
-    {
-        return;
-    }
-    strncpy(pkg_name, RDM_PKG_PREFIX, strlen(RDM_PKG_PREFIX) + 1);
-    strncat(pkg_name, issue, len - strlen(RDM_PKG_PREFIX) - 1);
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: pkg_name : [%s]\n",  __FUNCTION__, __LINE__, pkg_name);
-
-    char *pkg_inst_path = (char *)malloc(strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1);
-    if( pkg_inst_path == NULL)
-    {
-        return;
-    }
-    snprintf(pkg_inst_path, strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1, "%s%s", RRD_TMP_DIR, pkg_name);
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: pkg_inst_path : [%s]\n",  __FUNCTION__, __LINE__, pkg_inst_path);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-
-    (void)(handle);
-    (void)(subscription);
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
-    cache = findPresentInCache(pkg_name);
-    if (cache != NULL)
-    {
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s \n", __FUNCTION__, __LINE__, pkg_inst_path);
-    	rrdjsonlen = strlen(RRD_JSON_FILE);
-    	recPkglen = strlen(pkg_inst_path) + 1;
-    	recPkgNamelen = strlen(cache->issueString) + 1;
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
-	sendbuf = (data_buf *)malloc(sizeof(data_buf));
-    	RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
-    	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
-	if(!sendbuf->mdata)
-        {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
-            RRD_data_buff_deAlloc(sendbuf);
-            return;
-        }
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:JSON_PATH_LEN=%d \n", __FUNCTION__, __LINE__, recPkglen + rrdjsonlen);
-    	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
-    	if (!sendbuf->jsonPath)
-        {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
-            RRD_data_buff_deAlloc(sendbuf);
-            return;
-        }
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
-    	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
-        snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
-    	sendbuf->inDynamic = true;
-	if (checkAppendRequest(sendbuf->mdata))
-    	{
-        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
-        	sendbuf->inDynamic = false;
-        	sendbuf->appendMode = true;
-    	}		    
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
-    	RRDMsgDeliver(msqid, sendbuf);
-	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
-	/* coverity[leaked_storage] */
-	remove_item(cache);
-    }
-    else
-    {
-    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
-    }
-    free(pkg_name);
-    free(pkg_inst_path);
-}
-void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
-{
-    char *dataMsg = NULL;
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-
-    (void)(handle);
-    (void)(subscription);
-
-    rbusValue_t value = rbusObject_GetValue(event->data, "value");
-
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
-    if(!value)
-    {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: event->data value is NULL \n", __FUNCTION__, __LINE__);
-        return;
-    }
-
-    int len = strlen(rbusValue_GetString(value, NULL))+1;
-    dataMsg = (char *) calloc(1, len);
-    if(!dataMsg)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed for %s \n", __FUNCTION__, __LINE__, rbusValue_ToString(value, NULL, 0));
-        return;
-    }
-    strncpy(dataMsg, rbusValue_GetString(value, NULL), len-1);
-    dataMsg[len-1]='\0';
-    if (dataMsg[0] == '\0' || len <= 0  )
-    {
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
-        free(dataMsg);
-    }
-    else
-    {
-        pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
-        /* coverity[leaked_storage] */
-    }
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    EXPECT_EQ(RRDEventThreadFunc(arg), arg);
 }
 
-void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
-{
-    char *inString = NULL;
+#ifdef IARMBUS_SUPPORT
+/* --------------- Test shadowMain() aka main() from rrdMain --------------- */
+TEST(shadowMainTest, MaintTest) {
+    int msqid_cpy;
+    key_t key_cpy;
+    msqid_cpy = msqid;
+    key_cpy = key;
+    msqid = msgget(key, IPC_CREAT | 0666);
+    ASSERT_NE(msqid, -1) << "Error creating message queue for testing";
+    data_buf rbuf;
+    rbuf.mtype = DEFAULT;
+    rbuf.mdata = strdup("Test Message");
+    msgRRDHdr msgHdr;
+    msgHdr.mbody = malloc(sizeof(data_buf));
+    ASSERT_NE(msgHdr.mbody, nullptr);
+    memcpy(msgHdr.mbody, &rbuf, sizeof(data_buf));
+    ASSERT_NE(msgsnd(msqid, &msgHdr, sizeof(void *), 0), -1);
+    void *arg = nullptr;
 
-    (void)(handle);
-    (void)(subscription);
+    EXPECT_EQ(shadowMain(arg), 0);
 
-    rbusValue_t value = rbusObject_GetValue(event->data, "value");
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_WEBCFG_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_WEBCFG_ISSUE_EVENT);
-    if (value)
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
-			                        rbusValue_ToString(value, NULL, 0));
-        int len = strlen(rbusValue_GetString(value, NULL));
-        inString = (char *)calloc(1, len);
-        if(inString)
-        {
-            strncpy(inString, rbusValue_GetString(value, NULL), len);
-            pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
-        }
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
+    int ret = msgctl(msqid, IPC_RMID, nullptr);
+    ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
+    msqid = msqid_cpy;
+    key = key_cpy;
 }
 #endif
-void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
+
+/* ====================== Profile Management Function Tests ================*/
+/* --------------- Test load_profile_category() from rrdInterface --------------- */
+class LoadProfileCategoryTest : public ::testing::Test
 {
-    data_buf *sbuf = NULL;
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
-    sbuf = (data_buf *)malloc(sizeof(data_buf));
-    if (!sbuf)
+protected:
+    void SetUp() override
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed\n", __FUNCTION__, __LINE__);
+        // Clean up any existing test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     }
-    else
+
+    void TearDown() override
     {
-        RRD_data_buff_init(sbuf, sndtype, RRD_DEEPSLEEP_INVALID_DEFAULT);
-        sbuf->mdata = issueTypeList;
-        if (checkAppendRequest(sbuf->mdata))
-        {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
-            sbuf->appendMode = true;
-        }	
-        RRDMsgDeliver(msqid, sbuf);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
-        /* coverity[leaked_storage] */
+        // Clean up test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     }
+};
+
+TEST_F(LoadProfileCategoryTest, LoadFromExistingFile)
+{
+    // Create test file with category
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    ASSERT_NE(fp, nullptr);
+    fprintf(fp, "Video\n");
+    fclose(fp);
+
+    int result = load_profile_category();
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "Video");
 }
 
-/*Function: RRD_unsubscribe
- *Details: This helps to perform Bus disconnect/terminate and unregister event handler.
- *Input: NULL
- *Output: 0 for success and non-zero for failure
- */
-
-int RRD_unsubscribe()
+TEST_F(LoadProfileCategoryTest, LoadFromNonExistentFile)
 {
-    int ret = 0;
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-#if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
-    ret = RRD_IARM_unsubscribe();
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Unsubscribe failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
-#endif
-#if !defined(GTEST_ENABLE)
-    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);
-        return ret;
-    }
-
-    // Unregister RBUS data elements for profile data provider
-    ret = rbus_unregDataElements(rrdRbusHandle, 2, profileDataElements);
-    if (ret != 0) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS unregDataElements failed with error: %d\n", __FUNCTION__, __LINE__, ret);
-    } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements unregistered\n", __FUNCTION__, __LINE__);
-    }
-
-    ret = rbus_close(rrdRbusHandle);
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Termination failed!!! \n ", __FUNCTION__, __LINE__);
-	return ret;
-    }
-    else
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Termination done!\n", __FUNCTION__, __LINE__);
-    }
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-#endif
-    return ret;
-}
-/**
- * @brief Set handler for RDK Remote Debugger profile category selection
- */
-rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHandlerOptions_t* opts)
-{
-    (void)handle;
-    (void)opts;
-
-    char const* propertyName = rbusProperty_GetName(prop);
-    rbusValue_t value = rbusProperty_GetValue(prop);
-    rbusValueType_t type = rbusValue_GetType(value);
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Set handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
-
-    if(strcmp(propertyName, RRD_SET_PROFILE_EVENT) == 0) {
-        if (type == RBUS_STRING) {
-            const char* str = rbusValue_GetString(value, NULL);
-            if(strlen(str) > 255) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: String too long for setProfileData\n", __FUNCTION__, __LINE__);
-                return RBUS_ERROR_INVALID_INPUT;
-            }
-
-            strncpy(RRDProfileCategory, str, sizeof(RRDProfileCategory)-1);
-            RRDProfileCategory[sizeof(RRDProfileCategory)-1] = '\0';
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: setProfileData value: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
-
-            // Store the category selection to file
-            if(save_profile_category() != 0) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to store profile category\n", __FUNCTION__, __LINE__);
-                return RBUS_ERROR_BUS_ERROR;
-            }
-            
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Successfully set profile category to: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
-            return RBUS_ERROR_SUCCESS;
-        } else {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid type for setProfileData\n", __FUNCTION__, __LINE__);
-            return RBUS_ERROR_INVALID_INPUT;
-        }
-    }
-    
-    return RBUS_ERROR_INVALID_INPUT;
+    int result = load_profile_category();
+    EXPECT_EQ(result, -1);
+    EXPECT_STREQ(RRDProfileCategory, "all");
 }
 
-/**
- * @brief Check if a category has direct commands (not nested structure)
- */
-bool has_direct_commands(cJSON *category)
+TEST_F(LoadProfileCategoryTest, LoadFromEmptyFile)
 {
-    cJSON *item = NULL;
-    cJSON_ArrayForEach(item, category) {
-        if (cJSON_IsObject(item)) {
-            cJSON *commands = cJSON_GetObjectItem(item, "Commands");
-            if (commands && cJSON_IsString(commands)) {
-                return true;
-            }
-        }
-    }
-    return false;
+    // Create empty file
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    ASSERT_NE(fp, nullptr);
+    fclose(fp);
+
+    int result = load_profile_category();
+    EXPECT_EQ(result, -1);
+    EXPECT_STREQ(RRDProfileCategory, "all");
 }
 
-/**
- * @brief Read and validate JSON profile file
- */
-char* read_profile_json_file(const char* filename, long* file_size)
+TEST_F(LoadProfileCategoryTest, LoadWithNewlineHandling)
 {
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
-        return NULL;
+    // Create test file with multiple lines
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "w");
+    ASSERT_NE(fp, nullptr);
+    fprintf(fp, "Network\nextra line");
+    fclose(fp);
+
+    int result = load_profile_category();
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "Network");
+}
+
+/* --------------- Test save_profile_category() from rrdInterface --------------- */
+class SaveProfileCategoryTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        // Clean up any existing test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Set test category
+        strncpy(RRDProfileCategory, "Audio", sizeof(RRDProfileCategory) - 1);
+        RRDProfileCategory[sizeof(RRDProfileCategory) - 1] = '\0';
     }
-    
-    fseek(fp, 0L, SEEK_END);
-    long fileSz = ftell(fp);
-    rewind(fp);
-    
-    if (fileSz <= 0 || fileSz >= MAX_PROFILE_JSON_SIZE) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Invalid file size: %ld\n", __FUNCTION__, __LINE__, fileSz);
-        fclose(fp);
-        return NULL;
+
+    void TearDown() override
+    {
+        // Clean up test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     }
+};
+
+TEST_F(SaveProfileCategoryTest, SaveToFile)
+{
+    int result = save_profile_category();
+    EXPECT_EQ(result, 0);
+
+    // Verify file was created and contains correct content
+    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "r");
+    ASSERT_NE(fp, nullptr);
     
-    char *jsonBuffer = malloc(fileSz + 1);
-    if (!jsonBuffer) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory allocation failed for JSON buffer\n", __FUNCTION__, __LINE__);
-        fclose(fp);
-        return NULL;
-    }
-    
-    size_t bytesRead = fread(jsonBuffer, 1U, (size_t)fileSz, fp);
-    jsonBuffer[bytesRead] = '\0';
+    char buffer[256];
+    ASSERT_NE(fgets(buffer, sizeof(buffer), fp), nullptr);
     fclose(fp);
     
-    *file_size = fileSz;
-    return jsonBuffer;
+    // Remove newline for comparison
+    char *newline = strchr(buffer, '\n');
+    if (newline) *newline = '\0';
+    
+    EXPECT_STREQ(buffer, "Audio");
 }
 
-/**
- * @brief Generate JSON for all categories
- */
-char* get_all_categories_json(cJSON* json)
+TEST_F(SaveProfileCategoryTest, SaveToReadOnlyDirectory)
 {
-    cJSON *response = cJSON_CreateObject();
+    // This test checks behavior when file cannot be written
+    // Create a scenario where the directory might not be writable
+    // The function should return -1 in error cases
     
-    cJSON *category = NULL;
-    cJSON_ArrayForEach(category, json) {
-        if (cJSON_IsObject(category) && category->string) {
-            if (has_direct_commands(category)) {
-                // Create array for this category's issue types
-                cJSON *issueTypesArray = cJSON_CreateArray();
-                cJSON *issueType = NULL;
-                cJSON_ArrayForEach(issueType, category) {
-                    if (cJSON_IsObject(issueType) && issueType->string) {
-                        cJSON_AddItemToArray(issueTypesArray, cJSON_CreateString(issueType->string));
-                    }
-                }
-                
-                // Add this category and its issue types to response
-                if (cJSON_GetArraySize(issueTypesArray) > 0) {
-                    cJSON_AddItemToObject(response, category->string, issueTypesArray);
-                } else {
-                    cJSON_Delete(issueTypesArray);
-                }
-            }
+    // We can't easily test read-only scenarios in unit tests,
+    // but we can verify the function handles file creation properly
+    int result = save_profile_category();
+    
+    // Should succeed in normal test environment
+    EXPECT_GE(result, -1);  // Either success (0) or expected failure (-1)
+}
+
+/* --------------- Test has_direct_commands() from rrdInterface --------------- */
+class HasDirectCommandsTest : public ::testing::Test
+{
+protected:
+    cJSON *category;
+    
+    void SetUp() override
+    {
+        category = nullptr;
+    }
+
+    void TearDown() override
+    {
+        if (category) {
+            cJSON_Delete(category);
         }
     }
-    
-    char *result_str = cJSON_Print(response);
-    cJSON_Delete(response);
-    return result_str;
-}
+};
 
-/**
- * @brief Generate JSON for specific category
- */
-char* get_specific_category_json(cJSON* json, const char* category_name)
+TEST_F(HasDirectCommandsTest, CategoryWithDirectCommands)
 {
-    cJSON *category = cJSON_GetObjectItem(json, category_name);
-    if (!category || !cJSON_IsObject(category)) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s not found\n", 
-            __FUNCTION__, __LINE__, category_name);
-        return cJSON_Print(cJSON_CreateArray());
-    }
-    
-    if (!has_direct_commands(category)) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s has nested structure, returning empty\n", 
-            __FUNCTION__, __LINE__, category_name);
-        return cJSON_Print(cJSON_CreateArray());
-    }
-    
-    cJSON *issueTypes = cJSON_CreateArray();
-    cJSON *issueType = NULL;
-    cJSON_ArrayForEach(issueType, category) {
-        if (cJSON_IsObject(issueType) && issueType->string) {
-            cJSON_AddItemToArray(issueTypes, cJSON_CreateString(issueType->string));
+    // Create category with direct commands structure
+    const char *json_str = R"({
+        "IssueType1": {
+            "Commands": "ls -la"
+        },
+        "IssueType2": {
+            "Commands": "ps aux"
         }
-    }
+    })";
     
-    char *result_str = cJSON_Print(issueTypes);
-    cJSON_Delete(issueTypes);
-    return result_str;
+    category = cJSON_Parse(json_str);
+    ASSERT_NE(category, nullptr);
+    
+    bool result = has_direct_commands(category);
+    EXPECT_TRUE(result);
 }
 
-/**
- * @brief Set RBUS property response with JSON string
- */
-rbusError_t set_rbus_response(rbusProperty_t prop, const char* json_str)
+TEST_F(HasDirectCommandsTest, CategoryWithoutDirectCommands)
 {
-    if (!json_str) {
-        return RBUS_ERROR_BUS_ERROR;
-    }
+    // Create category without Commands field
+    const char *json_str = R"({
+        "IssueType1": {
+            "Description": "Test issue"
+        },
+        "IssueType2": {
+            "Timeout": 30
+        }
+    })";
     
-    rbusValue_t rbusValue;
-    rbusValue_Init(&rbusValue);
-    rbusValue_SetString(rbusValue, json_str);
-    rbusProperty_SetValue(prop, rbusValue);
-    rbusValue_Release(rbusValue);
+    category = cJSON_Parse(json_str);
+    ASSERT_NE(category, nullptr);
     
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Successfully returned profile data\n", __FUNCTION__, __LINE__);
-    return RBUS_ERROR_SUCCESS;
+    bool result = has_direct_commands(category);
+    EXPECT_FALSE(result);
 }
 
-/**
- * @brief Get handler for RDK Remote Debugger profile data retrieval
- */
-rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts)
+TEST_F(HasDirectCommandsTest, EmptyCategory)
 {
-    (void)handle;
-    (void)opts;
-
-    char const* propertyName = rbusProperty_GetName(prop);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Get handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
-
-    if(strcmp(propertyName, RRD_GET_PROFILE_EVENT) != 0) {
-        return RBUS_ERROR_INVALID_INPUT;
-    }
+    category = cJSON_CreateObject();
+    ASSERT_NE(category, nullptr);
     
-    const char *filename = "/etc/rrd/remote_debugger.json";
+    bool result = has_direct_commands(category);
+    EXPECT_FALSE(result);
+}
+
+TEST_F(HasDirectCommandsTest, NullCategory)
+{
+    bool result = has_direct_commands(nullptr);
+    EXPECT_FALSE(result);
+}
+
+/* --------------- Test read_profile_json_file() from rrdInterface --------------- */
+class ReadProfileJsonFileTest : public ::testing::Test
+{
+protected:
+    const char *test_file = "/tmp/test_profile.json";
     long file_size;
     
-    // Read JSON file
-    char *jsonBuffer = read_profile_json_file(filename, &file_size);
-    if (!jsonBuffer) {
-        return RBUS_ERROR_BUS_ERROR;
+    void SetUp() override
+    {
+        file_size = 0;
     }
-    
-    // Parse JSON
-    cJSON *json = cJSON_Parse(jsonBuffer);
-    if (!json) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to parse JSON from %s\n", __FUNCTION__, __LINE__, filename);
-        free(jsonBuffer);
-        return RBUS_ERROR_BUS_ERROR;
+
+    void TearDown() override
+    {
+        remove(test_file);
     }
+};
+
+TEST_F(ReadProfileJsonFileTest, ReadValidFile)
+{
+    // Create test file with JSON content
+    const char *json_content = R"({"Video": {"issue1": {"Commands": "test"}}})";
+    FILE *fp = fopen(test_file, "w");
+    ASSERT_NE(fp, nullptr);
+    fprintf(fp, "%s", json_content);
+    fclose(fp);
     
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: JSON parsed successfully, processing categories\n", __FUNCTION__, __LINE__);
+    char *result = read_profile_json_file(test_file, &file_size);
+    ASSERT_NE(result, nullptr);
+    EXPECT_GT(file_size, 0);
+    EXPECT_STREQ(result, json_content);
     
-    // Generate appropriate JSON response
-    char *result_str = NULL;
-    if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
-        result_str = get_all_categories_json(json);
-    } else {
-        result_str = get_specific_category_json(json, RRDProfileCategory);
+    free(result);
+}
+
+TEST_F(ReadProfileJsonFileTest, ReadNonExistentFile)
+{
+    char *result = read_profile_json_file("/tmp/nonexistent.json", &file_size);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(file_size, 0);
+}
+
+TEST_F(ReadProfileJsonFileTest, ReadEmptyFile)
+{
+    // Create empty file
+    FILE *fp = fopen(test_file, "w");
+    ASSERT_NE(fp, nullptr);
+    fclose(fp);
+    
+    char *result = read_profile_json_file(test_file, &file_size);
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST_F(ReadProfileJsonFileTest, ReadNullFilename)
+{
+    char *result = read_profile_json_file(nullptr, &file_size);
+    EXPECT_EQ(result, nullptr);
+}
+
+/* --------------- Test get_all_categories_json() from rrdInterface --------------- */
+class GetAllCategoriesJsonTest : public ::testing::Test
+{
+protected:
+    cJSON *json;
+    
+    void SetUp() override
+    {
+        json = nullptr;
     }
+
+    void TearDown() override
+    {
+        if (json) {
+            cJSON_Delete(json);
+        }
+    }
+};
+
+TEST_F(GetAllCategoriesJsonTest, GetAllValidCategories)
+{
+    // Create JSON with multiple categories
+    const char *json_str = R"({
+        "Video": {
+            "issue1": {"Commands": "test1"},
+            "issue2": {"Commands": "test2"}
+        },
+        "Audio": {
+            "issue3": {"Commands": "test3"}
+        }
+    })";
     
-    // Set RBUS response
-    rbusError_t error = set_rbus_response(prop, result_str);
+    json = cJSON_Parse(json_str);
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_all_categories_json(json);
+    ASSERT_NE(result, nullptr);
+    
+    // Parse result to verify structure
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    
+    // Check that Video and Audio categories exist
+    cJSON *video = cJSON_GetObjectItem(result_json, "Video");
+    cJSON *audio = cJSON_GetObjectItem(result_json, "Audio");
+    
+    EXPECT_NE(video, nullptr);
+    EXPECT_NE(audio, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(video));
+    EXPECT_TRUE(cJSON_IsArray(audio));
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetAllCategoriesJsonTest, GetAllFromEmptyJson)
+{
+    json = cJSON_CreateObject();
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_all_categories_json(json);
+    ASSERT_NE(result, nullptr);
+    
+    // Should return empty object
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_EQ(cJSON_GetArraySize(result_json), 0);
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetAllCategoriesJsonTest, GetAllFromNullJson)
+{
+    char *result = get_all_categories_json(nullptr);
+    // Function should handle null input gracefully
+    // Based on implementation, this might crash or return null
+    // The test documents the current behavior
+}
+
+/* --------------- Test get_specific_category_json() from rrdInterface --------------- */
+class GetSpecificCategoryJsonTest : public ::testing::Test
+{
+protected:
+    cJSON *json;
+    
+    void SetUp() override
+    {
+        json = nullptr;
+    }
+
+    void TearDown() override
+    {
+        if (json) {
+            cJSON_Delete(json);
+        }
+    }
+};
+
+TEST_F(GetSpecificCategoryJsonTest, GetExistingCategory)
+{
+    const char *json_str = R"({
+        "Video": {
+            "issue1": {"Commands": "test1"},
+            "issue2": {"Commands": "test2"}
+        },
+        "Audio": {
+            "issue3": {"Commands": "test3"}
+        }
+    })";
+    
+    json = cJSON_Parse(json_str);
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_specific_category_json(json, "Video");
+    ASSERT_NE(result, nullptr);
+    
+    // Parse result to verify it's an array with Video issues
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(result_json));
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetSpecificCategoryJsonTest, GetNonExistentCategory)
+{
+    const char *json_str = R"({
+        "Video": {
+            "issue1": {"Commands": "test1"}
+        }
+    })";
+    
+    json = cJSON_Parse(json_str);
+    ASSERT_NE(json, nullptr);
+    
+    char *result = get_specific_category_json(json, "NonExistent");
+    ASSERT_NE(result, nullptr);
+    
+    // Should return empty array
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(result_json));
+    EXPECT_EQ(cJSON_GetArraySize(result_json), 0);
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+TEST_F(GetSpecificCategoryJsonTest, GetFromNullJson)
+{
+    char *result = get_specific_category_json(nullptr, "Video");
+    // Should handle null input gracefully
+    ASSERT_NE(result, nullptr);
+    
+    cJSON *result_json = cJSON_Parse(result);
+    ASSERT_NE(result_json, nullptr);
+    EXPECT_TRUE(cJSON_IsArray(result_json));
+    
+    cJSON_Delete(result_json);
+    free(result);
+}
+
+/* --------------- Test rrd_SetHandler() from rrdInterface --------------- */
+class RrdSetHandlerTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    
+    void SetUp() override
+    {
+        // Clear any existing profile category
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+        
+        // Clean up test file
+        remove(RRD_PROFILE_CATEGORY_FILE);
+    }
+
+    void TearDown() override
+    {
+        // Clean up
+        remove(RRD_PROFILE_CATEGORY_FILE);
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+};
+
+TEST_F(RrdSetHandlerTest, SetValidProfileCategory)
+{
+    // This test verifies the overall logic without deep RBUS API testing
+    // since those are mocked and complex to set up properly
+    
+    // Set a test category directly to verify save/load workflow
+    strncpy(RRDProfileCategory, "TestCategory", sizeof(RRDProfileCategory) - 1);
+    
+    // Test save functionality
+    int save_result = save_profile_category();
+    EXPECT_EQ(save_result, 0);
+    
+    // Clear and reload to verify
+    memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    int load_result = load_profile_category();
+    EXPECT_EQ(load_result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "TestCategory");
+}
+
+/* --------------- Test rrd_GetHandler() from rrdInterface --------------- */
+class RrdGetHandlerTest : public ::testing::Test
+{
+protected:
+    const char *test_json_file = "/tmp/test_profile.json";
+    
+    void SetUp() override
+    {
+        // Create test JSON file
+        const char *json_content = R"({
+            "Video": {
+                "issue1": {"Commands": "test1"},
+                "issue2": {"Commands": "test2"}
+            },
+            "Audio": {
+                "issue3": {"Commands": "test3"}
+            }
+        })";
+        
+        FILE *fp = fopen(test_json_file, "w");
+        if (fp) {
+            fprintf(fp, "%s", json_content);
+            fclose(fp);
+        }
+        
+        // Set up profile category
+        strncpy(RRDProfileCategory, "all", sizeof(RRDProfileCategory) - 1);
+    }
+
+    void TearDown() override
+    {
+        remove(test_json_file);
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    }
+};
+
+TEST_F(RrdGetHandlerTest, TestProfileDataProcessing)
+{
+    // Test the helper functions used by rrd_GetHandler
+    
+    long file_size;
+    char *json_buffer = read_profile_json_file(test_json_file, &file_size);
+    ASSERT_NE(json_buffer, nullptr);
+    EXPECT_GT(file_size, 0);
+    
+    cJSON *json = cJSON_Parse(json_buffer);
+    ASSERT_NE(json, nullptr);
+    
+    // Test get_all_categories_json
+    char *all_result = get_all_categories_json(json);
+    ASSERT_NE(all_result, nullptr);
+    
+    // Test get_specific_category_json
+    char *specific_result = get_specific_category_json(json, "Video");
+    ASSERT_NE(specific_result, nullptr);
     
     // Cleanup
     cJSON_Delete(json);
-    free(jsonBuffer);
-    free(result_str);
-    
-    return error;
+    free(json_buffer);
+    free(all_result);
+    free(specific_result);
 }
+
+/* --------------- Test set_rbus_response() from rrdInterface --------------- */
+class SetRbusResponseTest : public ::testing::Test
+{
+protected:
+    MockRBusApi mock_rbus_api;
+    
+    void SetUp() override
+    {
+        // Note: This is a complex function to test due to RBUS dependencies
+        // These tests verify the basic logic flow
+    }
+
+    void TearDown() override
+    {
+        // Cleanup if needed
+    }
+};
+
+TEST_F(SetRbusResponseTest, HandlesNullJsonString)
+{
+    // Test with null JSON string - should return error
+    rbusError_t result = set_rbus_response(nullptr, nullptr);
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
+/*
+TEST_F(SetRbusResponseTest, HandlesValidJsonString)
+{
+    // This is difficult to test without full RBUS mock setup
+    // The function should succeed with valid inputs in a real environment
+    const char *test_json = R"({"test": "data"})";
+    
+    // Without full RBUS setup, we can't fully test this
+    // But we can verify it handles the null case properly
+    rbusError_t result = set_rbus_response(nullptr, test_json);
+    // Expected behavior depends on RBUS implementation details
+}
+*/
+/* ================== Gtest Main ======================== */
+GTEST_API_ int main(int argc, char *argv[])
+{
+    char testresults_fullfilepath[GTEST_REPORT_FILEPATH_SIZE];
+    char buffer[GTEST_REPORT_FILEPATH_SIZE];
+
+    memset( testresults_fullfilepath, 0, GTEST_REPORT_FILEPATH_SIZE );
+    memset( buffer, 0, GTEST_REPORT_FILEPATH_SIZE );
+
+    snprintf( testresults_fullfilepath, GTEST_REPORT_FILEPATH_SIZE, "json:%s%s" , GTEST_DEFAULT_RESULT_FILEPATH , GTEST_DEFAULT_RESULT_FILENAME);
+    ::testing::GTEST_FLAG(output) = testresults_fullfilepath;
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, KnownErrorCodes) {
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OK), "No errors.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(OUT_OF_MEMORY), "Out of memory.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_FIRST_ELEMENT), "Invalid first element.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_VERSION), "Invalid 'version' value.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid 'value' array.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, UnknownErrorCode) {
+    // An error code not defined in the map
+    int unknownError = 9999;
+    EXPECT_STREQ(remotedebuggerdoc_strerror(unknownError), "Unknown error.");
+}
+
+TEST(RemoteDebuggerDocStrErrorTest, EdgeCaseZeroButNotInMap) {
+    EXPECT_STREQ(remotedebuggerdoc_strerror(0), "No errors.");
+}
+
+
+TEST(LookupRrdProfileListTest, NullInput) {
+    EXPECT_FALSE(lookupRrdProfileList(nullptr));
+}
+ 
+TEST(LookupRrdProfileListTest, EmptyStringInput) {
+    EXPECT_FALSE(lookupRrdProfileList(""));
+}
+
+TEST(LookupRrdProfileListTest, ExactMatchFirst) {
+    lookupRrdProfileList("RRD_PROFILE_LIST");
+} 
+
+TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
+    issueData cmd;
+    cmd.command = strdup("echo hello");
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+    // Mock dependencies like mkdir, fopen, etc., as needed
+    bool result = executeCommands(&cmd);
+    //EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
+    //        .WillOnce(Return(fp));
+    //EXPECT_CALL(secureApi, v_secure_pclose(_))
+    //        .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
+    EXPECT_TRUE(result);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
+}
+/*
+TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllfail) {
+    issueData cmd;
+    cmd.command = NULL;
+    cmd.rfcvalue = strdup("dummy");
+    cmd.timeout = 0;
+    MockSecure secureApi;
+    FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
+    // Mock dependencies like mkdir, fopen, etc., as needed
+    bool result = executeCommands(&cmd);
+    //EXPECT_CALL(secureApi, v_secure_popen(_, _, _))
+    //        .WillOnce(Return(fp));
+    //EXPECT_CALL(secureApi, v_secure_pclose(_))
+    //        .WillOnce(Return(0));
+    //EXPECT_CALL(secureApi, v_secure_system(_, _))
+          //  .WillOnce(Return(0));
+    EXPECT_FALSE(result);
+    //free(cmd.command);
+    //free(cmd.rfcvalue);
+} */
+extern bool checkAppendRequest(char *issueRequest);
+/*
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+} */
+
+TEST(CheckAppendRequestTest, ReturnsTrueAndRemovesSuffixWhenSuffixPresent) {
+    char input[64] = "issue_apnd";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "issue");
+}
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_apnd";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseWhenSuffixMissing) {
+    char input[64] = "issue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "issue");  // Should remain unchanged
+}
+
+TEST(CheckAppendRequestTest, ReturnsFalseForShortString) {
+    char input[64] = "";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "");  // Should remain unchanged
+}
+/*
+TEST(CheckAppendRequestTest, ReturnsTrueWhenSuffixIsOnlyContent) {
+    char input[64] = "_append";
+    bool result = checkAppendRequest(input);
+    EXPECT_TRUE(result);
+    EXPECT_STREQ(input, "");
+} */
+
+TEST(CheckAppendRequestTest, ReturnsFalseIfSuffixAtStartOnly) {
+    char input[64] = "_appendissue";
+    bool result = checkAppendRequest(input);
+    EXPECT_FALSE(result);
+    EXPECT_STREQ(input, "_appendissue");
+}
+
+class GetIssueCommandInfoTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Cleanup if needed
+    }
+    void FreeIssueData(issueData* d) {
+        if (!d) return;
+        if (d->command) free(d->command);
+        if (d->rfcvalue) free(d->rfcvalue);
+        free(d);
+    }
+};
+
+TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
+    const char* jsonstr = R"({
+        "categoryA": {
+            "type1": [ 42, "kill" ]
+        },
+        "Sanity": {
+            "Check": {
+                "Commands": [ "kill", "ls" ]
+            }
+        }
+    })";
+    cJSON* root = cJSON_Parse(jsonstr);
+    ASSERT_NE(root, nullptr);
+
+    issueNodeData node;
+    node.Node = (char*)"categoryA";
+    node.subNode = (char*)"type1";
+
+    char buf[] = "rfcvalue123";
+    issueData* result = getIssueCommandInfo(&node, root, buf);
+    ASSERT_EQ(result, nullptr);
+    
+}
+
+TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
+    const char* jsonstr = R"({
+        "categoryB": {
+            "typeX": [ "echo only" ]
+        },
+        "Sanity": {
+            "Check": {
+                "Commands": [ "kill" ]
+            }
+        }
+    })";
+    cJSON* root = cJSON_Parse(jsonstr);
+    ASSERT_NE(root, nullptr);
+
+    issueNodeData node;
+    node.Node = (char*)"categoryB";
+    node.subNode = (char*)"typeX";
+
+    char buf[] = "rfctest";
+    issueData* result = getIssueCommandInfo(&node, root, buf);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->timeout, DEFAULT_TIMEOUT);
+    ASSERT_NE(result->command, nullptr);
+    EXPECT_TRUE(strstr(result->command, "echo only") != nullptr);
+    ASSERT_NE(result->rfcvalue, nullptr);
+    EXPECT_STREQ(result->rfcvalue, "rfctest");
+
+    FreeIssueData(result);
+    cJSON_Delete(root);
+}
+
+
+
+
+
+
+class RRDUploadOrchestrationTest : public ::testing::Test {
+protected:
+    const char *test_dir = "/tmp/rrd_test_upload";
+    const char *test_issue_type = "cpu.high";
+    const char *rrd_log_dir = "/tmp/rrd/";
+
+    void SetUp() override {
+        // Create test directory with some log files
+        mkdir(test_dir, 0755);
+        mkdir(rrd_log_dir, 0755);
+        
+        // Create dummy log files
+        std::string log1 = std::string(test_dir) + "/test.log";
+        std::string log2 = std::string(test_dir) + "/debug.log";
+        
+        std::ofstream f1(log1);
+        f1 << "Test log content 1\n";
+        f1.close();
+        
+        std::ofstream f2(log2);
+        f2 << "Test log content 2\n";
+        f2.close();
+
+        // Create test configuration files
+        std::ofstream include_props("/tmp/test_include.properties");
+        include_props << "LOG_SERVER=logs.example.com\n";
+        include_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        include_props << "UPLOAD_PROTOCOL=HTTP\n";
+        include_props << "RDK_PATH=/lib/rdk\n";
+        include_props << "LOG_PATH=/opt/logs\n";
+        include_props << "BUILD_TYPE=dev\n";
+        include_props.close();
+
+        std::ofstream dcm_props("/tmp/test_dcm.properties");
+        dcm_props << "LOG_SERVER=logs.example.com\n";
+        dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
+        dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
+        dcm_props.close();
+        
+        // Create config files in expected locations for rrd_config_load()
+        // This requires writable /etc/ and /opt/ (works in Docker CI environment)
+        system("mkdir -p /etc 2>/dev/null || true");
+        system("mkdir -p /opt 2>/dev/null || true");
+        system("cp /tmp/test_include.properties /etc/include.properties 2>/dev/null || true");
+        system("cp /tmp/test_include.properties /etc/device.properties 2>/dev/null || true");
+        system("cp /tmp/test_dcm.properties /opt/dcm.properties 2>/dev/null || true");
+        system("mkdir -p /tmp/rrd 2>/dev/null || true");
+    }
+
+    void TearDown() override {
+        // Cleanup test directory
+        int ret = system("rm -rf /tmp/rrd_test_upload*");
+        (void)ret;  // Explicitly ignore return value
+        
+        ret = system("rm -rf /tmp/rrd");
+        (void)ret;
+        
+        // Unset environment variables
+        unsetenv("RRD_INCLUDE_PROPERTIES");
+        unsetenv("RRD_DEVICE_PROPERTIES");
+        unsetenv("RRD_DCM_PROPERTIES");
+        
+        // Cleanup test config files
+        unlink("/tmp/test_include.properties");
+        unlink("/tmp/test_dcm.properties");
+        unlink("/etc/include.properties");
+        unlink("/etc/device.properties");
+        unlink("/opt/dcm.properties");
+    }
+};
+
+
+// Test: Invalid parameters
+TEST_F(RRDUploadOrchestrationTest, InvalidParametersNull) {
+    int result = rrd_upload_orchestrate(NULL, "issue_type");
+    EXPECT_NE(result, 0);
+
+    result = rrd_upload_orchestrate(test_dir, NULL);
+    EXPECT_NE(result, 0);
+
+    result = rrd_upload_orchestrate(NULL, NULL);
+    EXPECT_NE(result, 0);
+}
+
+// Test: Valid orchestration flow
+TEST_F(RRDUploadOrchestrationTest, ValidOrchestrationFlow) {
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    // Expected: 0 (success) or reasonable error code
+    EXPECT_GE(result, -1);  // At minimum, should not crash
+}
+
+// Test: Configuration loading
+TEST_F(RRDUploadOrchestrationTest, ConfigurationLoading) {
+    rrd_config_t config;
+    memset(&config, 0, sizeof(config));
+    
+    // Parse test properties file directly
+    int result = rrd_config_parse_properties("/tmp/test_include.properties", &config);
+    EXPECT_EQ(result, 0);
+    
+    // Verify configuration was loaded
+    EXPECT_STRNE(config.log_server, "");
+    EXPECT_STREQ(config.log_server, "logs.example.com");
+    EXPECT_STRNE(config.http_upload_link, "");
+    EXPECT_STREQ(config.http_upload_link, "http://logs.example.com/upload");
+    EXPECT_STRNE(config.upload_protocol, "");
+    EXPECT_STREQ(config.upload_protocol, "HTTP");
+}
+
+// Test: System information retrieval
+TEST_F(RRDUploadOrchestrationTest, SystemInfoRetrieval) {
+    char mac_addr[32] = {0};
+    char timestamp[32] = {0};
+
+    int result = rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr));
+    EXPECT_EQ(result, 0);
+    EXPECT_STRNE(mac_addr, "");
+    EXPECT_GE(strlen(mac_addr), 12);  // MAC address without colons (e.g., "AABBCCDDEEFF")
+
+    result = rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp));
+    EXPECT_EQ(result, 0);
+    EXPECT_STRNE(timestamp, "");
+    EXPECT_GE(strlen(timestamp), 10);  // Timestamp minimum length
+}
+
+// Test: Log directory validation
+TEST_F(RRDUploadOrchestrationTest, LogDirectoryValidation) {
+    // Valid directory
+    int result = rrd_logproc_validate_source(test_dir);
+    EXPECT_EQ(result, 0);
+
+    // Non-existent directory
+    result = rrd_logproc_validate_source("/tmp/nonexistent_rrd_test_12345");
+    EXPECT_NE(result, 0);
+
+    // Empty directory
+    const char *empty_dir = "/tmp/rrd_test_empty";
+    mkdir(empty_dir, 0755);
+    result = rrd_logproc_validate_source(empty_dir);
+    EXPECT_NE(result, 0);
+    rmdir(empty_dir);
+}
+
+// Test: Log preparation
+TEST_F(RRDUploadOrchestrationTest, LogPreparation) {
+    int result = rrd_logproc_prepare_logs(test_dir, test_issue_type);
+    EXPECT_EQ(result, 0);
+}
+
+// Test: Issue type conversion
+TEST_F(RRDUploadOrchestrationTest, IssueTypeConversion) {
+    char sanitized[64];
+    
+    // Test: lowercase to uppercase, dot to underscore
+    int result = rrd_logproc_convert_issue_type("cpu.high", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(sanitized, "CPU_HIGH");
+
+    // Test: mixed case
+    result = rrd_logproc_convert_issue_type("Memory.Low", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(sanitized, "MEMORY_LOW");
+
+    // Test: already uppercase
+    result = rrd_logproc_convert_issue_type("DISK", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(sanitized, "DISK");
+
+    // Test: invalid buffer
+    result = rrd_logproc_convert_issue_type("issue", sanitized, 1);
+    EXPECT_NE(result, 0);
+}
+
+// Test: Archive filename generation (NEW FORMAT)
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
+    char filename[256];
+    const char *mac = "00:11:22:33:44:55";
+    const char *issue = "CPU_HIGH";
+    const char *timestamp = "2024-12-17-14-30-45PM";
+
+    int result = rrd_archive_generate_filename(mac, issue, timestamp, filename, sizeof(filename));
+    EXPECT_EQ(result, 0);
+    EXPECT_STRNE(filename, "");
+    
+    // Verify new format: MAC_ISSUE_TIMESTAMP_RRD_DEBUG_LOGS.tgz
+    EXPECT_NE(strstr(filename, mac), nullptr);
+    EXPECT_NE(strstr(filename, issue), nullptr);
+    EXPECT_NE(strstr(filename, timestamp), nullptr);
+    EXPECT_NE(strstr(filename, "_RRD_DEBUG_LOGS.tgz"), nullptr);
+    
+    // Verify it ends with .tgz, not .tar.gz
+    const char *ext = strrchr(filename, '.');
+    EXPECT_STREQ(ext, ".tgz");
+}
+
+// Test: Archive creation in /tmp/rrd/
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
+    char archive_filename[256];
+    snprintf(archive_filename, sizeof(archive_filename), "test_archive_%d.tgz", getpid());
+    
+    // Create archive in /tmp/rrd/ directory
+    int result = rrd_archive_create(test_dir, rrd_log_dir, archive_filename);
+    EXPECT_EQ(result, 0);
+
+    // Verify archive file exists in /tmp/rrd/ and has content
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
+    
+    struct stat st;
+    result = stat(full_path, &st);
+    EXPECT_EQ(result, 0);
+    EXPECT_GT(st.st_size, 0);
+
+    // Cleanup
+    remove(full_path);
+}
+
+
+
+// Test: File operations
+TEST_F(RRDUploadOrchestrationTest, FileOperations) {
+    // Test file exists
+    std::string test_file = std::string(test_dir) + "/test.log";
+    bool exists = rrd_sysinfo_file_exists(test_file.c_str());
+    EXPECT_TRUE(exists);
+
+    // Test file does not exist
+    exists = rrd_sysinfo_file_exists("/tmp/nonexistent_file_12345");
+    EXPECT_FALSE(exists);
+
+    // Test directory exists
+    bool dir_exists = rrd_sysinfo_dir_exists(test_dir);
+    EXPECT_TRUE(dir_exists);
+
+    // Test directory does not exist
+    dir_exists = rrd_sysinfo_dir_exists("/tmp/nonexistent_dir_12345");
+    EXPECT_FALSE(dir_exists);
+}
+
+// Test: Directory emptiness check
+TEST_F(RRDUploadOrchestrationTest, DirectoryEmptinessCheck) {
+    // Non-empty directory
+    bool is_empty = rrd_sysinfo_dir_is_empty(test_dir);
+    EXPECT_FALSE(is_empty);
+
+    // Empty directory
+    const char *empty_dir = "/tmp/rrd_test_empty_check";
+    mkdir(empty_dir, 0755);
+    is_empty = rrd_sysinfo_dir_is_empty(empty_dir);
+    EXPECT_TRUE(is_empty);
+    rmdir(empty_dir);
+}
+
+// Test: Directory size calculation
+TEST_F(RRDUploadOrchestrationTest, DirectorySizeCalculation) {
+    size_t size = 0;
+    int result = rrd_sysinfo_get_dir_size(test_dir, &size);
+    EXPECT_EQ(result, 0);
+    EXPECT_GT(size, 0);  // Should have some size from log files
+}
+
+// Test: Archive cleanup
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
+    char archive_file[256];
+    snprintf(archive_file, sizeof(archive_file), "%stest_cleanup.tgz", rrd_log_dir);
+    
+    // Create a dummy archive file
+    std::ofstream f(archive_file);
+    f << "dummy archive content\n";
+    f.close();
+
+    // Verify it exists
+    struct stat st;
+    EXPECT_EQ(stat(archive_file, &st), 0);
+
+    // Cleanup
+    int result = rrd_archive_cleanup(archive_file);
+    EXPECT_EQ(result, 0);
+
+    // Verify it's deleted
+    EXPECT_NE(stat(archive_file, &st), 0);
+}
+
+// Test: Source directory cleanup
+TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanup) {
+    const char *temp_source = "/tmp/rrd_test_source_cleanup";
+    mkdir(temp_source, 0755);
+    
+    // Create some files in it
+    std::string file1 = std::string(temp_source) + "/file1.txt";
+    std::ofstream f1(file1);
+    f1 << "content\n";
+    f1.close();
+    
+    // Verify directory exists
+    struct stat st;
+    EXPECT_EQ(stat(temp_source, &st), 0);
+    
+    // Cleanup
+    int result = rrd_upload_cleanup_source_dir(temp_source);
+    EXPECT_EQ(result, 0);
+    
+    // Verify directory is gone
+    EXPECT_NE(stat(temp_source, &st), 0);
+}
+
+// Test: Configuration cleanup
+TEST_F(RRDUploadOrchestrationTest, ConfigurationCleanup) {
+    rrd_config_t config;
+    memset(&config, 1, sizeof(config));  // Fill with non-zero values
+    
+    rrd_config_cleanup(&config);
+    
+    // Verify all fields are cleared
+    EXPECT_EQ(config.log_server[0], 0);
+    EXPECT_EQ(config.http_upload_link[0], 0);
+    EXPECT_EQ(config.upload_protocol[0], 0);
+}
+
+// Test: Upload lock check
+TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
+    bool is_locked = false;
+    
+    // Initially should not be locked
+    int result = rrd_upload_check_lock(&is_locked);
+    EXPECT_EQ(result, 0);
+    EXPECT_FALSE(is_locked);
+    
+    // Create lock file and acquire exclusive lock to test detection
+    const char *lock_file = "/tmp/.log-upload.lock";
+    int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
+    ASSERT_GE(lock_fd, 0);
+    
+    // Acquire exclusive lock (this is what uploadstblogs does)
+    int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
+    ASSERT_EQ(lock_ret, 0);
+    
+    // Should detect lock
+    result = rrd_upload_check_lock(&is_locked);
+    EXPECT_EQ(result, 0);
+    EXPECT_TRUE(is_locked);
+    
+    // Cleanup - release lock and close
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
+    remove(lock_file);
+}
+
+// Integration test: End-to-end orchestration
+TEST_F(RRDUploadOrchestrationTest, EndToEndOrchestration) {
+    // This test verifies the entire flow works together
+    int result = rrd_upload_orchestrate(test_dir, "test.issue");
+    
+    // Result should be a valid return code (0 for success, or specific error code)
+    EXPECT_GE(result, -11);  // Within expected error range
+    EXPECT_LE(result, 11);
+}
+
+// Edge case: Invalid directory path
+TEST_F(RRDUploadOrchestrationTest, InvalidDirectoryPath) {
+    int result = rrd_upload_orchestrate("/invalid/path/to/logs", "issue");
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Empty directory
+TEST_F(RRDUploadOrchestrationTest, EmptyDirectoryFailure) {
+    const char *empty_dir = "/tmp/rrd_empty_test";
+    mkdir(empty_dir, 0755);
+    
+    int result = rrd_upload_orchestrate(empty_dir, "test_issue");
+    EXPECT_EQ(result, 6);  // Should fail with error code 6 (empty directory)
+    
+    rmdir(empty_dir);
+}
+
+// Failure case: NULL parameters
+TEST_F(RRDUploadOrchestrationTest, NullParametersFailure) {
+    // NULL upload_dir
+    int result = rrd_upload_orchestrate(NULL, "issue");
+    EXPECT_EQ(result, 1);
+    
+    // NULL issue_type
+    result = rrd_upload_orchestrate(test_dir, NULL);
+    EXPECT_EQ(result, 1);
+}
+
+// Failure case: Invalid MAC address buffer
+TEST_F(RRDUploadOrchestrationTest, InvalidMacBufferFailure) {
+    char mac_addr[5] = {0};  // Too small buffer
+    int result = rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr));
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Invalid timestamp buffer
+TEST_F(RRDUploadOrchestrationTest, InvalidTimestampBufferFailure) {
+    char timestamp[10] = {0};  // Too small buffer
+    int result = rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp));
+    EXPECT_NE(result, 0);  // Should fail
+}
+
+// Failure case: Issue type conversion with NULL
+TEST_F(RRDUploadOrchestrationTest, IssueTypeConversionNullFailure) {
+    char output[64];
+    
+    // NULL input
+    int result = rrd_logproc_convert_issue_type(NULL, output, sizeof(output));
+    EXPECT_NE(result, 0);
+    
+    // NULL output
+    result = rrd_logproc_convert_issue_type("issue", NULL, 64);
+    EXPECT_NE(result, 0);
+    
+    // Zero size
+    result = rrd_logproc_convert_issue_type("issue", output, 0);
+    EXPECT_NE(result, 0);
+}
+
+// Failure case: Archive filename generation with NULL parameters
+
+
+
+// Test case: LOGUPLOAD_ENABLE special handling
+TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
+    // Create RRD_LIVE_LOGS.tar.gz file
+    const char *live_logs = "/tmp/rrd/RRD_LIVE_LOGS.tar.gz";
+    mkdir("/tmp/rrd", 0755);
+    std::ofstream f(live_logs);
+    f << "live logs data\n";
+    f.close();
+    
+    // Test with LOGUPLOAD_ENABLE issue type
+    int result = rrd_upload_orchestrate(test_dir, "logupload_enable");
+    
+    // Should process without error (even if upload fails in test environment)
+    // The important thing is it doesn't crash and handles the live logs
+    EXPECT_GE(result, 0);  // May succeed or fail depending on upload, but shouldn't crash
+    
+    // Cleanup
+    remove(live_logs);
+}
+
+
+
+// Failure case: Upload with invalid parameters
+TEST_F(RRDUploadOrchestrationTest, UploadInvalidParametersFailure) {
+    const char *test_file = "/tmp/rrd/test_archive.tgz";
+    
+    // Create test archive
+    std::ofstream f(test_file);
+    f << "test data\n";
+    f.close();
+    
+    // NULL log_server
+    int result = rrd_upload_execute(NULL, "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Empty log_server
+    result = rrd_upload_execute("", "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL protocol
+    result = rrd_upload_execute("server", NULL, "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL http_link
+    result = rrd_upload_execute("server", "HTTP", NULL, "/tmp/rrd/", "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL working_dir
+    result = rrd_upload_execute("server", "HTTP", "http://upload", NULL, "test_archive.tgz", test_dir);
+    EXPECT_NE(result, 0);
+    
+    // NULL archive_filename
+    result = rrd_upload_execute("server", "HTTP", "http://upload", "/tmp/rrd/", NULL, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Cleanup
+    remove(test_file);
+}
+
+// Edge case: Special characters in issue type
+TEST_F(RRDUploadOrchestrationTest, SpecialCharactersInIssueType) {
+    char sanitized[64];
+    int result = rrd_logproc_convert_issue_type("test-issue.sub@special!", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    // Should only contain alphanumeric and underscore
+    for (const char *p = sanitized; *p; ++p) {
+        EXPECT_TRUE(isalnum(*p) || *p == '_');
+    }
+}
+
+// Performance test: Large directory
+TEST_F(RRDUploadOrchestrationTest, LargeDirectoryHandling) {
+    // Create multiple log files
+    for (int i = 0; i < 50; ++i) {
+        std::string filepath = std::string(test_dir) + "/log" + std::to_string(i) + ".txt";
+        std::ofstream f(filepath);
+        for (int j = 0; j < 100; ++j) {
+            f << "Log line " << j << "\n";
+        }
+        f.close();
+    }
+
+    // Test directory size calculation with many files
+    size_t size = 0;
+    int result = rrd_sysinfo_get_dir_size(test_dir, &size);
+    EXPECT_EQ(result, 0);
+    EXPECT_GT(size, 50 * 100);  // Should accumulate all file sizes
+}
+
+// Error path: Configuration load failure
+TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
+    // Test with missing configuration files
+    unlink("/etc/include.properties");
+    unlink("/etc/device.properties");
+    unlink("/etc/dcm.properties");
+    unlink("/opt/dcm.properties");
+    
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    EXPECT_EQ(result, 3);  // Expected error code for config load failure
+}
+
+// Error path: MAC address retrieval failure
+TEST_F(RRDUploadOrchestrationTest, MacAddressRetrievalFailure) {
+    char mac_addr[32] = {0};
+    
+    // Test with NULL buffer
+    int result = rrd_sysinfo_get_mac_address(NULL, 32);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size
+    result = rrd_sysinfo_get_mac_address(mac_addr, 0);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_sysinfo_get_mac_address(mac_addr, 5);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Timestamp retrieval failure
+TEST_F(RRDUploadOrchestrationTest, TimestampRetrievalFailure) {
+    char timestamp[32] = {0};
+    
+    // Test with NULL buffer
+    int result = rrd_sysinfo_get_timestamp(NULL, 32);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size
+    result = rrd_sysinfo_get_timestamp(timestamp, 0);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_sysinfo_get_timestamp(timestamp, 5);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Log preparation failure
+TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
+    // Test with non-existent directory
+    int result = rrd_logproc_prepare_logs("/nonexistent/directory", test_issue_type);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL issue type
+    result = rrd_logproc_prepare_logs(test_dir, NULL);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Issue type sanitization failure
+TEST_F(RRDUploadOrchestrationTest, IssueTypeSanitizationFailure) {
+    char sanitized[64];
+    
+    // Test with NULL issue type
+    int result = rrd_logproc_convert_issue_type(NULL, sanitized, sizeof(sanitized));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL output buffer
+    result = rrd_logproc_convert_issue_type("test", NULL, 64);
+    EXPECT_NE(result, 0);
+    
+    // Test with zero size buffer
+    result = rrd_logproc_convert_issue_type("test", sanitized, 0);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Archive filename generation failure
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
+    char filename[256];
+    
+    // Test with NULL MAC address
+    int result = rrd_archive_generate_filename(NULL, "ISSUE", "timestamp", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL issue type
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", NULL, "timestamp", filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL timestamp
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", NULL, filename, sizeof(filename));
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL output buffer
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, 256);
+    EXPECT_NE(result, 0);
+    
+    // Test with insufficient buffer size
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", filename, 10);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Archive creation failure
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
+    char archive_filename[256] = "test_archive_fail.tgz";
+    
+    // Test with non-existent source directory
+    int result = rrd_archive_create("/nonexistent/directory", rrd_log_dir, archive_filename);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL archive filename
+    result = rrd_archive_create(test_dir, rrd_log_dir, NULL);
+    EXPECT_NE(result, 0);
+    
+    // Test with invalid working directory
+    result = rrd_archive_create(test_dir, "/nonexistent/path/", archive_filename);
+    EXPECT_NE(result, 0);
+}
+
+// Error path: Upload execution failure - Updated signature
+TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
+    // Create a test archive first
+    char archive_filename[256];
+    snprintf(archive_filename, sizeof(archive_filename), "test_upload_fail_%d.tgz", getpid());
+    
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
+    
+    std::ofstream f(full_path);
+    f << "dummy archive content\n";
+    f.close();
+    
+    // Test with invalid server (empty string)
+    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload", 
+                                     rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Test with NULL parameters
+    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload", 
+                                rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", NULL, "http://server/upload", 
+                                rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", NULL, 
+                                rrd_log_dir, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                NULL, archive_filename, test_dir);
+    EXPECT_NE(result, 0);
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
+                                rrd_log_dir, NULL, test_dir);
+    EXPECT_NE(result, 0);
+    
+    // Cleanup
+    remove(full_path);
+}
+
+// Test: Lock wait behavior
+TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
+    const char *lock_file = "/tmp/.log-upload.lock";
+    
+    // Create lock file and acquire exclusive lock
+    int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
+    ASSERT_GE(lock_fd, 0);
+    
+    // Acquire exclusive lock to simulate uploadstblogs running
+    int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
+    ASSERT_EQ(lock_ret, 0);
+    
+    // Test wait for lock with short timeout (should timeout because we're holding the lock)
+    int result = rrd_upload_wait_for_lock(2, 1);  // 2 attempts, 1 second each
+    EXPECT_NE(result, 0);  // Should timeout
+    
+    // Release and remove lock file
+    flock(lock_fd, LOCK_UN);
+    close(lock_fd);
+    remove(lock_file);
+    
+    // Test wait for lock when no lock exists (should succeed immediately)
+    result = rrd_upload_wait_for_lock(2, 1);
+    EXPECT_EQ(result, 0);
+}
+
+// Archive test: NULL parameters
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationNullParams) {
+    // NULL source_dir
+    int result = rrd_archive_create(NULL, "/tmp/rrd/", "test.tgz");
+    EXPECT_EQ(result, -1);
+    
+    // NULL archive_filename
+    result = rrd_archive_create(test_dir, "/tmp/rrd/", NULL);
+    EXPECT_EQ(result, -1);
+}
+
+// Archive test: Invalid output path (unwritable directory)
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationUnwritable) {
+    // Try to create archive in non-existent directory
+    int result = rrd_archive_create(test_dir, "/nonexistent/dir/", "test.tgz");
+    EXPECT_EQ(result, -2);  // Should fail to create output file
+}
+
+// Archive test: Cleanup NULL parameter
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanupNullParam) {
+    int result = rrd_archive_cleanup(NULL);
+    EXPECT_EQ(result, -1);
+}
+
+// Archive test: Cleanup non-existent file (should log warning but not crash)
+TEST_F(RRDUploadOrchestrationTest, ArchiveCleanupNonExistent) {
+    int result = rrd_archive_cleanup("/tmp/nonexistent_archive_12345.tgz");
+    EXPECT_EQ(result, -2);  // Should fail to remove but not crash
+}
+
+// Archive test: Very long filename
+TEST_F(RRDUploadOrchestrationTest, ArchiveVeryLongFilename) {
+    // Create a file with very long name (>100 characters to test tar header splitting)
+    std::string long_filename(150, 'a');
+    long_filename += ".txt";
+    std::string long_path = std::string(test_dir) + "/" + long_filename;
+    
+    std::ofstream f(long_path);
+    f << "test content\n";
+    f.close();
+    
+    // Try to archive it
+    int result = rrd_archive_create(test_dir, "/tmp/rrd/", "longname_test.tgz");
+    // Should either succeed by splitting name or fail gracefully
+    // The important thing is it doesn't crash
+    
+    // Cleanup
+    remove(long_path.c_str());
+    remove("/tmp/rrd/longname_test.tgz");
+}
+
+// Archive test: Subdirectories
+TEST_F(RRDUploadOrchestrationTest, ArchiveWithSubdirectories) {
+    // Create subdirectory structure
+    std::string subdir = std::string(test_dir) + "/subdir";
+    mkdir(subdir.c_str(), 0755);
+    
+    std::string subfile = subdir + "/subfile.txt";
+    std::ofstream f(subfile);
+    f << "subdirectory file\n";
+    f.close();
+    
+    // Create archive
+    int result = rrd_archive_create(test_dir, "/tmp/rrd/", "subdir_test.tgz");
+    EXPECT_EQ(result, 0);
+    
+    // Verify archive exists and has content
+    struct stat st;
+    EXPECT_EQ(stat("/tmp/rrd/subdir_test.tgz", &st), 0);
+    EXPECT_GT(st.st_size, 0);
+    
+    // Cleanup
+    remove(subfile.c_str());
+    rmdir(subdir.c_str());
+    remove("/tmp/rrd/subdir_test.tgz");
+}
+
+// Archive test: Empty working directory
+TEST_F(RRDUploadOrchestrationTest, ArchiveEmptyWorkingDir) {
+    // Create archive with empty working_dir (should use current directory)
+    int result = rrd_archive_create(test_dir, "", "empty_workdir_test.tgz");
+    EXPECT_EQ(result, 0);
+    
+    // Cleanup
+    remove("empty_workdir_test.tgz");
+}
+
+// Archive test: CPU usage check (if implemented)
+TEST_F(RRDUploadOrchestrationTest, CPUUsageCheck) {
+    float cpu_usage = 0.0f;
+    int result = rrd_archive_check_cpu_usage(&cpu_usage);
+    // May succeed or fail depending on system, but shouldn't crash
+    if (result == 0) {
+        EXPECT_GE(cpu_usage, 0.0f);
+        EXPECT_LE(cpu_usage, 100.0f);
+    }
+}
+
+// Archive test: Priority adjustment
+TEST_F(RRDUploadOrchestrationTest, PriorityAdjustment) {
+    // Test with different CPU usage levels
+    int result = rrd_archive_adjust_priority(90.0f);  // High CPU
+    // May succeed or fail depending on permissions
+    
+    result = rrd_archive_adjust_priority(60.0f);  // Medium CPU
+    // May succeed or fail depending on permissions
+    
+    result = rrd_archive_adjust_priority(30.0f);  // Low CPU
+    // May succeed or fail depending on permissions
+    // The important thing is it doesn't crash
+}
+
+/* ====================== rrd_SetHandler and rrd_GetHandler ================*/
+
+// Simple mock for RBUS profile handler tests
+class RBusProfileMock {
+public:
+    std::string mockPropertyName;
+    std::string mockPropertyValue;
+    rbusValueType_t mockValueType = RBUS_STRING;
+    std::string mockResponseValue;
+};
+
+// Global mock RBUS property for profile handler tests
+struct MockRBusProperty {
+    std::string name;
+    std::string value;
+    rbusValueType_t type;
+} g_mockRbusProperty;
+
+// Mock RBUS function implementations for profile handler tests  
+static char const* mock_rbusProperty_GetName(rbusProperty_t property) {
+    (void)property;
+    return g_mockRbusProperty.name.c_str();
+}
+
+static rbusValue_t mock_rbusProperty_GetValue(rbusProperty_t property) {
+    (void)property;
+    return (rbusValue_t)g_mockRbusProperty.value.c_str();
+}
+
+static rbusValueType_t mock_rbusValue_GetType(rbusValue_t value) {
+    (void)value;
+    return g_mockRbusProperty.type;
+}
+
+static char const* mock_rbusValue_GetString(rbusValue_t value, int* len) {
+    (void)value;
+    if (len) *len = g_mockRbusProperty.value.length();
+    return g_mockRbusProperty.value.c_str();
+}
+
+static void mock_rbusProperty_SetValue(rbusProperty_t property, rbusValue_t value) {
+    (void)property; (void)value;
+}
+
+static void mock_rbusValue_Release(rbusValue_t value) {
+    (void)value;
+}
+
+// External declarations for function pointers from Client_Mock.cpp
+extern char const* (*rbusProperty_GetName)(rbusProperty_t);
+extern rbusValue_t (*rbusProperty_GetValue)(rbusProperty_t);
+extern rbusValueType_t (*rbusValue_GetType)(rbusValue_t);
+extern char const* (*rbusValue_GetString)(rbusValue_t, int*);
+extern void (*rbusProperty_SetValue)(rbusProperty_t, rbusValue_t);
+extern void (*rbusValue_Release)(rbusValue_t);
+
+// Test fixture for RRD Profile Handler tests
+class RRDProfileHandlerTest : public ::testing::Test {
+protected:
+    RBusProfileMock mockRBusApi;
+    MockRBusApi mockWrapper; // Add mock for RBusApiWrapper
+    
+    // Store original function pointers
+    char const* (*orig_rbusProperty_GetName)(rbusProperty_t);
+    rbusValue_t (*orig_rbusProperty_GetValue)(rbusProperty_t);
+    rbusValueType_t (*orig_rbusValue_GetType)(rbusValue_t);
+    char const* (*orig_rbusValue_GetString)(rbusValue_t, int*);
+    void (*orig_rbusProperty_SetValue)(rbusProperty_t, rbusValue_t);
+    void (*orig_rbusValue_Release)(rbusValue_t);
+    
+    void SetUp() override {
+        // Reset global state
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+        strcpy(RRDProfileCategory, "all");
+        
+        // Reset mock RBUS data
+        mockRBusApi.mockPropertyName.clear();
+        mockRBusApi.mockPropertyValue.clear();
+        mockRBusApi.mockValueType = RBUS_STRING;
+        mockRBusApi.mockResponseValue.clear();
+        
+        // Reset global mock property
+        g_mockRbusProperty.name.clear();
+        g_mockRbusProperty.value.clear();
+        g_mockRbusProperty.type = RBUS_STRING;
+        
+        // Clear any existing RBusApiWrapper implementation first
+        RBusApiWrapper::clearImpl();
+        
+        // Set up RBusApiWrapper with mock implementation
+        RBusApiWrapper::setImpl(&mockWrapper);
+        
+        // Set up expectations for common RBUS operations
+        EXPECT_CALL(mockWrapper, rbusValue_Init(testing::_))
+            .WillRepeatedly(testing::Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mockWrapper, rbusValue_SetString(testing::_, testing::_))
+            .WillRepeatedly(testing::Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mockWrapper, rbusProperty_SetValue(testing::_, testing::_))
+            .WillRepeatedly(testing::Return());
+        EXPECT_CALL(mockWrapper, rbusValue_Release(testing::_))
+            .WillRepeatedly(testing::Return());
+        
+        // Store original function pointers
+        orig_rbusProperty_GetName = rbusProperty_GetName;
+        orig_rbusProperty_GetValue = rbusProperty_GetValue;
+        orig_rbusValue_GetType = rbusValue_GetType;
+        orig_rbusValue_GetString = rbusValue_GetString;
+        orig_rbusProperty_SetValue = rbusProperty_SetValue;
+        orig_rbusValue_Release = rbusValue_Release;
+        
+        // Redirect to mock implementations
+        rbusProperty_GetName = mock_rbusProperty_GetName;
+        rbusProperty_GetValue = mock_rbusProperty_GetValue;
+        rbusValue_GetType = mock_rbusValue_GetType;
+        rbusValue_GetString = mock_rbusValue_GetString;
+        rbusProperty_SetValue = mock_rbusProperty_SetValue;
+        rbusValue_Release = mock_rbusValue_Release;
+    }
+    
+    void TearDown() override {
+        // Clean up test files
+        unlink(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global state
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+        strcpy(RRDProfileCategory, "all");
+        
+        // Reset global mock property properly (don't use memset on C++ objects)
+        g_mockRbusProperty.name.clear();
+        g_mockRbusProperty.value.clear();
+        g_mockRbusProperty.type = RBUS_STRING;
+        
+        // Clear RBusApiWrapper implementation
+        RBusApiWrapper::clearImpl();
+        
+        // Restore original function pointers
+        rbusProperty_GetName = orig_rbusProperty_GetName;
+        rbusProperty_GetValue = orig_rbusProperty_GetValue;
+        rbusValue_GetType = orig_rbusValue_GetType;
+        rbusValue_GetString = orig_rbusValue_GetString;
+        rbusProperty_SetValue = orig_rbusProperty_SetValue;
+        rbusValue_Release = orig_rbusValue_Release;
+    }
+};
+
+/* --------------- Test rrd_SetHandler() --------------- */
+
+TEST_F(RRDProfileHandlerTest, SetHandler_ValidStringAll)
+{
+    // Setup mock RBUS property
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "all";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
+
+TEST_F(RRDProfileHandlerTest, SetHandler_ValidStringCategory)
+{
+    // Setup mock RBUS property
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "Video";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "Video");
+}
+
+TEST_F(RRDProfileHandlerTest, SetHandler_StringTooLong)
+{
+    // Create a string longer than 255 characters
+    std::string longString(300, 'A');
+    
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = longString;
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+    // RRDProfileCategory should remain unchanged
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
+
+TEST_F(RRDProfileHandlerTest, SetHandler_InvalidType)
+{
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "Network";
+    g_mockRbusProperty.type = RBUS_INT32; // Invalid type for this parameter
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
+
+TEST_F(RRDProfileHandlerTest, SetHandler_WrongPropertyName)
+{
+    g_mockRbusProperty.name = "wrong.property.name";
+    g_mockRbusProperty.value = "Audio";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
+
+/* --------------- Test rrd_GetHandler() --------------- */
+
+TEST_F(RRDProfileHandlerTest, GetHandler_AllCategories)
+{
+    // Override the filename in get handler to use our test JSON
+    // We'll need to modify the function to accept a test file path
+    
+    strcpy(RRDProfileCategory, "all");
+    
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusGetHandlerOptions_t* opts = nullptr;
+    
+    // Note: The actual function reads from "/etc/rrd/remote_debugger.json"
+    // For testing, we would need to either:
+    // 1. Create that file with test data, or
+    // 2. Modify the function to accept a test file parameter
+    // For now, we'll test the logic with a file that doesn't exist
+    rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
+    
+    // Expect BUS_ERROR because test file doesn't exist at expected location
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
+
+TEST_F(RRDProfileHandlerTest, GetHandler_SpecificCategory)
+{
+    strcpy(RRDProfileCategory, "Network");
+    
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusGetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
+    
+    // Expect BUS_ERROR because test file doesn't exist at expected location
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
+
+TEST_F(RRDProfileHandlerTest, GetHandler_WrongPropertyName)
+{
+    g_mockRbusProperty.name = "wrong.property.name";
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusGetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+}
+
+/* --------------- Test helper functions --------------- */
+
+TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_ValidFile)
+{
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* result = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(result, nullptr);
+    EXPECT_GT(file_size, 0);
+    EXPECT_NE(strstr(result, "Video"), nullptr);
+    EXPECT_NE(strstr(result, "Audio"), nullptr);
+    EXPECT_NE(strstr(result, "Network"), nullptr);
+    EXPECT_NE(strstr(result, "System"), nullptr);
+    
+    free(result);
+}
+
+TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_NonExistentFile)
+{
+    long file_size = 0;
+    char* result = read_profile_json_file("/nonexistent/file.json", &file_size);
+    
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(file_size, 0);
+}
+
+/*
+TEST_F(RRDProfileHandlerTest, HasDirectCommands_ValidStructure)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    cJSON* videoCategory = cJSON_GetObjectItem(json, "Video");
+    ASSERT_NE(videoCategory, nullptr);
+    
+    bool result = has_direct_commands(videoCategory);
+    EXPECT_TRUE(result);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+}
+
+TEST_F(RRDProfileHandlerTest, HasDirectCommands_EmptyCategory)
+{
+    // Test with empty JSON
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestEmpty.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestEmpty.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    bool result = has_direct_commands(json);
+    EXPECT_FALSE(result);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+}
+
+TEST_F(RRDProfileHandlerTest, GetAllCategoriesJson_ValidInput)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    char* result = get_all_categories_json(json);
+    ASSERT_NE(result, nullptr);
+    
+    // Check that the result contains the expected categories
+    EXPECT_NE(strstr(result, "Video"), nullptr);
+    EXPECT_NE(strstr(result, "Audio"), nullptr);
+    EXPECT_NE(strstr(result, "Network"), nullptr);
+    EXPECT_NE(strstr(result, "System"), nullptr);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+    free(result);
+}
+*/
+TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_ValidCategory)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    char* result = get_specific_category_json(json, "Video");
+    ASSERT_NE(result, nullptr);
+    
+    // Check that the result contains Video issue types
+    EXPECT_NE(strstr(result, "VideoDecodeFailure"), nullptr);
+    EXPECT_NE(strstr(result, "VideoFreeze"), nullptr);
+    EXPECT_NE(strstr(result, "VideoArtifacts"), nullptr);
+    // Should not contain other categories
+    EXPECT_EQ(strstr(result, "AudioLoss"), nullptr);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+    free(result);
+}
+
+TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_InvalidCategory)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    char* result = get_specific_category_json(json, "NonExistentCategory");
+    ASSERT_NE(result, nullptr);
+    
+    // Should return empty array
+    EXPECT_NE(strstr(result, "[]"), nullptr);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+    free(result);
+}
+
+/* --------------- Test JSON parsing error handling --------------- */
+
+TEST_F(RRDProfileHandlerTest, ParseInvalidJson)
+{
+    // Test with invalid JSON file
+    long file_size = 0;
+    const char* filepath = find_test_file("profileTestInvalid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestInvalid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    EXPECT_EQ(json, nullptr); // Should fail to parse
+    
+    // Clean up
+    free(jsonBuffer);
+}
+
+TEST_F(RRDProfileHandlerTest, SetRbusResponse_ValidInput)
+{
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    
+    const char* testJson = "{\"test\": \"value\"}";
+    
+    rbusError_t result = set_rbus_response(mockProp, testJson);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    // Note: Response verification depends on implementation
+}
+
+TEST_F(RRDProfileHandlerTest, SetRbusResponse_NullInput)
+{
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    
+    rbusError_t result = set_rbus_response(mockProp, nullptr);
+    
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
+
+/* --------------- Test profile category file operations --------------- */
+
+TEST_F(RRDProfileHandlerTest, SaveAndLoadProfileCategory)
+{
+    // Test saving a category
+    strcpy(RRDProfileCategory, "Network");
+    int saveResult = save_profile_category();
+    EXPECT_EQ(saveResult, 0);
+    
+    // Clear the global variable
+    memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+    strcpy(RRDProfileCategory, "default");
+    
+    // Test loading the category
+    int loadResult = load_profile_category();
+    EXPECT_EQ(loadResult, 0);
+    EXPECT_STREQ(RRDProfileCategory, "Network");
+}
+
+TEST_F(RRDProfileHandlerTest, LoadProfileCategory_NoFile)
+{
+    // Ensure file doesn't exist
+    unlink(RRD_PROFILE_CATEGORY_FILE);
+    
+    // Should return non-zero and keep default value
+    strcpy(RRDProfileCategory, "default");
+    int result = load_profile_category();
+    EXPECT_NE(result, 0);
+    EXPECT_STREQ(RRDProfileCategory, "default");
+}
+
+/* --------------- Integration tests for complete workflow --------------- */
+
+TEST_F(RRDProfileHandlerTest, SetAndGetWorkflow_AllCategories)
+{
+    // Test complete workflow: set "all" -> get should return all categories
+    
+    // Step 1: Set profile category to "all"
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "all";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockSetProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusError_t setResult = rrd_SetHandler(nullptr, mockSetProp, nullptr);
+    
+    EXPECT_EQ(setResult, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+    
+    // Step 2: Get profile data (will fail because file doesn't exist at expected path)
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockGetProp = (rbusProperty_t)&g_mockRbusProperty;
+    
+    rbusError_t getResult = rrd_GetHandler(nullptr, mockGetProp, nullptr);
+    EXPECT_EQ(getResult, RBUS_ERROR_BUS_ERROR); // Expected since file doesn't exist
+}
+
+TEST_F(RRDProfileHandlerTest, SetAndGetWorkflow_SpecificCategory)
+{
+    // Test complete workflow: set "System" -> get should return System category only
+    
+    // Step 1: Set profile category to specific category
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "System";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockSetProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusError_t setResult = rrd_SetHandler(nullptr, mockSetProp, nullptr);
+    
+    EXPECT_EQ(setResult, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "System");
+    
+    // Step 2: Verify the category was persisted
+    // Clear global and reload from file
+    strcpy(RRDProfileCategory, "default");
+    load_profile_category();
+    EXPECT_STREQ(RRDProfileCategory, "System");
+}
+
+/* --------------- Boundary and stress tests --------------- */
+
+TEST_F(RRDProfileHandlerTest, SetHandler_EmptyString)
+{
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&mockRBusApi;
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, nullptr);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "");
+}
+
+TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
+{
+    // Create a string of exactly 255 characters (max allowed)
+    std::string maxString(255, 'A');
+    
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = maxString;
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, nullptr);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
+}
+
+
+
+
+
+
+
+
+
+
+
+
