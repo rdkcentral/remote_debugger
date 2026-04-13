@@ -85,6 +85,33 @@
 #define GTEST_DEFAULT_RESULT_FILENAME "rdkRemoteDebugger_gtest_report.json"
 #define GTEST_REPORT_FILEPATH_SIZE 256
 
+// Define test data directory - use relative path that works from test execution context
+#define TEST_DATA_DIR "src/unittest/UTJson/"
+
+// Helper function to find test files with fallback paths
+static const char* find_test_file(const char* filename) {
+    static char filepath[512];
+    const char* search_paths[] = {
+        "UTJson/",
+        "src/unittest/UTJson/", 
+        "./UTJson/",
+        "./src/unittest/UTJson/",
+        "../src/unittest/UTJson/",
+        "../../src/unittest/UTJson/",
+        NULL
+    };
+    
+    for (int i = 0; search_paths[i] != NULL; i++) {
+        snprintf(filepath, sizeof(filepath), "%s%s", search_paths[i], filename);
+        FILE* f = fopen(filepath, "r");
+        if (f) {
+            fclose(f);
+            return filepath;
+        }
+    }
+    return NULL;  // File not found in any path
+}
+
 using namespace std;
 using ::testing::_;
 using ::testing::Return;
@@ -5364,6 +5391,7 @@ extern void (*rbusValue_Release)(rbusValue_t);
 class RRDProfileHandlerTest : public ::testing::Test {
 protected:
     RBusProfileMock mockRBusApi;
+    MockRBusApi mockWrapper; // Add mock for RBusApiWrapper
     
     // Store original function pointers
     char const* (*orig_rbusProperty_GetName)(rbusProperty_t);
@@ -5388,6 +5416,22 @@ protected:
         g_mockRbusProperty.name.clear();
         g_mockRbusProperty.value.clear();
         g_mockRbusProperty.type = RBUS_STRING;
+        
+        // Clear any existing RBusApiWrapper implementation first
+        RBusApiWrapper::clearImpl();
+        
+        // Set up RBusApiWrapper with mock implementation
+        RBusApiWrapper::setImpl(&mockWrapper);
+        
+        // Set up expectations for common RBUS operations
+        EXPECT_CALL(mockWrapper, rbusValue_Init(testing::_))
+            .WillRepeatedly(testing::Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mockWrapper, rbusValue_SetString(testing::_, testing::_))
+            .WillRepeatedly(testing::Return(RBUS_ERROR_SUCCESS));
+        EXPECT_CALL(mockWrapper, rbusProperty_SetValue(testing::_, testing::_))
+            .WillRepeatedly(testing::Return());
+        EXPECT_CALL(mockWrapper, rbusValue_Release(testing::_))
+            .WillRepeatedly(testing::Return());
         
         // Store original function pointers
         orig_rbusProperty_GetName = rbusProperty_GetName;
@@ -5418,6 +5462,9 @@ protected:
         g_mockRbusProperty.name.clear();
         g_mockRbusProperty.value.clear();
         g_mockRbusProperty.type = RBUS_STRING;
+        
+        // Clear RBusApiWrapper implementation
+        RBusApiWrapper::clearImpl();
         
         // Restore original function pointers
         rbusProperty_GetName = orig_rbusProperty_GetName;
@@ -5566,7 +5613,10 @@ TEST_F(RRDProfileHandlerTest, GetHandler_WrongPropertyName)
 TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_ValidFile)
 {
     long file_size = 0;
-    char* result = read_profile_json_file("UTJson/profileTestValid.json", &file_size);
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* result = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(result, nullptr);
     EXPECT_GT(file_size, 0);
@@ -5590,7 +5640,10 @@ TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_NonExistentFile)
 TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_EmptyFile)
 {
     long file_size = 0;
-    char* result = read_profile_json_file("UTJson/profileTestEmpty.json", &file_size);
+    const char* filepath = find_test_file("profileTestEmpty.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestEmpty.json in any search path";
+    
+    char* result = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(result, nullptr);
     EXPECT_GT(file_size, 0);
@@ -5603,7 +5656,10 @@ TEST_F(RRDProfileHandlerTest, HasDirectCommands_ValidStructure)
 {
     // Parse our test JSON
     long file_size = 0;
-    char* jsonBuffer = read_profile_json_file("UTJson/profileTestValid.json", &file_size);
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(jsonBuffer, nullptr);
     
@@ -5624,7 +5680,10 @@ TEST_F(RRDProfileHandlerTest, HasDirectCommands_EmptyCategory)
 {
     // Test with empty JSON
     long file_size = 0;
-    char* jsonBuffer = read_profile_json_file("UTJson/profileTestEmpty.json", &file_size);
+    const char* filepath = find_test_file("profileTestEmpty.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestEmpty.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(jsonBuffer, nullptr);
     
@@ -5642,7 +5701,10 @@ TEST_F(RRDProfileHandlerTest, GetAllCategoriesJson_ValidInput)
 {
     // Parse our test JSON
     long file_size = 0;
-    char* jsonBuffer = read_profile_json_file("UTJson/profileTestValid.json", &file_size);
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(jsonBuffer, nullptr);
     
@@ -5667,7 +5729,10 @@ TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_ValidCategory)
 {
     // Parse our test JSON
     long file_size = 0;
-    char* jsonBuffer = read_profile_json_file("UTJson/profileTestValid.json", &file_size);
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(jsonBuffer, nullptr);
     
@@ -5693,7 +5758,10 @@ TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_InvalidCategory)
 {
     // Parse our test JSON
     long file_size = 0;
-    char* jsonBuffer = read_profile_json_file("UTJson/profileTestValid.json", &file_size);
+    const char* filepath = find_test_file("profileTestValid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(jsonBuffer, nullptr);
     
@@ -5717,7 +5785,10 @@ TEST_F(RRDProfileHandlerTest, ParseInvalidJson)
 {
     // Test with invalid JSON file
     long file_size = 0;
-    char* jsonBuffer = read_profile_json_file("UTJson/profileTestInvalid.json", &file_size);
+    const char* filepath = find_test_file("profileTestInvalid.json");
+    ASSERT_NE(filepath, nullptr) << "Could not find profileTestInvalid.json in any search path";
+    
+    char* jsonBuffer = read_profile_json_file(filepath, &file_size);
     
     ASSERT_NE(jsonBuffer, nullptr);
     
@@ -5859,3 +5930,15 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
+
+
+
+
+
+
+
+
+
+
+
+
