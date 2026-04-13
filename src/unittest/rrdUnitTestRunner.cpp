@@ -5322,44 +5322,56 @@ struct MockRBusProperty {
     rbusValueType_t type;
 } g_mockRbusProperty;
 
-#ifdef GTEST_ENABLE
-// Mock RBUS functions for profile handler tests
-extern "C" {
-    char const* rbusProperty_GetName(rbusProperty_t property) {
-        (void)property;
-        return g_mockRbusProperty.name.c_str();
-    }
-    
-    rbusValue_t rbusProperty_GetValue(rbusProperty_t property) {
-        (void)property;
-        return (rbusValue_t)g_mockRbusProperty.value.c_str();
-    }
-    
-    rbusValueType_t rbusValue_GetType(rbusValue_t value) {
-        (void)value;
-        return g_mockRbusProperty.type;
-    }
-    
-    char const* rbusValue_GetString(rbusValue_t value, int* len) {
-        (void)value;
-        if (len) *len = g_mockRbusProperty.value.length();
-        return g_mockRbusProperty.value.c_str();
-    }
-    
-    void rbusProperty_SetValue(rbusProperty_t property, rbusValue_t value) {
-        (void)property; (void)value;
-    }
-    
-    void rbusValue_Release(rbusValue_t value) {
-        (void)value;
-    }
+// Mock RBUS function implementations for profile handler tests  
+static char const* mock_rbusProperty_GetName(rbusProperty_t property) {
+    (void)property;
+    return g_mockRbusProperty.name.c_str();
 }
-#endif
+
+static rbusValue_t mock_rbusProperty_GetValue(rbusProperty_t property) {
+    (void)property;
+    return (rbusValue_t)g_mockRbusProperty.value.c_str();
+}
+
+static rbusValueType_t mock_rbusValue_GetType(rbusValue_t value) {
+    (void)value;
+    return g_mockRbusProperty.type;
+}
+
+static char const* mock_rbusValue_GetString(rbusValue_t value, int* len) {
+    (void)value;
+    if (len) *len = g_mockRbusProperty.value.length();
+    return g_mockRbusProperty.value.c_str();
+}
+
+static void mock_rbusProperty_SetValue(rbusProperty_t property, rbusValue_t value) {
+    (void)property; (void)value;
+}
+
+static void mock_rbusValue_Release(rbusValue_t value) {
+    (void)value;
+}
+
+// External declarations for function pointers from Client_Mock.cpp
+extern char const* (*rbusProperty_GetName)(rbusProperty_t);
+extern rbusValue_t (*rbusProperty_GetValue)(rbusProperty_t);
+extern rbusValueType_t (*rbusValue_GetType)(rbusValue_t);
+extern char const* (*rbusValue_GetString)(rbusValue_t, int*);
+extern void (*rbusProperty_SetValue)(rbusProperty_t, rbusValue_t);
+extern void (*rbusValue_Release)(rbusValue_t);
 
 // Test fixture for RRD Profile Handler tests
 class RRDProfileHandlerTest : public ::testing::Test {
 protected:
     RBusProfileMock mockRBusApi;
+    
+    // Store original function pointers
+    char const* (*orig_rbusProperty_GetName)(rbusProperty_t);
+    rbusValue_t (*orig_rbusProperty_GetValue)(rbusProperty_t);
+    rbusValueType_t (*orig_rbusValue_GetType)(rbusValue_t);
+    char const* (*orig_rbusValue_GetString)(rbusValue_t, int*);
+    void (*orig_rbusProperty_SetValue)(rbusProperty_t, rbusValue_t);
+    void (*orig_rbusValue_Release)(rbusValue_t);
     
     void SetUp() override {
         // Reset global state
@@ -5376,6 +5388,22 @@ protected:
         g_mockRbusProperty.name.clear();
         g_mockRbusProperty.value.clear();
         g_mockRbusProperty.type = RBUS_STRING;
+        
+        // Store original function pointers
+        orig_rbusProperty_GetName = rbusProperty_GetName;
+        orig_rbusProperty_GetValue = rbusProperty_GetValue;
+        orig_rbusValue_GetType = rbusValue_GetType;
+        orig_rbusValue_GetString = rbusValue_GetString;
+        orig_rbusProperty_SetValue = rbusProperty_SetValue;
+        orig_rbusValue_Release = rbusValue_Release;
+        
+        // Redirect to mock implementations
+        rbusProperty_GetName = mock_rbusProperty_GetName;
+        rbusProperty_GetValue = mock_rbusProperty_GetValue;
+        rbusValue_GetType = mock_rbusValue_GetType;
+        rbusValue_GetString = mock_rbusValue_GetString;
+        rbusProperty_SetValue = mock_rbusProperty_SetValue;
+        rbusValue_Release = mock_rbusValue_Release;
     }
     
     void TearDown() override {
@@ -5388,6 +5416,14 @@ protected:
         
         // Reset global mock property
         memset(&g_mockRbusProperty, 0, sizeof(g_mockRbusProperty));
+        
+        // Restore original function pointers
+        rbusProperty_GetName = orig_rbusProperty_GetName;
+        rbusProperty_GetValue = orig_rbusProperty_GetValue;
+        rbusValue_GetType = orig_rbusValue_GetType;
+        rbusValue_GetString = orig_rbusValue_GetString;
+        rbusProperty_SetValue = orig_rbusProperty_SetValue;
+        rbusValue_Release = orig_rbusValue_Release;
     }
 };
 
@@ -5811,25 +5847,13 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     // Create a string of exactly 255 characters (max allowed)
     std::string maxString(255, 'A');
     
-    mockRBusApi.mockPropertyName = RRD_SET_PROFILE_EVENT;
-    mockRBusApi.mockPropertyValue = maxString;
-    mockRBusApi.mockValueType = RBUS_STRING;
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = maxString;
+    g_mockRbusProperty.type = RBUS_STRING;
     
-    rbusProperty_t mockProp = (rbusProperty_t)&mockRBusApi;
+    rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, nullptr);
     
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
-
-
-
-
-
-
-
-
-
-
-
-
