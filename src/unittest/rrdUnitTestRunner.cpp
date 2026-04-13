@@ -31,6 +31,83 @@
 #include "Client_Mock.h"
 #include "Client_Mock.cpp"
 
+// RBUS Mocks for testing rrd_SetHandler and rrd_GetHandler
+#ifdef GTEST_ENABLE
+// Mock RBUS types and functions when building for unit tests
+typedef void* rbusHandle_t;
+typedef void* rbusProperty_t;
+typedef void* rbusValue_t;
+typedef void* rbusSetHandlerOptions_t;
+typedef void* rbusGetHandlerOptions_t;
+typedef int rbusValueType_t;
+typedef enum {
+    RBUS_ERROR_SUCCESS = 0,
+    RBUS_ERROR_INVALID_INPUT = 1,
+    RBUS_ERROR_BUS_ERROR = 2
+} rbusError_t;
+
+#define RBUS_STRING 1
+
+// Mock RBUS function declarations
+const char* rbusProperty_GetName(rbusProperty_t prop);
+rbusValue_t rbusProperty_GetValue(rbusProperty_t prop);
+rbusValueType_t rbusValue_GetType(rbusValue_t value);
+const char* rbusValue_GetString(rbusValue_t value, int* len);
+void rbusValue_Init(rbusValue_t* value);
+void rbusValue_SetString(rbusValue_t value, const char* str);
+void rbusProperty_SetValue(rbusProperty_t prop, rbusValue_t value);
+void rbusValue_Release(rbusValue_t value);
+
+// Global mock data for RBUS testing  
+struct MockRbusProperty {
+    std::string name;
+    std::string value;
+    rbusValueType_t type;
+};
+
+MockRbusProperty g_mockRbusProperty;
+
+// Mock RBUS function implementations
+const char* rbusProperty_GetName(rbusProperty_t prop) {
+    (void)prop;
+    return g_mockRbusProperty.name.c_str();
+}
+
+rbusValue_t rbusProperty_GetValue(rbusProperty_t prop) {
+    (void)prop;
+    return &g_mockRbusProperty.value;
+}
+
+rbusValueType_t rbusValue_GetType(rbusValue_t value) {
+    (void)value;
+    return g_mockRbusProperty.type;
+}
+
+const char* rbusValue_GetString(rbusValue_t value, int* len) {
+    (void)value;
+    if (len) *len = g_mockRbusProperty.value.length();
+    return g_mockRbusProperty.value.c_str();
+}
+
+void rbusValue_Init(rbusValue_t* value) {
+    (void)value;
+}
+
+void rbusValue_SetString(rbusValue_t value, const char* str) {
+    (void)value;
+    g_mockRbusProperty.value = str ? str : "";
+}
+
+void rbusProperty_SetValue(rbusProperty_t prop, rbusValue_t value) {
+    (void)prop;
+    (void)value;
+}
+
+void rbusValue_Release(rbusValue_t value) {
+    (void)value;
+}
+#endif
+
 // rrdJsonParser
 #include "rrdJsonParser.h"
 #include "rrdJsonParser.c"
@@ -5304,14 +5381,346 @@ TEST_F(RRDUploadOrchestrationTest, PriorityAdjustment) {
     // The important thing is it doesn't crash
 }
 
+/* ====================== rrd_SetHandler and rrd_GetHandler ================*/
 
+// Test fixture for RRD Profile Handler tests
+class RRDProfileHandlerTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Reset global state
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+        strcpy(RRDProfileCategory, "all");
+        
+        // Create test JSON file
+        CreateTestJSON();
+        
+        // Reset mock RBUS data
+        g_mockRbusProperty.name.clear();
+        g_mockRbusProperty.value.clear();
+        g_mockRbusProperty.type = RBUS_STRING;
+    }
+    
+    void TearDown() override {
+        // Clean up test files
+        unlink("/tmp/test_profile.json");
+        unlink(RRD_PROFILE_CATEGORY_FILE);
+        
+        // Reset global state
+        memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
+        strcpy(RRDProfileCategory, "all");
+    }
+    
+    void CreateTestJSON() {
+        const char* testJson = R"({
+  "Video": [
+    {
+      "VideoDecodeFailure": {
+        "Commands": "cat /proc/cpuinfo"
+      }
+    },
+    {
+      "VideoFreeze": {
+        "Commands": "ps aux"
+      }
+    }
+  ],
+  "Audio": [
+    {
+      "AudioLoss": {
+        "Commands": "cat /proc/meminfo"
+      }
+    }
+  ],
+  "Network": [
+    {
+      "ConnectivityIssue": {
+        "Commands": "ifconfig"
+      }
+    },
+    {
+      "SlowConnection": {
+        "Commands": "netstat -rn"
+      }
+    }
+  ]
+})";
+        
+        FILE* fp = fopen("/tmp/test_profile.json", "w");
+        if (fp) {
+            fprintf(fp, "%s", testJson);
+            fclose(fp);
+        }
+    }
+};
 
+/* --------------- Test rrd_SetHandler() --------------- */
 
+TEST_F(RRDProfileHandlerTest, SetHandler_ValidStringAll)
+{
+    // Setup mock RBUS property
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "all";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
 
+TEST_F(RRDProfileHandlerTest, SetHandler_ValidStringCategory)
+{
+    // Setup mock RBUS property
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "Video";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(RRDProfileCategory, "Video");
+}
 
+TEST_F(RRDProfileHandlerTest, SetHandler_StringTooLong)
+{
+    // Create a string longer than 255 characters
+    std::string longString(300, 'A');
+    
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = longString;
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+    // RRDProfileCategory should remain unchanged
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
 
+TEST_F(RRDProfileHandlerTest, SetHandler_InvalidType)
+{
+    g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
+    g_mockRbusProperty.value = "Network";
+    g_mockRbusProperty.type = 999; // Invalid type
+    
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
 
+TEST_F(RRDProfileHandlerTest, SetHandler_WrongPropertyName)
+{
+    g_mockRbusProperty.name = "wrong.property.name";
+    g_mockRbusProperty.value = "Audio";
+    g_mockRbusProperty.type = RBUS_STRING;
+    
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusSetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+    EXPECT_STREQ(RRDProfileCategory, "all");
+}
 
+/* --------------- Test rrd_GetHandler() --------------- */
 
+TEST_F(RRDProfileHandlerTest, GetHandler_AllCategories)
+{
+    // Override the filename in get handler to use our test JSON
+    // We'll need to modify the function to accept a test file path
+    
+    strcpy(RRDProfileCategory, "all");
+    
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusGetHandlerOptions_t* opts = nullptr;
+    
+    // Note: The actual function reads from "/etc/rrd/remote_debugger.json"
+    // For testing, we would need to either:
+    // 1. Create that file with test data, or
+    // 2. Modify the function to accept a test file parameter
+    // For now, we'll test the logic with a file that doesn't exist
+    rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
+    
+    // Expect BUS_ERROR because test file doesn't exist at expected location
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
 
+TEST_F(RRDProfileHandlerTest, GetHandler_SpecificCategory)
+{
+    strcpy(RRDProfileCategory, "Network");
+    
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusGetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
+    
+    // Expect BUS_ERROR because test file doesn't exist at expected location
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
 
+TEST_F(RRDProfileHandlerTest, GetHandler_WrongPropertyName)
+{
+    g_mockRbusProperty.name = "wrong.property.name";
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    rbusGetHandlerOptions_t* opts = nullptr;
+    
+    rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
+    
+    EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
+}
+
+/* --------------- Test helper functions --------------- */
+
+TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_ValidFile)
+{
+    long file_size = 0;
+    char* result = read_profile_json_file("/tmp/test_profile.json", &file_size);
+    
+    ASSERT_NE(result, nullptr);
+    EXPECT_GT(file_size, 0);
+    EXPECT_NE(strstr(result, "Video"), nullptr);
+    EXPECT_NE(strstr(result, "Audio"), nullptr);
+    EXPECT_NE(strstr(result, "Network"), nullptr);
+    
+    free(result);
+}
+
+TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_NonExistentFile)
+{
+    long file_size = 0;
+    char* result = read_profile_json_file("/nonexistent/file.json", &file_size);
+    
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(file_size, 0);
+}
+
+TEST_F(RRDProfileHandlerTest, HasDirectCommands_ValidStructure)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    char* jsonBuffer = read_profile_json_file("/tmp/test_profile.json", &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    cJSON* videoCategory = cJSON_GetObjectItem(json, "Video");
+    ASSERT_NE(videoCategory, nullptr);
+    
+    bool result = has_direct_commands(videoCategory);
+    EXPECT_TRUE(result);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+}
+
+TEST_F(RRDProfileHandlerTest, GetAllCategoriesJson_ValidInput)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    char* jsonBuffer = read_profile_json_file("/tmp/test_profile.json", &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    char* result = get_all_categories_json(json);
+    ASSERT_NE(result, nullptr);
+    
+    // Check that the result contains the expected categories
+    EXPECT_NE(strstr(result, "Video"), nullptr);
+    EXPECT_NE(strstr(result, "Audio"), nullptr);
+    EXPECT_NE(strstr(result, "Network"), nullptr);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+    free(result);
+}
+
+TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_ValidCategory)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    char* jsonBuffer = read_profile_json_file("/tmp/test_profile.json", &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    char* result = get_specific_category_json(json, "Video");
+    ASSERT_NE(result, nullptr);
+    
+    // Check that the result contains Video issue types
+    EXPECT_NE(strstr(result, "VideoDecodeFailure"), nullptr);
+    EXPECT_NE(strstr(result, "VideoFreeze"), nullptr);
+    // Should not contain other categories
+    EXPECT_EQ(strstr(result, "AudioLoss"), nullptr);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+    free(result);
+}
+
+TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_InvalidCategory)
+{
+    // Parse our test JSON
+    long file_size = 0;
+    char* jsonBuffer = read_profile_json_file("/tmp/test_profile.json", &file_size);
+    
+    ASSERT_NE(jsonBuffer, nullptr);
+    
+    cJSON* json = cJSON_Parse(jsonBuffer);
+    ASSERT_NE(json, nullptr);
+    
+    char* result = get_specific_category_json(json, "NonExistentCategory");
+    ASSERT_NE(result, nullptr);
+    
+    // Should return empty array
+    EXPECT_NE(strstr(result, "[]"), nullptr);
+    
+    cJSON_Delete(json);
+    free(jsonBuffer);
+    free(result);
+}
+
+TEST_F(RRDProfileHandlerTest, SetRbusResponse_ValidInput)
+{
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    
+    const char* testJson = "{\"test\": \"value\"}";
+    
+    rbusError_t result = set_rbus_response(mockProp, testJson);
+    
+    EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
+    EXPECT_STREQ(g_mockRbusProperty.value.c_str(), testJson);
+}
+
+TEST_F(RRDProfileHandlerTest, SetRbusResponse_NullInput)
+{
+    g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
+    rbusProperty_t mockProp = &g_mockRbusProperty;
+    
+    rbusError_t result = set_rbus_response(mockProp, nullptr);
+    
+    EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
+}
