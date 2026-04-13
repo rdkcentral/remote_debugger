@@ -93,14 +93,14 @@ static const char* find_test_file(const char* filename) {
     static char filepath[512];
     const char* search_paths[] = {
         "UTJson/",
-        "src/unittest/UTJson/",
+        "src/unittest/UTJson/", 
         "./UTJson/",
         "./src/unittest/UTJson/",
         "../src/unittest/UTJson/",
         "../../src/unittest/UTJson/",
         NULL
     };
-
+    
     for (int i = 0; search_paths[i] != NULL; i++) {
         snprintf(filepath, sizeof(filepath), "%s%s", search_paths[i], filename);
         FILE* f = fopen(filepath, "r");
@@ -1100,7 +1100,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
-
+    
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
             .WillOnce(Return(RBUS_ERROR_BUS_ERROR));
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
@@ -1141,10 +1141,10 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
            .WillOnce(Return(RBUS_ERROR_SUCCESS));
     EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
-
+    
     EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
             .WillOnce(Return(RBUS_ERROR_SUCCESS));
-
+    
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
     free(buff.jsonPath);
@@ -1273,7 +1273,7 @@ protected:
         setenv("RFC_LOG_SERVER", "logs.example.com", 1);
         setenv("RFC_HTTP_UPLOAD_LINK", "http://logs.example.com/upload", 1);
         setenv("RFC_UPLOAD_PROTOCOL", "HTTP", 1);
-
+       
     }
 
     void TearDown() override
@@ -1281,7 +1281,7 @@ protected:
         unsetenv("RFC_LOG_SERVER");
         unsetenv("RFC_HTTP_UPLOAD_LINK");
         unsetenv("RFC_UPLOAD_PROTOCOL");
-
+       
     }
 };
 
@@ -2592,7 +2592,7 @@ protected:
         {
             RBusApiWrapper::clearImpl();
             RBusApiWrapper::setImpl(&mock_rbus_api);
-        }
+        } 
         ::testing::Mock::AllowLeak(&mock_rbus_api);
     }
     void TearDown() override
@@ -2601,7 +2601,7 @@ protected:
         if (test_name != "TestInvalidOwnerName" || test_name != "TestCurrentStateNotDeepSleep")
         RBusApiWrapper::clearImpl();
         /*
-
+        
         if (test_name == "TestCurrentStateDeepSleepRBusOpenFail" || test_name == "TestCurrentStateDeepSleepRBusOpenSuccessRbusSetFail")
         {
             RBusApiWrapper::clearImpl();
@@ -3760,7 +3760,7 @@ protected:
     {
         // Clean up any existing test file
         remove(RRD_PROFILE_CATEGORY_FILE);
-
+        
         // Reset global category
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     }
@@ -3769,7 +3769,7 @@ protected:
     {
         // Clean up test file
         remove(RRD_PROFILE_CATEGORY_FILE);
-
+        
         // Reset global category
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     }
@@ -3828,7 +3828,7 @@ protected:
     {
         // Clean up any existing test file
         remove(RRD_PROFILE_CATEGORY_FILE);
-
+        
         // Set test category
         strncpy(RRDProfileCategory, "Audio", sizeof(RRDProfileCategory) - 1);
         RRDProfileCategory[sizeof(RRDProfileCategory) - 1] = '\0';
@@ -3838,7 +3838,7 @@ protected:
     {
         // Clean up test file
         remove(RRD_PROFILE_CATEGORY_FILE);
-
+        
         // Reset global category
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     }
@@ -3852,15 +3852,15 @@ TEST_F(SaveProfileCategoryTest, SaveToFile)
     // Verify file was created and contains correct content
     FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "r");
     ASSERT_NE(fp, nullptr);
-
+    
     char buffer[256];
     ASSERT_NE(fgets(buffer, sizeof(buffer), fp), nullptr);
     fclose(fp);
-
+    
     // Remove newline for comparison
     char *newline = strchr(buffer, '\n');
     if (newline) *newline = '\0';
-
+    
     EXPECT_STREQ(buffer, "Audio");
 }
 
@@ -3869,11 +3869,11 @@ TEST_F(SaveProfileCategoryTest, SaveToReadOnlyDirectory)
     // This test checks behavior when file cannot be written
     // Create a scenario where the directory might not be writable
     // The function should return -1 in error cases
-
+    
     // We can't easily test read-only scenarios in unit tests,
     // but we can verify the function handles file creation properly
     int result = save_profile_category();
-
+    
     // Should succeed in normal test environment
     EXPECT_GE(result, -1);  // Either success (0) or expected failure (-1)
 }
@@ -3883,7 +3883,7 @@ class HasDirectCommandsTest : public ::testing::Test
 {
 protected:
     cJSON *category;
-
+    
     void SetUp() override
     {
         category = nullptr;
@@ -3908,10 +3908,10 @@ TEST_F(HasDirectCommandsTest, CategoryWithDirectCommands)
             "Commands": "ps aux"
         }
     })";
-
+    
     category = cJSON_Parse(json_str);
     ASSERT_NE(category, nullptr);
-
+    
     bool result = has_direct_commands(category);
     EXPECT_TRUE(result);
 }
@@ -3927,10 +3927,10 @@ TEST_F(HasDirectCommandsTest, CategoryWithoutDirectCommands)
             "Timeout": 30
         }
     })";
-
+    
     category = cJSON_Parse(json_str);
     ASSERT_NE(category, nullptr);
-
+    
     bool result = has_direct_commands(category);
     EXPECT_FALSE(result);
 }
@@ -3939,7 +3939,7 @@ TEST_F(HasDirectCommandsTest, EmptyCategory)
 {
     category = cJSON_CreateObject();
     ASSERT_NE(category, nullptr);
-
+    
     bool result = has_direct_commands(category);
     EXPECT_FALSE(result);
 }
@@ -3956,7 +3956,7 @@ class ReadProfileJsonFileTest : public ::testing::Test
 protected:
     const char *test_file = "/tmp/test_profile.json";
     long file_size;
-
+    
     void SetUp() override
     {
         file_size = 0;
@@ -3976,12 +3976,12 @@ TEST_F(ReadProfileJsonFileTest, ReadValidFile)
     ASSERT_NE(fp, nullptr);
     fprintf(fp, "%s", json_content);
     fclose(fp);
-
+    
     char *result = read_profile_json_file(test_file, &file_size);
     ASSERT_NE(result, nullptr);
     EXPECT_GT(file_size, 0);
     EXPECT_STREQ(result, json_content);
-
+    
     free(result);
 }
 
@@ -3998,7 +3998,7 @@ TEST_F(ReadProfileJsonFileTest, ReadEmptyFile)
     FILE *fp = fopen(test_file, "w");
     ASSERT_NE(fp, nullptr);
     fclose(fp);
-
+    
     char *result = read_profile_json_file(test_file, &file_size);
     EXPECT_EQ(result, nullptr);
 }
@@ -4014,7 +4014,7 @@ class GetAllCategoriesJsonTest : public ::testing::Test
 {
 protected:
     cJSON *json;
-
+    
     void SetUp() override
     {
         json = nullptr;
@@ -4040,26 +4040,26 @@ TEST_F(GetAllCategoriesJsonTest, GetAllValidCategories)
             "issue3": {"Commands": "test3"}
         }
     })";
-
+    
     json = cJSON_Parse(json_str);
     ASSERT_NE(json, nullptr);
-
+    
     char *result = get_all_categories_json(json);
     ASSERT_NE(result, nullptr);
-
+    
     // Parse result to verify structure
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
-
+    
     // Check that Video and Audio categories exist
     cJSON *video = cJSON_GetObjectItem(result_json, "Video");
     cJSON *audio = cJSON_GetObjectItem(result_json, "Audio");
-
+    
     EXPECT_NE(video, nullptr);
     EXPECT_NE(audio, nullptr);
     EXPECT_TRUE(cJSON_IsArray(video));
     EXPECT_TRUE(cJSON_IsArray(audio));
-
+    
     cJSON_Delete(result_json);
     free(result);
 }
@@ -4068,15 +4068,15 @@ TEST_F(GetAllCategoriesJsonTest, GetAllFromEmptyJson)
 {
     json = cJSON_CreateObject();
     ASSERT_NE(json, nullptr);
-
+    
     char *result = get_all_categories_json(json);
     ASSERT_NE(result, nullptr);
-
+    
     // Should return empty object
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
     EXPECT_EQ(cJSON_GetArraySize(result_json), 0);
-
+    
     cJSON_Delete(result_json);
     free(result);
 }
@@ -4094,7 +4094,7 @@ class GetSpecificCategoryJsonTest : public ::testing::Test
 {
 protected:
     cJSON *json;
-
+    
     void SetUp() override
     {
         json = nullptr;
@@ -4119,18 +4119,18 @@ TEST_F(GetSpecificCategoryJsonTest, GetExistingCategory)
             "issue3": {"Commands": "test3"}
         }
     })";
-
+    
     json = cJSON_Parse(json_str);
     ASSERT_NE(json, nullptr);
-
+    
     char *result = get_specific_category_json(json, "Video");
     ASSERT_NE(result, nullptr);
-
+    
     // Parse result to verify it's an array with Video issues
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
     EXPECT_TRUE(cJSON_IsArray(result_json));
-
+    
     cJSON_Delete(result_json);
     free(result);
 }
@@ -4142,19 +4142,19 @@ TEST_F(GetSpecificCategoryJsonTest, GetNonExistentCategory)
             "issue1": {"Commands": "test1"}
         }
     })";
-
+    
     json = cJSON_Parse(json_str);
     ASSERT_NE(json, nullptr);
-
+    
     char *result = get_specific_category_json(json, "NonExistent");
     ASSERT_NE(result, nullptr);
-
+    
     // Should return empty array
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
     EXPECT_TRUE(cJSON_IsArray(result_json));
     EXPECT_EQ(cJSON_GetArraySize(result_json), 0);
-
+    
     cJSON_Delete(result_json);
     free(result);
 }
@@ -4164,11 +4164,11 @@ TEST_F(GetSpecificCategoryJsonTest, GetFromNullJson)
     char *result = get_specific_category_json(nullptr, "Video");
     // Should handle null input gracefully
     ASSERT_NE(result, nullptr);
-
+    
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
     EXPECT_TRUE(cJSON_IsArray(result_json));
-
+    
     cJSON_Delete(result_json);
     free(result);
 }
@@ -4178,12 +4178,12 @@ class RrdSetHandlerTest : public ::testing::Test
 {
 protected:
     MockRBusApi mock_rbus_api;
-
+    
     void SetUp() override
     {
         // Clear any existing profile category
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
-
+        
         // Clean up test file
         remove(RRD_PROFILE_CATEGORY_FILE);
     }
@@ -4200,14 +4200,14 @@ TEST_F(RrdSetHandlerTest, SetValidProfileCategory)
 {
     // This test verifies the overall logic without deep RBUS API testing
     // since those are mocked and complex to set up properly
-
+    
     // Set a test category directly to verify save/load workflow
     strncpy(RRDProfileCategory, "TestCategory", sizeof(RRDProfileCategory) - 1);
-
+    
     // Test save functionality
     int save_result = save_profile_category();
     EXPECT_EQ(save_result, 0);
-
+    
     // Clear and reload to verify
     memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     int load_result = load_profile_category();
@@ -4220,7 +4220,7 @@ class RrdGetHandlerTest : public ::testing::Test
 {
 protected:
     const char *test_json_file = "/tmp/test_profile.json";
-
+    
     void SetUp() override
     {
         // Create test JSON file
@@ -4233,13 +4233,13 @@ protected:
                 "issue3": {"Commands": "test3"}
             }
         })";
-
+        
         FILE *fp = fopen(test_json_file, "w");
         if (fp) {
             fprintf(fp, "%s", json_content);
             fclose(fp);
         }
-
+        
         // Set up profile category
         strncpy(RRDProfileCategory, "all", sizeof(RRDProfileCategory) - 1);
     }
@@ -4254,23 +4254,23 @@ protected:
 TEST_F(RrdGetHandlerTest, TestProfileDataProcessing)
 {
     // Test the helper functions used by rrd_GetHandler
-
+    
     long file_size;
     char *json_buffer = read_profile_json_file(test_json_file, &file_size);
     ASSERT_NE(json_buffer, nullptr);
     EXPECT_GT(file_size, 0);
-
+    
     cJSON *json = cJSON_Parse(json_buffer);
     ASSERT_NE(json, nullptr);
-
+    
     // Test get_all_categories_json
     char *all_result = get_all_categories_json(json);
     ASSERT_NE(all_result, nullptr);
-
+    
     // Test get_specific_category_json
     char *specific_result = get_specific_category_json(json, "Video");
     ASSERT_NE(specific_result, nullptr);
-
+    
     // Cleanup
     cJSON_Delete(json);
     free(json_buffer);
@@ -4283,7 +4283,7 @@ class SetRbusResponseTest : public ::testing::Test
 {
 protected:
     MockRBusApi mock_rbus_api;
-
+    
     void SetUp() override
     {
         // Note: This is a complex function to test due to RBUS dependencies
@@ -4308,7 +4308,7 @@ TEST_F(SetRbusResponseTest, HandlesValidJsonString)
     // This is difficult to test without full RBUS mock setup
     // The function should succeed with valid inputs in a real environment
     const char *test_json = R"({"test": "data"})";
-
+    
     // Without full RBUS setup, we can't fully test this
     // But we can verify it handles the null case properly
     rbusError_t result = set_rbus_response(nullptr, test_json);
@@ -4352,14 +4352,14 @@ TEST(RemoteDebuggerDocStrErrorTest, EdgeCaseZeroButNotInMap) {
 TEST(LookupRrdProfileListTest, NullInput) {
     EXPECT_FALSE(lookupRrdProfileList(nullptr));
 }
-
+ 
 TEST(LookupRrdProfileListTest, EmptyStringInput) {
     EXPECT_FALSE(lookupRrdProfileList(""));
 }
 
 TEST(LookupRrdProfileListTest, ExactMatchFirst) {
     lookupRrdProfileList("RRD_PROFILE_LIST");
-}
+} 
 
 TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     issueData cmd;
@@ -4484,7 +4484,7 @@ TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
     char buf[] = "rfcvalue123";
     issueData* result = getIssueCommandInfo(&node, root, buf);
     ASSERT_EQ(result, nullptr);
-
+    
 }
 
 TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
@@ -4534,15 +4534,15 @@ protected:
         // Create test directory with some log files
         mkdir(test_dir, 0755);
         mkdir(rrd_log_dir, 0755);
-
+        
         // Create dummy log files
         std::string log1 = std::string(test_dir) + "/test.log";
         std::string log2 = std::string(test_dir) + "/debug.log";
-
+        
         std::ofstream f1(log1);
         f1 << "Test log content 1\n";
         f1.close();
-
+        
         std::ofstream f2(log2);
         f2 << "Test log content 2\n";
         f2.close();
@@ -4562,7 +4562,7 @@ protected:
         dcm_props << "HTTP_UPLOAD_LINK=http://logs.example.com/upload\n";
         dcm_props << "UPLOAD_PROTOCOL=HTTP\n";
         dcm_props.close();
-
+        
         // Create config files in expected locations for rrd_config_load()
         // This requires writable /etc/ and /opt/ (works in Docker CI environment)
         system("mkdir -p /etc 2>/dev/null || true");
@@ -4577,15 +4577,15 @@ protected:
         // Cleanup test directory
         int ret = system("rm -rf /tmp/rrd_test_upload*");
         (void)ret;  // Explicitly ignore return value
-
+        
         ret = system("rm -rf /tmp/rrd");
         (void)ret;
-
+        
         // Unset environment variables
         unsetenv("RRD_INCLUDE_PROPERTIES");
         unsetenv("RRD_DEVICE_PROPERTIES");
         unsetenv("RRD_DCM_PROPERTIES");
-
+        
         // Cleanup test config files
         unlink("/tmp/test_include.properties");
         unlink("/tmp/test_dcm.properties");
@@ -4619,11 +4619,11 @@ TEST_F(RRDUploadOrchestrationTest, ValidOrchestrationFlow) {
 TEST_F(RRDUploadOrchestrationTest, ConfigurationLoading) {
     rrd_config_t config;
     memset(&config, 0, sizeof(config));
-
+    
     // Parse test properties file directly
     int result = rrd_config_parse_properties("/tmp/test_include.properties", &config);
     EXPECT_EQ(result, 0);
-
+    
     // Verify configuration was loaded
     EXPECT_STRNE(config.log_server, "");
     EXPECT_STREQ(config.log_server, "logs.example.com");
@@ -4676,7 +4676,7 @@ TEST_F(RRDUploadOrchestrationTest, LogPreparation) {
 // Test: Issue type conversion
 TEST_F(RRDUploadOrchestrationTest, IssueTypeConversion) {
     char sanitized[64];
-
+    
     // Test: lowercase to uppercase, dot to underscore
     int result = rrd_logproc_convert_issue_type("cpu.high", sanitized, sizeof(sanitized));
     EXPECT_EQ(result, 0);
@@ -4707,13 +4707,13 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
     int result = rrd_archive_generate_filename(mac, issue, timestamp, filename, sizeof(filename));
     EXPECT_EQ(result, 0);
     EXPECT_STRNE(filename, "");
-
+    
     // Verify new format: MAC_ISSUE_TIMESTAMP_RRD_DEBUG_LOGS.tgz
     EXPECT_NE(strstr(filename, mac), nullptr);
     EXPECT_NE(strstr(filename, issue), nullptr);
     EXPECT_NE(strstr(filename, timestamp), nullptr);
     EXPECT_NE(strstr(filename, "_RRD_DEBUG_LOGS.tgz"), nullptr);
-
+    
     // Verify it ends with .tgz, not .tar.gz
     const char *ext = strrchr(filename, '.');
     EXPECT_STREQ(ext, ".tgz");
@@ -4723,7 +4723,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
 TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
     char archive_filename[256];
     snprintf(archive_filename, sizeof(archive_filename), "test_archive_%d.tgz", getpid());
-
+    
     // Create archive in /tmp/rrd/ directory
     int result = rrd_archive_create(test_dir, rrd_log_dir, archive_filename);
     EXPECT_EQ(result, 0);
@@ -4731,7 +4731,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
     // Verify archive file exists in /tmp/rrd/ and has content
     char full_path[512];
     snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
-
+    
     struct stat st;
     result = stat(full_path, &st);
     EXPECT_EQ(result, 0);
@@ -4789,7 +4789,7 @@ TEST_F(RRDUploadOrchestrationTest, DirectorySizeCalculation) {
 TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
     char archive_file[256];
     snprintf(archive_file, sizeof(archive_file), "%stest_cleanup.tgz", rrd_log_dir);
-
+    
     // Create a dummy archive file
     std::ofstream f(archive_file);
     f << "dummy archive content\n";
@@ -4811,21 +4811,21 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
 TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanup) {
     const char *temp_source = "/tmp/rrd_test_source_cleanup";
     mkdir(temp_source, 0755);
-
+    
     // Create some files in it
     std::string file1 = std::string(temp_source) + "/file1.txt";
     std::ofstream f1(file1);
     f1 << "content\n";
     f1.close();
-
+    
     // Verify directory exists
     struct stat st;
     EXPECT_EQ(stat(temp_source, &st), 0);
-
+    
     // Cleanup
     int result = rrd_upload_cleanup_source_dir(temp_source);
     EXPECT_EQ(result, 0);
-
+    
     // Verify directory is gone
     EXPECT_NE(stat(temp_source, &st), 0);
 }
@@ -4834,9 +4834,9 @@ TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanup) {
 TEST_F(RRDUploadOrchestrationTest, ConfigurationCleanup) {
     rrd_config_t config;
     memset(&config, 1, sizeof(config));  // Fill with non-zero values
-
+    
     rrd_config_cleanup(&config);
-
+    
     // Verify all fields are cleared
     EXPECT_EQ(config.log_server[0], 0);
     EXPECT_EQ(config.http_upload_link[0], 0);
@@ -4846,26 +4846,26 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationCleanup) {
 // Test: Upload lock check
 TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
     bool is_locked = false;
-
+    
     // Initially should not be locked
     int result = rrd_upload_check_lock(&is_locked);
     EXPECT_EQ(result, 0);
     EXPECT_FALSE(is_locked);
-
+    
     // Create lock file and acquire exclusive lock to test detection
     const char *lock_file = "/tmp/.log-upload.lock";
     int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
     ASSERT_GE(lock_fd, 0);
-
+    
     // Acquire exclusive lock (this is what uploadstblogs does)
     int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
     ASSERT_EQ(lock_ret, 0);
-
+    
     // Should detect lock
     result = rrd_upload_check_lock(&is_locked);
     EXPECT_EQ(result, 0);
     EXPECT_TRUE(is_locked);
-
+    
     // Cleanup - release lock and close
     flock(lock_fd, LOCK_UN);
     close(lock_fd);
@@ -4876,7 +4876,7 @@ TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
 TEST_F(RRDUploadOrchestrationTest, EndToEndOrchestration) {
     // This test verifies the entire flow works together
     int result = rrd_upload_orchestrate(test_dir, "test.issue");
-
+    
     // Result should be a valid return code (0 for success, or specific error code)
     EXPECT_GE(result, -11);  // Within expected error range
     EXPECT_LE(result, 11);
@@ -4892,10 +4892,10 @@ TEST_F(RRDUploadOrchestrationTest, InvalidDirectoryPath) {
 TEST_F(RRDUploadOrchestrationTest, EmptyDirectoryFailure) {
     const char *empty_dir = "/tmp/rrd_empty_test";
     mkdir(empty_dir, 0755);
-
+    
     int result = rrd_upload_orchestrate(empty_dir, "test_issue");
     EXPECT_EQ(result, 6);  // Should fail with error code 6 (empty directory)
-
+    
     rmdir(empty_dir);
 }
 
@@ -4904,7 +4904,7 @@ TEST_F(RRDUploadOrchestrationTest, NullParametersFailure) {
     // NULL upload_dir
     int result = rrd_upload_orchestrate(NULL, "issue");
     EXPECT_EQ(result, 1);
-
+    
     // NULL issue_type
     result = rrd_upload_orchestrate(test_dir, NULL);
     EXPECT_EQ(result, 1);
@@ -4927,15 +4927,15 @@ TEST_F(RRDUploadOrchestrationTest, InvalidTimestampBufferFailure) {
 // Failure case: Issue type conversion with NULL
 TEST_F(RRDUploadOrchestrationTest, IssueTypeConversionNullFailure) {
     char output[64];
-
+    
     // NULL input
     int result = rrd_logproc_convert_issue_type(NULL, output, sizeof(output));
     EXPECT_NE(result, 0);
-
+    
     // NULL output
     result = rrd_logproc_convert_issue_type("issue", NULL, 64);
     EXPECT_NE(result, 0);
-
+    
     // Zero size
     result = rrd_logproc_convert_issue_type("issue", output, 0);
     EXPECT_NE(result, 0);
@@ -4953,14 +4953,14 @@ TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
     std::ofstream f(live_logs);
     f << "live logs data\n";
     f.close();
-
+    
     // Test with LOGUPLOAD_ENABLE issue type
     int result = rrd_upload_orchestrate(test_dir, "logupload_enable");
-
+    
     // Should process without error (even if upload fails in test environment)
     // The important thing is it doesn't crash and handles the live logs
     EXPECT_GE(result, 0);  // May succeed or fail depending on upload, but shouldn't crash
-
+    
     // Cleanup
     remove(live_logs);
 }
@@ -4970,36 +4970,36 @@ TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
 // Failure case: Upload with invalid parameters
 TEST_F(RRDUploadOrchestrationTest, UploadInvalidParametersFailure) {
     const char *test_file = "/tmp/rrd/test_archive.tgz";
-
+    
     // Create test archive
     std::ofstream f(test_file);
     f << "test data\n";
     f.close();
-
+    
     // NULL log_server
     int result = rrd_upload_execute(NULL, "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
     EXPECT_NE(result, 0);
-
+    
     // Empty log_server
     result = rrd_upload_execute("", "HTTP", "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
     EXPECT_NE(result, 0);
-
+    
     // NULL protocol
     result = rrd_upload_execute("server", NULL, "http://upload", "/tmp/rrd/", "test_archive.tgz", test_dir);
     EXPECT_NE(result, 0);
-
+    
     // NULL http_link
     result = rrd_upload_execute("server", "HTTP", NULL, "/tmp/rrd/", "test_archive.tgz", test_dir);
     EXPECT_NE(result, 0);
-
+    
     // NULL working_dir
     result = rrd_upload_execute("server", "HTTP", "http://upload", NULL, "test_archive.tgz", test_dir);
     EXPECT_NE(result, 0);
-
+    
     // NULL archive_filename
     result = rrd_upload_execute("server", "HTTP", "http://upload", "/tmp/rrd/", NULL, test_dir);
     EXPECT_NE(result, 0);
-
+    
     // Cleanup
     remove(test_file);
 }
@@ -5041,7 +5041,7 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
     unlink("/etc/device.properties");
     unlink("/etc/dcm.properties");
     unlink("/opt/dcm.properties");
-
+    
     int result = rrd_upload_orchestrate(test_dir, test_issue_type);
     EXPECT_EQ(result, 3);  // Expected error code for config load failure
 }
@@ -5049,15 +5049,15 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
 // Error path: MAC address retrieval failure
 TEST_F(RRDUploadOrchestrationTest, MacAddressRetrievalFailure) {
     char mac_addr[32] = {0};
-
+    
     // Test with NULL buffer
     int result = rrd_sysinfo_get_mac_address(NULL, 32);
     EXPECT_NE(result, 0);
-
+    
     // Test with zero size
     result = rrd_sysinfo_get_mac_address(mac_addr, 0);
     EXPECT_NE(result, 0);
-
+    
     // Test with insufficient buffer size
     result = rrd_sysinfo_get_mac_address(mac_addr, 5);
     EXPECT_NE(result, 0);
@@ -5066,15 +5066,15 @@ TEST_F(RRDUploadOrchestrationTest, MacAddressRetrievalFailure) {
 // Error path: Timestamp retrieval failure
 TEST_F(RRDUploadOrchestrationTest, TimestampRetrievalFailure) {
     char timestamp[32] = {0};
-
+    
     // Test with NULL buffer
     int result = rrd_sysinfo_get_timestamp(NULL, 32);
     EXPECT_NE(result, 0);
-
+    
     // Test with zero size
     result = rrd_sysinfo_get_timestamp(timestamp, 0);
     EXPECT_NE(result, 0);
-
+    
     // Test with insufficient buffer size
     result = rrd_sysinfo_get_timestamp(timestamp, 5);
     EXPECT_NE(result, 0);
@@ -5085,7 +5085,7 @@ TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
     // Test with non-existent directory
     int result = rrd_logproc_prepare_logs("/nonexistent/directory", test_issue_type);
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL issue type
     result = rrd_logproc_prepare_logs(test_dir, NULL);
     EXPECT_NE(result, 0);
@@ -5094,15 +5094,15 @@ TEST_F(RRDUploadOrchestrationTest, LogPreparationFailure) {
 // Error path: Issue type sanitization failure
 TEST_F(RRDUploadOrchestrationTest, IssueTypeSanitizationFailure) {
     char sanitized[64];
-
+    
     // Test with NULL issue type
     int result = rrd_logproc_convert_issue_type(NULL, sanitized, sizeof(sanitized));
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL output buffer
     result = rrd_logproc_convert_issue_type("test", NULL, 64);
     EXPECT_NE(result, 0);
-
+    
     // Test with zero size buffer
     result = rrd_logproc_convert_issue_type("test", sanitized, 0);
     EXPECT_NE(result, 0);
@@ -5111,23 +5111,23 @@ TEST_F(RRDUploadOrchestrationTest, IssueTypeSanitizationFailure) {
 // Error path: Archive filename generation failure
 TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
     char filename[256];
-
+    
     // Test with NULL MAC address
     int result = rrd_archive_generate_filename(NULL, "ISSUE", "timestamp", filename, sizeof(filename));
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL issue type
     result = rrd_archive_generate_filename("00:11:22:33:44:55", NULL, "timestamp", filename, sizeof(filename));
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL timestamp
     result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", NULL, filename, sizeof(filename));
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL output buffer
     result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, 256);
     EXPECT_NE(result, 0);
-
+    
     // Test with insufficient buffer size
     result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", filename, 10);
     EXPECT_NE(result, 0);
@@ -5136,15 +5136,15 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
 // Error path: Archive creation failure
 TEST_F(RRDUploadOrchestrationTest, ArchiveCreationFailure) {
     char archive_filename[256] = "test_archive_fail.tgz";
-
+    
     // Test with non-existent source directory
     int result = rrd_archive_create("/nonexistent/directory", rrd_log_dir, archive_filename);
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL archive filename
     result = rrd_archive_create(test_dir, rrd_log_dir, NULL);
     EXPECT_NE(result, 0);
-
+    
     // Test with invalid working directory
     result = rrd_archive_create(test_dir, "/nonexistent/path/", archive_filename);
     EXPECT_NE(result, 0);
@@ -5155,40 +5155,40 @@ TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
     // Create a test archive first
     char archive_filename[256];
     snprintf(archive_filename, sizeof(archive_filename), "test_upload_fail_%d.tgz", getpid());
-
+    
     char full_path[512];
     snprintf(full_path, sizeof(full_path), "%s%s", rrd_log_dir, archive_filename);
-
+    
     std::ofstream f(full_path);
     f << "dummy archive content\n";
     f.close();
-
+    
     // Test with invalid server (empty string)
-    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload",
+    int result = rrd_upload_execute("", "HTTP", "http://invalid.server/upload", 
                                      rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
-
+    
     // Test with NULL parameters
-    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload",
+    result = rrd_upload_execute(NULL, "HTTP", "http://server/upload", 
                                 rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
-
-    result = rrd_upload_execute("server", NULL, "http://server/upload",
+    
+    result = rrd_upload_execute("server", NULL, "http://server/upload", 
                                 rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
-
-    result = rrd_upload_execute("server", "HTTP", NULL,
+    
+    result = rrd_upload_execute("server", "HTTP", NULL, 
                                 rrd_log_dir, archive_filename, test_dir);
     EXPECT_NE(result, 0);
-
-    result = rrd_upload_execute("server", "HTTP", "http://server/upload",
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
                                 NULL, archive_filename, test_dir);
     EXPECT_NE(result, 0);
-
-    result = rrd_upload_execute("server", "HTTP", "http://server/upload",
+    
+    result = rrd_upload_execute("server", "HTTP", "http://server/upload", 
                                 rrd_log_dir, NULL, test_dir);
     EXPECT_NE(result, 0);
-
+    
     // Cleanup
     remove(full_path);
 }
@@ -5196,24 +5196,24 @@ TEST_F(RRDUploadOrchestrationTest, UploadExecutionFailure) {
 // Test: Lock wait behavior
 TEST_F(RRDUploadOrchestrationTest, LockWaitBehavior) {
     const char *lock_file = "/tmp/.log-upload.lock";
-
+    
     // Create lock file and acquire exclusive lock
     int lock_fd = open(lock_file, O_RDWR | O_CREAT, 0644);
     ASSERT_GE(lock_fd, 0);
-
+    
     // Acquire exclusive lock to simulate uploadstblogs running
     int lock_ret = flock(lock_fd, LOCK_EX | LOCK_NB);
     ASSERT_EQ(lock_ret, 0);
-
+    
     // Test wait for lock with short timeout (should timeout because we're holding the lock)
     int result = rrd_upload_wait_for_lock(2, 1);  // 2 attempts, 1 second each
     EXPECT_NE(result, 0);  // Should timeout
-
+    
     // Release and remove lock file
     flock(lock_fd, LOCK_UN);
     close(lock_fd);
     remove(lock_file);
-
+    
     // Test wait for lock when no lock exists (should succeed immediately)
     result = rrd_upload_wait_for_lock(2, 1);
     EXPECT_EQ(result, 0);
@@ -5224,7 +5224,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCreationNullParams) {
     // NULL source_dir
     int result = rrd_archive_create(NULL, "/tmp/rrd/", "test.tgz");
     EXPECT_EQ(result, -1);
-
+    
     // NULL archive_filename
     result = rrd_archive_create(test_dir, "/tmp/rrd/", NULL);
     EXPECT_EQ(result, -1);
@@ -5255,16 +5255,16 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveVeryLongFilename) {
     std::string long_filename(150, 'a');
     long_filename += ".txt";
     std::string long_path = std::string(test_dir) + "/" + long_filename;
-
+    
     std::ofstream f(long_path);
     f << "test content\n";
     f.close();
-
+    
     // Try to archive it
     int result = rrd_archive_create(test_dir, "/tmp/rrd/", "longname_test.tgz");
     // Should either succeed by splitting name or fail gracefully
     // The important thing is it doesn't crash
-
+    
     // Cleanup
     remove(long_path.c_str());
     remove("/tmp/rrd/longname_test.tgz");
@@ -5275,21 +5275,21 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveWithSubdirectories) {
     // Create subdirectory structure
     std::string subdir = std::string(test_dir) + "/subdir";
     mkdir(subdir.c_str(), 0755);
-
+    
     std::string subfile = subdir + "/subfile.txt";
     std::ofstream f(subfile);
     f << "subdirectory file\n";
     f.close();
-
+    
     // Create archive
     int result = rrd_archive_create(test_dir, "/tmp/rrd/", "subdir_test.tgz");
     EXPECT_EQ(result, 0);
-
+    
     // Verify archive exists and has content
     struct stat st;
     EXPECT_EQ(stat("/tmp/rrd/subdir_test.tgz", &st), 0);
     EXPECT_GT(st.st_size, 0);
-
+    
     // Cleanup
     remove(subfile.c_str());
     rmdir(subdir.c_str());
@@ -5301,7 +5301,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveEmptyWorkingDir) {
     // Create archive with empty working_dir (should use current directory)
     int result = rrd_archive_create(test_dir, "", "empty_workdir_test.tgz");
     EXPECT_EQ(result, 0);
-
+    
     // Cleanup
     remove("empty_workdir_test.tgz");
 }
@@ -5322,10 +5322,10 @@ TEST_F(RRDUploadOrchestrationTest, PriorityAdjustment) {
     // Test with different CPU usage levels
     int result = rrd_archive_adjust_priority(90.0f);  // High CPU
     // May succeed or fail depending on permissions
-
+    
     result = rrd_archive_adjust_priority(60.0f);  // Medium CPU
     // May succeed or fail depending on permissions
-
+    
     result = rrd_archive_adjust_priority(30.0f);  // Low CPU
     // May succeed or fail depending on permissions
     // The important thing is it doesn't crash
@@ -5349,7 +5349,7 @@ struct MockRBusProperty {
     rbusValueType_t type;
 } g_mockRbusProperty;
 
-// Mock RBUS function implementations for profile handler tests
+// Mock RBUS function implementations for profile handler tests  
 static char const* mock_rbusProperty_GetName(rbusProperty_t property) {
     (void)property;
     return g_mockRbusProperty.name.c_str();
@@ -5392,7 +5392,7 @@ class RRDProfileHandlerTest : public ::testing::Test {
 protected:
     RBusProfileMock mockRBusApi;
     MockRBusApi mockWrapper; // Add mock for RBusApiWrapper
-
+    
     // Store original function pointers
     char const* (*orig_rbusProperty_GetName)(rbusProperty_t);
     rbusValue_t (*orig_rbusProperty_GetValue)(rbusProperty_t);
@@ -5400,29 +5400,29 @@ protected:
     char const* (*orig_rbusValue_GetString)(rbusValue_t, int*);
     void (*orig_rbusProperty_SetValue)(rbusProperty_t, rbusValue_t);
     void (*orig_rbusValue_Release)(rbusValue_t);
-
+    
     void SetUp() override {
         // Reset global state
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
         strcpy(RRDProfileCategory, "all");
-
+        
         // Reset mock RBUS data
         mockRBusApi.mockPropertyName.clear();
         mockRBusApi.mockPropertyValue.clear();
         mockRBusApi.mockValueType = RBUS_STRING;
         mockRBusApi.mockResponseValue.clear();
-
+        
         // Reset global mock property
         g_mockRbusProperty.name.clear();
         g_mockRbusProperty.value.clear();
         g_mockRbusProperty.type = RBUS_STRING;
-
+        
         // Clear any existing RBusApiWrapper implementation first
         RBusApiWrapper::clearImpl();
-
+        
         // Set up RBusApiWrapper with mock implementation
         RBusApiWrapper::setImpl(&mockWrapper);
-
+        
         // Set up expectations for common RBUS operations
         EXPECT_CALL(mockWrapper, rbusValue_Init(testing::_))
             .WillRepeatedly(testing::Return(RBUS_ERROR_SUCCESS));
@@ -5432,7 +5432,7 @@ protected:
             .WillRepeatedly(testing::Return());
         EXPECT_CALL(mockWrapper, rbusValue_Release(testing::_))
             .WillRepeatedly(testing::Return());
-
+        
         // Store original function pointers
         orig_rbusProperty_GetName = rbusProperty_GetName;
         orig_rbusProperty_GetValue = rbusProperty_GetValue;
@@ -5440,7 +5440,7 @@ protected:
         orig_rbusValue_GetString = rbusValue_GetString;
         orig_rbusProperty_SetValue = rbusProperty_SetValue;
         orig_rbusValue_Release = rbusValue_Release;
-
+        
         // Redirect to mock implementations
         rbusProperty_GetName = mock_rbusProperty_GetName;
         rbusProperty_GetValue = mock_rbusProperty_GetValue;
@@ -5449,23 +5449,23 @@ protected:
         rbusProperty_SetValue = mock_rbusProperty_SetValue;
         rbusValue_Release = mock_rbusValue_Release;
     }
-
+    
     void TearDown() override {
         // Clean up test files
         unlink(RRD_PROFILE_CATEGORY_FILE);
-
+        
         // Reset global state
         memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
         strcpy(RRDProfileCategory, "all");
-
+        
         // Reset global mock property properly (don't use memset on C++ objects)
         g_mockRbusProperty.name.clear();
         g_mockRbusProperty.value.clear();
         g_mockRbusProperty.type = RBUS_STRING;
-
+        
         // Clear RBusApiWrapper implementation
         RBusApiWrapper::clearImpl();
-
+        
         // Restore original function pointers
         rbusProperty_GetName = orig_rbusProperty_GetName;
         rbusProperty_GetValue = orig_rbusProperty_GetValue;
@@ -5484,12 +5484,12 @@ TEST_F(RRDProfileHandlerTest, SetHandler_ValidStringAll)
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = "all";
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusSetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, "all");
 }
@@ -5500,12 +5500,12 @@ TEST_F(RRDProfileHandlerTest, SetHandler_ValidStringCategory)
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = "Video";
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusSetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, "Video");
 }
@@ -5514,16 +5514,16 @@ TEST_F(RRDProfileHandlerTest, SetHandler_StringTooLong)
 {
     // Create a string longer than 255 characters
     std::string longString(300, 'A');
-
+    
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = longString;
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusSetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
     // RRDProfileCategory should remain unchanged
     EXPECT_STREQ(RRDProfileCategory, "all");
@@ -5534,12 +5534,12 @@ TEST_F(RRDProfileHandlerTest, SetHandler_InvalidType)
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = "Network";
     g_mockRbusProperty.type = RBUS_INT32; // Invalid type for this parameter
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusSetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
     EXPECT_STREQ(RRDProfileCategory, "all");
 }
@@ -5549,12 +5549,12 @@ TEST_F(RRDProfileHandlerTest, SetHandler_WrongPropertyName)
     g_mockRbusProperty.name = "wrong.property.name";
     g_mockRbusProperty.value = "Audio";
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusSetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, opts);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
     EXPECT_STREQ(RRDProfileCategory, "all");
 }
@@ -5565,20 +5565,20 @@ TEST_F(RRDProfileHandlerTest, GetHandler_AllCategories)
 {
     // Override the filename in get handler to use our test JSON
     // We'll need to modify the function to accept a test file path
-
+    
     strcpy(RRDProfileCategory, "all");
-
+    
     g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusGetHandlerOptions_t* opts = nullptr;
-
+    
     // Note: The actual function reads from "/etc/rrd/remote_debugger.json"
     // For testing, we would need to either:
     // 1. Create that file with test data, or
     // 2. Modify the function to accept a test file parameter
     // For now, we'll test the logic with a file that doesn't exist
     rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
-
+    
     // Expect BUS_ERROR because test file doesn't exist at expected location
     EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
 }
@@ -5586,13 +5586,13 @@ TEST_F(RRDProfileHandlerTest, GetHandler_AllCategories)
 TEST_F(RRDProfileHandlerTest, GetHandler_SpecificCategory)
 {
     strcpy(RRDProfileCategory, "Network");
-
+    
     g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusGetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
-
+    
     // Expect BUS_ERROR because test file doesn't exist at expected location
     EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
 }
@@ -5602,9 +5602,9 @@ TEST_F(RRDProfileHandlerTest, GetHandler_WrongPropertyName)
     g_mockRbusProperty.name = "wrong.property.name";
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusGetHandlerOptions_t* opts = nullptr;
-
+    
     rbusError_t result = rrd_GetHandler(nullptr, mockProp, opts);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_INVALID_INPUT);
 }
 
@@ -5615,16 +5615,16 @@ TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_ValidFile)
     long file_size = 0;
     const char* filepath = find_test_file("profileTestValid.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
-
+    
     char* result = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(result, nullptr);
     EXPECT_GT(file_size, 0);
     EXPECT_NE(strstr(result, "Video"), nullptr);
     EXPECT_NE(strstr(result, "Audio"), nullptr);
     EXPECT_NE(strstr(result, "Network"), nullptr);
     EXPECT_NE(strstr(result, "System"), nullptr);
-
+    
     free(result);
 }
 
@@ -5632,10 +5632,11 @@ TEST_F(RRDProfileHandlerTest, ReadProfileJsonFile_NonExistentFile)
 {
     long file_size = 0;
     char* result = read_profile_json_file("/nonexistent/file.json", &file_size);
-
+    
     EXPECT_EQ(result, nullptr);
     EXPECT_EQ(file_size, 0);
 }
+
 /*
 TEST_F(RRDProfileHandlerTest, HasDirectCommands_ValidStructure)
 {
@@ -5643,20 +5644,20 @@ TEST_F(RRDProfileHandlerTest, HasDirectCommands_ValidStructure)
     long file_size = 0;
     const char* filepath = find_test_file("profileTestValid.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
-
+    
     char* jsonBuffer = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(jsonBuffer, nullptr);
-
+    
     cJSON* json = cJSON_Parse(jsonBuffer);
     ASSERT_NE(json, nullptr);
-
+    
     cJSON* videoCategory = cJSON_GetObjectItem(json, "Video");
     ASSERT_NE(videoCategory, nullptr);
-
+    
     bool result = has_direct_commands(videoCategory);
     EXPECT_TRUE(result);
-
+    
     cJSON_Delete(json);
     free(jsonBuffer);
 }
@@ -5667,17 +5668,17 @@ TEST_F(RRDProfileHandlerTest, HasDirectCommands_EmptyCategory)
     long file_size = 0;
     const char* filepath = find_test_file("profileTestEmpty.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestEmpty.json in any search path";
-
+    
     char* jsonBuffer = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(jsonBuffer, nullptr);
-
+    
     cJSON* json = cJSON_Parse(jsonBuffer);
     ASSERT_NE(json, nullptr);
-
+    
     bool result = has_direct_commands(json);
     EXPECT_FALSE(result);
-
+    
     cJSON_Delete(json);
     free(jsonBuffer);
 }
@@ -5688,57 +5689,56 @@ TEST_F(RRDProfileHandlerTest, GetAllCategoriesJson_ValidInput)
     long file_size = 0;
     const char* filepath = find_test_file("profileTestValid.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
-
+    
     char* jsonBuffer = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(jsonBuffer, nullptr);
-
+    
     cJSON* json = cJSON_Parse(jsonBuffer);
     ASSERT_NE(json, nullptr);
-
+    
     char* result = get_all_categories_json(json);
     ASSERT_NE(result, nullptr);
-
+    
     // Check that the result contains the expected categories
     EXPECT_NE(strstr(result, "Video"), nullptr);
     EXPECT_NE(strstr(result, "Audio"), nullptr);
     EXPECT_NE(strstr(result, "Network"), nullptr);
     EXPECT_NE(strstr(result, "System"), nullptr);
-
+    
     cJSON_Delete(json);
     free(jsonBuffer);
     free(result);
 }
-
+*/
 TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_ValidCategory)
 {
     // Parse our test JSON
     long file_size = 0;
     const char* filepath = find_test_file("profileTestValid.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
-
+    
     char* jsonBuffer = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(jsonBuffer, nullptr);
-
+    
     cJSON* json = cJSON_Parse(jsonBuffer);
     ASSERT_NE(json, nullptr);
-
+    
     char* result = get_specific_category_json(json, "Video");
     ASSERT_NE(result, nullptr);
-
+    
     // Check that the result contains Video issue types
     EXPECT_NE(strstr(result, "VideoDecodeFailure"), nullptr);
     EXPECT_NE(strstr(result, "VideoFreeze"), nullptr);
     EXPECT_NE(strstr(result, "VideoArtifacts"), nullptr);
     // Should not contain other categories
     EXPECT_EQ(strstr(result, "AudioLoss"), nullptr);
-
+    
     cJSON_Delete(json);
     free(jsonBuffer);
     free(result);
 }
-*/
 
 TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_InvalidCategory)
 {
@@ -5746,20 +5746,20 @@ TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_InvalidCategory)
     long file_size = 0;
     const char* filepath = find_test_file("profileTestValid.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestValid.json in any search path";
-
+    
     char* jsonBuffer = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(jsonBuffer, nullptr);
-
+    
     cJSON* json = cJSON_Parse(jsonBuffer);
     ASSERT_NE(json, nullptr);
-
+    
     char* result = get_specific_category_json(json, "NonExistentCategory");
     ASSERT_NE(result, nullptr);
-
+    
     // Should return empty array
     EXPECT_NE(strstr(result, "[]"), nullptr);
-
+    
     cJSON_Delete(json);
     free(jsonBuffer);
     free(result);
@@ -5773,14 +5773,14 @@ TEST_F(RRDProfileHandlerTest, ParseInvalidJson)
     long file_size = 0;
     const char* filepath = find_test_file("profileTestInvalid.json");
     ASSERT_NE(filepath, nullptr) << "Could not find profileTestInvalid.json in any search path";
-
+    
     char* jsonBuffer = read_profile_json_file(filepath, &file_size);
-
+    
     ASSERT_NE(jsonBuffer, nullptr);
-
+    
     cJSON* json = cJSON_Parse(jsonBuffer);
     EXPECT_EQ(json, nullptr); // Should fail to parse
-
+    
     // Clean up
     free(jsonBuffer);
 }
@@ -5789,11 +5789,11 @@ TEST_F(RRDProfileHandlerTest, SetRbusResponse_ValidInput)
 {
     g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
-
+    
     const char* testJson = "{\"test\": \"value\"}";
-
+    
     rbusError_t result = set_rbus_response(mockProp, testJson);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     // Note: Response verification depends on implementation
 }
@@ -5802,9 +5802,9 @@ TEST_F(RRDProfileHandlerTest, SetRbusResponse_NullInput)
 {
     g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
-
+    
     rbusError_t result = set_rbus_response(mockProp, nullptr);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_BUS_ERROR);
 }
 
@@ -5816,11 +5816,11 @@ TEST_F(RRDProfileHandlerTest, SaveAndLoadProfileCategory)
     strcpy(RRDProfileCategory, "Network");
     int saveResult = save_profile_category();
     EXPECT_EQ(saveResult, 0);
-
+    
     // Clear the global variable
     memset(RRDProfileCategory, 0, sizeof(RRDProfileCategory));
     strcpy(RRDProfileCategory, "default");
-
+    
     // Test loading the category
     int loadResult = load_profile_category();
     EXPECT_EQ(loadResult, 0);
@@ -5831,10 +5831,12 @@ TEST_F(RRDProfileHandlerTest, LoadProfileCategory_NoFile)
 {
     // Ensure file doesn't exist
     unlink(RRD_PROFILE_CATEGORY_FILE);
-
+    
+    // Should return non-zero and keep default value
+    strcpy(RRDProfileCategory, "default");
     int result = load_profile_category();
     EXPECT_NE(result, 0);
-    EXPECT_STREQ(RRDProfileCategory, "all");
+    EXPECT_STREQ(RRDProfileCategory, "default");
 }
 
 /* --------------- Integration tests for complete workflow --------------- */
@@ -5842,22 +5844,22 @@ TEST_F(RRDProfileHandlerTest, LoadProfileCategory_NoFile)
 TEST_F(RRDProfileHandlerTest, SetAndGetWorkflow_AllCategories)
 {
     // Test complete workflow: set "all" -> get should return all categories
-
+    
     // Step 1: Set profile category to "all"
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = "all";
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockSetProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusError_t setResult = rrd_SetHandler(nullptr, mockSetProp, nullptr);
-
+    
     EXPECT_EQ(setResult, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, "all");
-
+    
     // Step 2: Get profile data (will fail because file doesn't exist at expected path)
     g_mockRbusProperty.name = RRD_GET_PROFILE_EVENT;
     rbusProperty_t mockGetProp = (rbusProperty_t)&g_mockRbusProperty;
-
+    
     rbusError_t getResult = rrd_GetHandler(nullptr, mockGetProp, nullptr);
     EXPECT_EQ(getResult, RBUS_ERROR_BUS_ERROR); // Expected since file doesn't exist
 }
@@ -5865,18 +5867,18 @@ TEST_F(RRDProfileHandlerTest, SetAndGetWorkflow_AllCategories)
 TEST_F(RRDProfileHandlerTest, SetAndGetWorkflow_SpecificCategory)
 {
     // Test complete workflow: set "System" -> get should return System category only
-
+    
     // Step 1: Set profile category to specific category
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = "System";
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockSetProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusError_t setResult = rrd_SetHandler(nullptr, mockSetProp, nullptr);
-
+    
     EXPECT_EQ(setResult, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, "System");
-
+    
     // Step 2: Verify the category was persisted
     // Clear global and reload from file
     strcpy(RRDProfileCategory, "default");
@@ -5891,10 +5893,10 @@ TEST_F(RRDProfileHandlerTest, SetHandler_EmptyString)
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = "";
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&mockRBusApi;
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, nullptr);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, "");
 }
@@ -5903,14 +5905,26 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
 {
     // Create a string of exactly 255 characters (max allowed)
     std::string maxString(255, 'A');
-
+    
     g_mockRbusProperty.name = RRD_SET_PROFILE_EVENT;
     g_mockRbusProperty.value = maxString;
     g_mockRbusProperty.type = RBUS_STRING;
-
+    
     rbusProperty_t mockProp = (rbusProperty_t)&g_mockRbusProperty;
     rbusError_t result = rrd_SetHandler(nullptr, mockProp, nullptr);
-
+    
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
+
+
+
+
+
+
+
+
+
+
+
+
