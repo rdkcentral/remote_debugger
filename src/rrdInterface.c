@@ -192,16 +192,8 @@ int RRD_subscribe()
 
 bool checkAppendRequest(char *issueRequest)
 {
-    if (!issueRequest) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL issueRequest parameter\n", __FUNCTION__, __LINE__);
-        return false;
-    }
-    
+
     size_t issuestr_len = strlen(issueRequest);
-    if (issuestr_len == 0) {
-        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s:%d]: Empty issueRequest string\n", __FUNCTION__, __LINE__);
-        return false;
-    }
     
     size_t suffixstr_len = strlen(APPEND_SUFFIX);
     char *suffixptr = NULL;
