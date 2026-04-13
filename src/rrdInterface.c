@@ -95,7 +95,7 @@ rbusDataElement_t profileDataElements[2] = {
     },
     {
         RRD_GET_PROFILE_EVENT,
-        RBUS_ELEMENT_TYPE_PROPERTY,
+        RBUS_ELEMENT_TYPE_PROPERTY, 
         DATA_HANDLER_GET_MACRO
     }
 };
@@ -117,7 +117,7 @@ int RRD_subscribe()
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Subscribe!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
+	return ret;
     }
 #endif
     //RBUS Event Subscribe for RRD
@@ -309,12 +309,12 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     if(retCode != RBUS_ERROR_SUCCESS || value == NULL)
     {
          RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RBUS get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
-         return;
-    }
+	 return;
+    }	
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
     issue =rbusValue_GetString(value, NULL);
     char *dot_position = strchr(issue, '.'); // Find the first occurrence of '.'
-    if (dot_position != NULL)
+    if (dot_position != NULL) 
     {
         *dot_position = '\0'; // Replace '.' with null terminator
     }
@@ -344,46 +344,46 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     cache = findPresentInCache(pkg_name);
     if (cache != NULL)
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s \n", __FUNCTION__, __LINE__, pkg_inst_path);
-        rrdjsonlen = strlen(RRD_JSON_FILE);
-        recPkglen = strlen(pkg_inst_path) + 1;
-        recPkgNamelen = strlen(cache->issueString) + 1;
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
-        sendbuf = (data_buf *)malloc(sizeof(data_buf));
-        RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
-        sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
-        if(!sendbuf->mdata)
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s \n", __FUNCTION__, __LINE__, pkg_inst_path);
+    	rrdjsonlen = strlen(RRD_JSON_FILE);
+    	recPkglen = strlen(pkg_inst_path) + 1;
+    	recPkgNamelen = strlen(cache->issueString) + 1;
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
+	sendbuf = (data_buf *)malloc(sizeof(data_buf));
+    	RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
+    	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
+	if(!sendbuf->mdata)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
             RRD_data_buff_deAlloc(sendbuf);
             return;
         }
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:JSON_PATH_LEN=%d \n", __FUNCTION__, __LINE__, recPkglen + rrdjsonlen);
-        sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
-        if (!sendbuf->jsonPath)
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:JSON_PATH_LEN=%d \n", __FUNCTION__, __LINE__, recPkglen + rrdjsonlen);
+    	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
+    	if (!sendbuf->jsonPath)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
             RRD_data_buff_deAlloc(sendbuf);
             return;
         }
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
-        strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
+    	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
         snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
-        sendbuf->inDynamic = true;
-        if (checkAppendRequest(sendbuf->mdata))
-        {
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
-                sendbuf->inDynamic = false;
-                sendbuf->appendMode = true;
-        }
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
-        RRDMsgDeliver(msqid, sendbuf);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
-        /* coverity[leaked_storage] */
-        remove_item(cache);
+    	sendbuf->inDynamic = true;
+	if (checkAppendRequest(sendbuf->mdata))
+    	{
+        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
+        	sendbuf->inDynamic = false;
+        	sendbuf->appendMode = true;
+    	}		    
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
+    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
+    	RRDMsgDeliver(msqid, sendbuf);
+	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
+	/* coverity[leaked_storage] */
+	remove_item(cache);
     }
     else
     {
@@ -445,8 +445,8 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_WEBCFG_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_WEBCFG_ISSUE_EVENT);
     if (value)
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__,
-                                                rbusValue_ToString(value, NULL, 0));
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
+			                        rbusValue_ToString(value, NULL, 0));
         int len = strlen(rbusValue_GetString(value, NULL));
         inString = (char *)calloc(1, len);
         if(inString)
@@ -475,7 +475,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
             sbuf->appendMode = true;
-        }
+        }	
         RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
         /* coverity[leaked_storage] */
@@ -522,7 +522,7 @@ int RRD_unsubscribe()
     if (ret != 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Termination failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
+	return ret;
     }
     else
     {
@@ -564,7 +564,7 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to store profile category\n", __FUNCTION__, __LINE__);
                 return RBUS_ERROR_BUS_ERROR;
             }
-
+            
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Successfully set profile category to: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
             return RBUS_ERROR_SUCCESS;
         } else {
@@ -572,7 +572,7 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
             return RBUS_ERROR_INVALID_INPUT;
         }
     }
-
+    
     return RBUS_ERROR_INVALID_INPUT;
 }
 
@@ -603,28 +603,28 @@ char* read_profile_json_file(const char* filename, long* file_size)
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
         return NULL;
     }
-
+    
     fseek(fp, 0L, SEEK_END);
     long fileSz = ftell(fp);
     rewind(fp);
-
+    
     if (fileSz <= 0 || fileSz >= MAX_PROFILE_JSON_SIZE) {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Invalid file size: %ld\n", __FUNCTION__, __LINE__, fileSz);
         fclose(fp);
         return NULL;
     }
-
+    
     char *jsonBuffer = malloc(fileSz + 1);
     if (!jsonBuffer) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory allocation failed for JSON buffer\n", __FUNCTION__, __LINE__);
         fclose(fp);
         return NULL;
     }
-
+    
     size_t bytesRead = fread(jsonBuffer, 1U, (size_t)fileSz, fp);
     jsonBuffer[bytesRead] = '\0';
     fclose(fp);
-
+    
     *file_size = fileSz;
     return jsonBuffer;
 }
@@ -635,7 +635,7 @@ char* read_profile_json_file(const char* filename, long* file_size)
 char* get_all_categories_json(cJSON* json)
 {
     cJSON *response = cJSON_CreateObject();
-
+    
     cJSON *category = NULL;
     cJSON_ArrayForEach(category, json) {
         if (cJSON_IsObject(category) && category->string) {
@@ -648,7 +648,7 @@ char* get_all_categories_json(cJSON* json)
                         cJSON_AddItemToArray(issueTypesArray, cJSON_CreateString(issueType->string));
                     }
                 }
-
+                
                 // Add this category and its issue types to response
                 if (cJSON_GetArraySize(issueTypesArray) > 0) {
                     cJSON_AddItemToObject(response, category->string, issueTypesArray);
@@ -658,7 +658,7 @@ char* get_all_categories_json(cJSON* json)
             }
         }
     }
-
+    
     char *result_str = cJSON_Print(response);
     cJSON_Delete(response);
     return result_str;
@@ -671,17 +671,17 @@ char* get_specific_category_json(cJSON* json, const char* category_name)
 {
     cJSON *category = cJSON_GetObjectItem(json, category_name);
     if (!category || !cJSON_IsObject(category)) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s not found\n",
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s not found\n", 
             __FUNCTION__, __LINE__, category_name);
         return cJSON_Print(cJSON_CreateArray());
     }
-
+    
     if (!has_direct_commands(category)) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s has nested structure, returning empty\n",
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s has nested structure, returning empty\n", 
             __FUNCTION__, __LINE__, category_name);
         return cJSON_Print(cJSON_CreateArray());
     }
-
+    
     cJSON *issueTypes = cJSON_CreateArray();
     cJSON *issueType = NULL;
     cJSON_ArrayForEach(issueType, category) {
@@ -689,7 +689,7 @@ char* get_specific_category_json(cJSON* json, const char* category_name)
             cJSON_AddItemToArray(issueTypes, cJSON_CreateString(issueType->string));
         }
     }
-
+    
     char *result_str = cJSON_Print(issueTypes);
     cJSON_Delete(issueTypes);
     return result_str;
@@ -703,13 +703,13 @@ rbusError_t set_rbus_response(rbusProperty_t prop, const char* json_str)
     if (!json_str) {
         return RBUS_ERROR_BUS_ERROR;
     }
-
+    
     rbusValue_t rbusValue;
     rbusValue_Init(&rbusValue);
     rbusValue_SetString(rbusValue, json_str);
     rbusProperty_SetValue(prop, rbusValue);
     rbusValue_Release(rbusValue);
-
+    
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Successfully returned profile data\n", __FUNCTION__, __LINE__);
     return RBUS_ERROR_SUCCESS;
 }
@@ -728,16 +728,16 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
     if(strcmp(propertyName, RRD_GET_PROFILE_EVENT) != 0) {
         return RBUS_ERROR_INVALID_INPUT;
     }
-
+    
     const char *filename = "/etc/rrd/remote_debugger.json";
     long file_size;
-
+    
     // Read JSON file
     char *jsonBuffer = read_profile_json_file(filename, &file_size);
     if (!jsonBuffer) {
         return RBUS_ERROR_BUS_ERROR;
     }
-
+    
     // Parse JSON
     cJSON *json = cJSON_Parse(jsonBuffer);
     if (!json) {
@@ -745,9 +745,9 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
         free(jsonBuffer);
         return RBUS_ERROR_BUS_ERROR;
     }
-
+    
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: JSON parsed successfully, processing categories\n", __FUNCTION__, __LINE__);
-
+    
     // Generate appropriate JSON response
     char *result_str = NULL;
     if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
@@ -755,14 +755,14 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
     } else {
         result_str = get_specific_category_json(json, RRDProfileCategory);
     }
-
+    
     // Set RBUS response
     rbusError_t error = set_rbus_response(prop, result_str);
-
+    
     // Cleanup
     cJSON_Delete(json);
     free(jsonBuffer);
     free(result_str);
-
+    
     return error;
 }
