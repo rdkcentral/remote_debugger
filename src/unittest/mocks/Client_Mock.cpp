@@ -131,6 +131,54 @@ rbusError_t RBusApiWrapper::rbus_get(rbusHandle_t handle, char const *objectName
     EXPECT_NE(impl, nullptr);
     return impl->rbus_get(handle, objectName, value, respHandler);
 }
+
+rbusError_t RBusApiWrapper::rbus_regDataElements(rbusHandle_t handle, int numElements, rbusDataElement_t* elements)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbus_regDataElements(handle, numElements, elements);
+}
+
+rbusError_t RBusApiWrapper::rbus_unregDataElements(rbusHandle_t handle, int numElements, rbusDataElement_t* elements)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbus_unregDataElements(handle, numElements, elements);
+}
+
+char const* RBusApiWrapper::rbusProperty_GetName(rbusProperty_t property)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusProperty_GetName(property);
+}
+
+rbusValue_t RBusApiWrapper::rbusProperty_GetValue(rbusProperty_t property)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusProperty_GetValue(property);
+}
+
+rbusValueType_t RBusApiWrapper::rbusValue_GetType(rbusValue_t value)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusValue_GetType(value);
+}
+
+char const* RBusApiWrapper::rbusValue_GetString(rbusValue_t value, int* len)
+{
+    EXPECT_NE(impl, nullptr);
+    return impl->rbusValue_GetString(value, len);
+}
+
+void RBusApiWrapper::rbusProperty_SetValue(rbusProperty_t property, rbusValue_t value)
+{
+    EXPECT_NE(impl, nullptr);
+    impl->rbusProperty_SetValue(property, value);
+}
+
+void RBusApiWrapper::rbusValue_Release(rbusValue_t value)
+{
+    EXPECT_NE(impl, nullptr);
+    impl->rbusValue_Release(value);
+}
 const char* rbusError_ToString(rbusError_t e)
 {
     #define rbusError_String(E, S) case E: s = S; break;
@@ -141,16 +189,27 @@ const char* rbusError_ToString(rbusError_t e)
     rbusError_String(RBUS_ERROR_SUCCESS, "ok");
     rbusError_String(RBUS_ERROR_BUS_ERROR, "generic error");
     rbusError_String(RBUS_ERROR_NOT_INITIALIZED, "not initialized");
+    rbusError_String(RBUS_ERROR_INVALID_INPUT, "invalid input");
     default:
       s = "unknown error";
   }
   return s;
 }
+
 rbusError_t (*rbus_open)(rbusHandle_t *, char const *) = &RBusApiWrapper::rbus_open;
 rbusError_t (*rbus_close)(rbusHandle_t) = &RBusApiWrapper::rbus_close;
 rbusError_t (*rbusValue_Init)(rbusValue_t *) = &RBusApiWrapper::rbusValue_Init;
 rbusError_t (*rbusValue_SetString)(rbusValue_t, char const *) = &RBusApiWrapper::rbusValue_SetString;
 rbusError_t (*rbus_set)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t) = &RBusApiWrapper::rbus_set;
+rbusError_t (*rbus_get)(rbusHandle_t, char const *, rbusValue_t, rbusMethodAsyncRespHandler_t) = &RBusApiWrapper::rbus_get;
+rbusError_t (*rbus_regDataElements)(rbusHandle_t, int, rbusDataElement_t*) = &RBusApiWrapper::rbus_regDataElements;
+rbusError_t (*rbus_unregDataElements)(rbusHandle_t, int, rbusDataElement_t*) = &RBusApiWrapper::rbus_unregDataElements;
+char const* (*rbusProperty_GetName)(rbusProperty_t) = &RBusApiWrapper::rbusProperty_GetName;
+rbusValue_t (*rbusProperty_GetValue)(rbusProperty_t) = &RBusApiWrapper::rbusProperty_GetValue;
+rbusValueType_t (*rbusValue_GetType)(rbusValue_t) = &RBusApiWrapper::rbusValue_GetType;
+char const* (*rbusValue_GetString)(rbusValue_t, int*) = &RBusApiWrapper::rbusValue_GetString;
+void (*rbusProperty_SetValue)(rbusProperty_t, rbusValue_t) = &RBusApiWrapper::rbusProperty_SetValue;
+void (*rbusValue_Release)(rbusValue_t) = &RBusApiWrapper::rbusValue_Release;
 
 /* -------- RFC ---------------*/
 SetParamInterface *SetParamWrapper::impl = nullptr;
