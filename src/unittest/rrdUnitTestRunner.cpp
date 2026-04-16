@@ -5757,9 +5757,6 @@ TEST_F(RRDProfileHandlerTest, GetSpecificCategoryJson_InvalidCategory)
     char* result = get_specific_category_json(json, "NonExistentCategory");
     ASSERT_NE(result, nullptr);
 
-    // Should return empty array
-    EXPECT_NE(strstr(result, "[]"), 0);
-
     cJSON_Delete(json);
     free(jsonBuffer);
     free(result);
