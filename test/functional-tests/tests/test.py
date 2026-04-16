@@ -27,6 +27,18 @@ import json
 import time
 from helper_functions import *
 
+def test_check_and_start_remotedebugger():
+    kill_rrd()
+    remove_logfile()
+    test_check_dynamic_directory_exists()
+    test_check_dynamic_config_file()
+    print("Starting remotedebugger process")
+    command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
+    run_shell_silent(command_to_start)
+    command_to_get_pid = "pidof remotedebugger"
+    pid = run_shell_command(command_to_get_pid)
+    assert pid != "", "remotedebugger process did not start"
+
 def test_rrd_profile_data_rbuscli_basic():
     """Basic test of rbuscli commands for RRD profile data."""
 
