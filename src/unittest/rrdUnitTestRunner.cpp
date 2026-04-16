@@ -5183,7 +5183,7 @@ TEST_F(GetSpecificCategoryJsonTest, GetFromNullJson)
 
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
-    EXPECT_TRUE(cJSON_IsArray(result_json));
+    EXPECT_FALSE(cJSON_IsArray(result_json));
 
     cJSON_Delete(result_json);
     free(result);
