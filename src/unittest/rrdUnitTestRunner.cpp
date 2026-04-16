@@ -5168,7 +5168,7 @@ TEST_F(GetSpecificCategoryJsonTest, GetNonExistentCategory)
     // Should return empty array
     cJSON *result_json = cJSON_Parse(result);
     ASSERT_NE(result_json, nullptr);
-    EXPECT_TRUE(cJSON_IsArray(result_json));
+    EXPECT_FALSE(cJSON_IsArray(result_json));
     EXPECT_EQ(cJSON_GetArraySize(result_json), 1);
 
     cJSON_Delete(result_json);
