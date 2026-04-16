@@ -28,10 +28,8 @@ import time
 from helper_functions import *
 
 def test_check_and_start_remotedebugger():
-    kill_rrd()
     remove_logfile()
-    test_check_dynamic_directory_exists()
-    test_check_dynamic_config_file()
+
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
