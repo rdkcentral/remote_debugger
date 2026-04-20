@@ -37,7 +37,7 @@ uint32_t gWebCfgBloBVersion = 0;
 rbusHandle_t    rrdRbusHandle;
 
 // File-local storage for profile category
-static char RRDProfileCategory[256] = "all";
+static char RRDProfileCategory[BUF_LEN_256] = "all";
 #define MAX_PROFILE_JSON_SIZE 32768
 
 // Helper functions for profile category file-based storage
@@ -586,7 +586,7 @@ rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHand
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL string for setProfileData\n", __FUNCTION__, __LINE__);
                 return RBUS_ERROR_INVALID_INPUT;
             }
-            if(strlen(str) > 255) {
+            if(strlen(str) > BUF_LEN_256 - 1) {
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: String too long for setProfileData\n", __FUNCTION__, __LINE__);
                 return RBUS_ERROR_INVALID_INPUT;
             }
