@@ -19,6 +19,11 @@
 
 #include "rrdExecuteScript.h"
 #if !defined(GTEST_ENABLE)
+#define RRD_SCRIPT "/lib/rdk/uploadRRDLogs.sh"
+#else
+#define RRD_SCRIPT "./mockSampleUploadScript.sh"
+#endif
+#if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
 #include "rdk_otlp_instrumentation.h"
 #endif
