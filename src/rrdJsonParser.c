@@ -21,6 +21,9 @@
 #include "rrdRunCmdThread.h"
 #include "rrdExecuteScript.h"
 #include "rrdCommandSanity.h"
+#if !defined(GTEST_ENABLE)
+#include "rdk_otlp_instrumentation.h"
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
@@ -484,6 +487,10 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     char outdir[BUF_LEN_256] =  {'\0'};
     time_t ctime;
     struct tm *ltime;
+#if !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "checkIssueNodeInfo");
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Started child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+#endif
     rfcbuf = strdup(buff->mdata);
 
     // Creating Directory for MainNode under /tmp/rrd Folder
@@ -502,6 +509,10 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+#if !defined(GTEST_ENABLE)
+        rdk_otlp_finish_child_span();
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+#endif
         return;
     }
     else
@@ -560,6 +571,10 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
 	}
     }
+#if !defined(GTEST_ENABLE)
+    rdk_otlp_finish_child_span();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+#endif
 }
 
 /*
