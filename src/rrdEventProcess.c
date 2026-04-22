@@ -20,6 +20,9 @@
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#if !defined(GTEST_ENABLE)
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
@@ -63,6 +66,10 @@ void processIssueTypeEvent(data_buf *rbuf)
     int index = 0, count = 0, dataMsgLen = 0;
     data_buf *cmdBuff = NULL;
 
+#if !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "processIssueTypeEvent");
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Started child span for processIssueTypeEvent\n", __FUNCTION__, __LINE__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     if (NULL != rbuf)
     {
@@ -122,6 +129,10 @@ void processIssueTypeEvent(data_buf *rbuf)
         }
     }
     
+#if !defined(GTEST_ENABLE)
+    rdk_otlp_finish_child_span();
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span for processIssueTypeEvent\n", __FUNCTION__, __LINE__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
 }
