@@ -50,7 +50,7 @@ int uploadDebugoutput(char *outdir, char *issuename)
 #endif
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
-        ret = rrd_upload_orchestrate(outdir, issuename);
+		v_secure_system("%s %s %s",RRD_SCRIPT,outdir,issuename)
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Upload orchestration failed with code: %d\n",__FUNCTION__,__LINE__, ret);
