@@ -20,6 +20,7 @@
 #include "rrdExecuteScript.h"
 #if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
+#include "rdk_otlp_instrumentation.h"
 #endif
 
 static void normalizeIssueName(char *str);
@@ -38,6 +39,10 @@ int uploadDebugoutput(char *outdir, char *issuename)
     if(outdir != NULL && issuename != NULL)
     {
         normalizeIssueName(issuename);
+#if !defined(GTEST_ENABLE)
+        rdk_otlp_start_child_span("RRD_ctx", "uploadDebugReport");
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+#endif
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
         ret = rrd_upload_orchestrate(outdir, issuename);
@@ -49,6 +54,10 @@ int uploadDebugoutput(char *outdir, char *issuename)
         {
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Upload orchestration completed successfully\n",__FUNCTION__,__LINE__);
         }
+#if !defined(GTEST_ENABLE)
+        rdk_otlp_finish_child_span();
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+#endif
     }
 
     return ret;
