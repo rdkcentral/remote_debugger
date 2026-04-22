@@ -19,22 +19,18 @@
 
 #include "rrdExecuteScript.h"
 #if !defined(GTEST_ENABLE)
-#define RRD_SCRIPT "/lib/rdk/uploadRRDLogs.sh"
-#else
-#define RRD_SCRIPT "./mockSampleUploadScript.sh"
-#endif
-#if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
+#include "rdk_otlp_instrumentation.h"
 #endif
 
 static void normalizeIssueName(char *str);
 
 /*
  * @function uploadDebugoutput
- * @brief Executes a script to perform tar and upload operations for the collected issue logs.
+ * @brief Calls the upload API to perform tar and upload operations for the collected issue logs.
  * @param char *outdir - Output directory string.
  * @param char *issuename - Issue type from RFC.
- * @return int - Returns 0 for success and 1 for failure.
+ * @return int - Returns 0 for success and non-zero for failure.
  */
 int uploadDebugoutput(char *outdir, char *issuename)
 {
@@ -43,11 +39,25 @@ int uploadDebugoutput(char *outdir, char *issuename)
     if(outdir != NULL && issuename != NULL)
     {
         normalizeIssueName(issuename);
-        RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output Script: %s... \n",__FUNCTION__,__LINE__,RRD_SCRIPT);
-        if(v_secure_system("%s %s %s",RRD_SCRIPT,outdir,issuename) != 0)
+#if !defined(GTEST_ENABLE)
+        rdk_otlp_start_child_span("RRD_ctx", "uploadDebugReport");
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+#endif
+        RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
+        
+        ret = rrd_upload_orchestrate(outdir, issuename);
+        if(ret != 0)
         {
-            ret = 1;
+            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Upload orchestration failed with code: %d\n",__FUNCTION__,__LINE__, ret);
         }
+        else
+        {
+            RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Upload orchestration completed successfully\n",__FUNCTION__,__LINE__);
+        }
+#if !defined(GTEST_ENABLE)
+        rdk_otlp_finish_child_span();
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+#endif
     }
 
     return ret;
