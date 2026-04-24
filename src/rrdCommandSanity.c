@@ -30,6 +30,7 @@
 int updateBackgroundCmd(char * str)
 {
     int i = 0;
+    
 
     if(str == NULL)
     {
