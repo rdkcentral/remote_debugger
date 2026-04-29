@@ -357,7 +357,7 @@ bool executeCommands(issueData *cmdinfo)
             strncat(finalOutFile,RRD_OUTPUT_FILE, strlen(RRD_OUTPUT_FILE) + 1);
 
             /* Open debug_output.txt file*/
-            filePointer = fopen(finalOutFile, "a+");
+            filePointer = fopen(finalOutFile, "w+");
             if (filePointer == NULL)
             {
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Unable to Open File:%s\n",__FUNCTION__,__LINE__,finalOutFile);
