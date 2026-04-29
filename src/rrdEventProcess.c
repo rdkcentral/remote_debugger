@@ -25,6 +25,7 @@
 #define RRD_TMP_DIR "/tmp/"
 
 static void processIssueType(data_buf *rbuf);
+static void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
@@ -140,13 +141,47 @@ static void processIssueType(data_buf *rbuf)
     issueData *staticprofiledata = NULL;    
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
-    if (rbuf->mdata != NULL) // issue data exits
+    if (rbuf->mdata != NULL) // issue data exists
     {
+        // Split base and suffix
+        char base[256] = {0};
+        char suffix[128] = {0};
+        split_issue_type(rbuf->mdata, base, sizeof(base), suffix, sizeof(suffix));
+
+        // Overwrite mdata with base for internal processing
+        strncpy(rbuf->mdata, base, strlen(base)+1);
+
+        // Store suffix for later use (e.g., in appendMode)
+        if (rbuf->appendMode && suffix[0] != '\0') {
+            // Save suffix in a new field or global if needed, or attach to rbuf if struct allows
+            // For now, just log it for demonstration
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType Suffix to append: %s\n", __FUNCTION__, __LINE__, suffix);
+        }
+
         pIssueNode = (issueNodeData *)malloc(sizeof(issueNodeData));
         if(pIssueNode)
         {
             getIssueInfo((char *)rbuf->mdata, pIssueNode); // issue data extract
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Extracted Node %s and Sub Node %s \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode);
+            // Utility to split base and suffix from issue type string
+            // Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+            // Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+            static void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
+                if (!input || !base || !suffix) return;
+                const char *underscore = strchr(input, '_');
+                if (underscore) {
+                    size_t b_len = underscore - input;
+                    if (b_len >= base_len) b_len = base_len - 1;
+                    strncpy(base, input, b_len);
+                    base[b_len] = '\0';
+                    strncpy(suffix, underscore, suffix_len - 1);
+                    suffix[suffix_len - 1] = '\0';
+                } else {
+                    strncpy(base, input, base_len - 1);
+                    base[base_len - 1] = '\0';
+                    suffix[0] = '\0';
+                }
+            }
             if (rbuf->appendMode)
             {
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received append request to process static and dynamic profiles... \n", __FUNCTION__, __LINE__);
