@@ -157,35 +157,6 @@ static void processIssueType(data_buf *rbuf)
 
     if (rbuf->mdata != NULL) // issue data exists
     {
-        // Log the incoming mdata before split
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] processIssueType: incoming mdata='%s'\n", __FUNCTION__, __LINE__, rbuf->mdata);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] processIssueType: split base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, rbuf->mdata, rbuf->suffix);
-        
-        /*
-        // Split base and suffix
-        char base[256] = {0};
-        char suffix[128] = {0};
-
-        split_issue_type(rbuf->mdata, base, sizeof(base), suffix, sizeof(suffix));
-
-        // Log the result of split
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] processIssueType: split base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
-
-        // Overwrite mdata with base for internal processing
-        strncpy(rbuf->mdata, base, strlen(base)+1);
-
-        // Store suffix for later use (persist in struct)
-        if (rbuf->suffix) {
-            free(rbuf->suffix);
-        }
-        if (suffix[0] != '\0') {
-            rbuf->suffix = strdup(suffix);
-        } else {
-            rbuf->suffix = NULL;
-        }
-        
-        */
-
         pIssueNode = (issueNodeData *)malloc(sizeof(issueNodeData));
         if(pIssueNode)
         {
