@@ -1,3 +1,4 @@
+#include "rrdCommon.h"
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
@@ -45,6 +46,29 @@ void removeSpecialChar(char *str)
         }
     }
 }
+
+// Utility to split base and suffix from issue type string
+// Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+// Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
+    if (!input || !base || !suffix) return;
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
+    const char *underscore = strchr(input, '_');
+    if (underscore) {
+        size_t b_len = underscore - input;
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+        strncpy(suffix, underscore, suffix_len - 1);
+        suffix[suffix_len - 1] = '\0';
+    } else {
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
+}
+
 
 /*
  * @function getParamcount
@@ -205,6 +229,7 @@ void getIssueInfo(char *issuestr, issueNodeData *issue)
     }
     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:  Received Main Node= %s, SubNode= %s\n",__FUNCTION__,__LINE__,issue->Node,issue->subNode);
 }
+
 
 /*
  * @function findIssueInParsedJSON
@@ -576,7 +601,20 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                status = uploadDebugoutput(outdir,buff->mdata);
+                // Use the persisted suffix from buff for upload
+                char tarName[512] = {0};
+                if (buff->suffix && buff->suffix[0] != '\0') {
+                    snprintf(tarName, sizeof(tarName), "%s%s.tar.gz", buff->mdata, buff->suffix);
+                } else {
+                    snprintf(tarName, sizeof(tarName), "%s.tar.gz", buff->mdata);
+                }
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Directory for upload: '%s'\n", __FUNCTION__, __LINE__, outdir);
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Original issue string: '%s'\n", __FUNCTION__, __LINE__, buff->mdata);
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Suffix used for upload: '%s'\n", __FUNCTION__, __LINE__, buff->suffix ? buff->suffix : "");
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
+                status = uploadDebugoutput(outdir, tarName, buff->suffix ? buff->suffix : "");
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
