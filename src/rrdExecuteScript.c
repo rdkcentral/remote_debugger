@@ -32,13 +32,22 @@ static void normalizeIssueName(char *str);
  * @param char *issuename - Issue type from RFC.
  * @return int - Returns 0 for success and non-zero for failure.
  */
-int uploadDebugoutput(char *outdir, char *issuename)
+// Modified to accept optional suffix for tar name
+int uploadDebugoutput(char *outdir, char *issuename, const char *suffix)
 {
     int ret = 0;
 
     if(outdir != NULL && issuename != NULL)
     {
         normalizeIssueName(issuename);
+
+        // Compose tar name with suffix if provided
+        char tarname[512];
+        if (suffix && suffix[0] != '\0') {
+            snprintf(tarname, sizeof(tarname), "%s%s.tar", issuename, suffix);
+        } else {
+            snprintf(tarname, sizeof(tarname), "%s.tar", issuename);
+        }
 #ifdef IARMBUS_SUPPORT
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
