@@ -48,6 +48,7 @@ extern "C"
 #endif
 #define RRD_OUTPUT_FILE "debug_outputs.txt"
 #define BUF_LEN_256 256
+#define BUF_LEN_512 512
 
 /*Public Function*/
 void initCache(void);

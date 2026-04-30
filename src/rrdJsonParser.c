@@ -24,6 +24,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
+/* Maximum suffix length, including the leading '_' character. */
+#define RRD_MAX_SUFFIX_LEN  9
 
 /*
  * @function removeSpecialChar
@@ -45,6 +47,102 @@ void removeSpecialChar(char *str)
         }
     }
 }
+
+
+/*
+ * @function split_issue_type
+ * @brief Utility to split base and suffix from issue type string.
+ *        The input is always split at the first '_'. The base is the part
+ *        before the underscore (never contains '_'). The suffix is only
+ *        kept when its total length (including the leading '_') is at most
+ *        RRD_MAX_SUFFIX_LEN (9) characters; longer suffixes are discarded.
+ *        After length validation the suffix is sanitized: only the characters
+ *        [A-Za-z0-9_-] are retained so that the value is safe to use in file
+ *        names and shell command arguments without risk of injection.
+ *        If no underscore is present the full input is the base.
+ *        Examples:
+ *          "Device.DeviceTime_ab12345" → base="Device.DeviceTime",
+ *                                        suffix="_ab12345"  (8 chars, accepted)
+ *          "Device.DeviceTime_Search-uuid-very-long"
+ *                                      → base="Device.DeviceTime",
+ *                                        suffix=""          (>9 chars, discarded)
+ *          "Device.DeviceTime"         → base="Device.DeviceTime",
+ *                                        suffix=""
+ *          "Device.DeviceTime_ab;rm"   → base="Device.DeviceTime",
+ *                                        suffix="_abrm"     (unsafe ';' stripped)
+ * @param const char *input - The input string to split.
+ * @param char *base - Buffer to store the base part (never contains '_').
+ * @param size_t base_len - Size of the base buffer.
+ * @param char *suffix - Buffer to store the suffix part when valid, else "".
+ * @param size_t suffix_len - Size of the suffix buffer.
+ * @return void
+ */
+
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) 
+{
+    if (base && base_len > 0) 
+	{
+        base[0] = '\0';
+    }
+    if (suffix && suffix_len > 0) 
+	{
+        suffix[0] = '\0';
+    }
+
+    if (!input || !base || !suffix) 
+	{
+        return;
+    }
+
+    if (base_len == 0 || suffix_len == 0) 
+	{
+        return;
+    }
+
+    const char *underscore = strchr(input, '_');
+    if (underscore)
+    {
+        /* Always split at the first underscore — base never contains '_' */
+        size_t b_len = (size_t)(underscore - input);
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+
+        /* Keep the suffix only when its total length (including '_') is
+         * within the allowed limit; longer tokens are discarded. */
+        if (strlen(underscore) <= RRD_MAX_SUFFIX_LEN)
+        {
+            /* Sanitize: retain only [A-Za-z0-9_-] to prevent injection when
+             * the suffix is later embedded in file names or command arguments. */
+            size_t si = 0, di = 0;
+            size_t max_copy = suffix_len - 1;
+            while (underscore[si] != '\0' && di < max_copy)
+            {
+                char ch = underscore[si];
+                if (isalnum((unsigned char)ch) || ch == '_' || ch == '-')
+                {
+                    suffix[di++] = ch;
+                }
+                si++;
+            }
+            suffix[di] = '\0';
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
+                    __FUNCTION__, __LINE__, base, strlen(underscore), RRD_MAX_SUFFIX_LEN);
+            suffix[0] = '\0';
+        }
+    }
+    else
+    {
+        /* No underscore — full input is the base */
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+}
+
 
 /*
  * @function getParamcount
@@ -515,7 +613,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
 
@@ -535,7 +637,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
     else
@@ -576,7 +682,26 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                status = uploadDebugoutput(outdir,buff->mdata);
+                // Use the persisted suffix from buff for upload
+                char tarName[512] = {0};
+                int tar_name_len = 0;
+                if (buff->suffix && buff->suffix[0] != '\0') 
+				{
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
+                } 
+				else 
+				{
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
+                }
+                if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
+                {
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
+                    status = -1;
+                }
+                else
+                {
+                    status = uploadDebugoutput(outdir, tarName);
+                }
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -588,14 +713,22 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             }
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
 	else
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
     }
 }
