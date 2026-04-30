@@ -68,6 +68,7 @@ extern "C"
 #define BUF_LEN_128  128
 #define APPEND_SUFFIX "_apnd"
 
+
 /* Enum for Messages Queue*/
 typedef enum {
      RRD_EVENT_MSG_DEFAULT = 0,
@@ -97,6 +98,7 @@ typedef struct mbuffer {
      bool                inDynamic;
      bool                appendMode;
      deepsleep_event_et  dsEvent;
+     char *suffix; // Holds the suffix split from issue type string, if any
 } data_buf;
 
 /*Structure for Message Header*/
