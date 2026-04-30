@@ -705,7 +705,7 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
  * @param const char delimiter - The character used to split the string.
  * @param char ***args - Pointer to an array of strings where the tokens will be stored.
  * @return int - The number of tokens found in the string.
-Splitter */
+ */
 static int issueTypeSplitter(char *input_str, char *outsuffix, const char delimeter, char ***args)
 {
     int cnt = 1, i = 0;
