@@ -17,15 +17,17 @@
  * limitations under the License.
 */
 
+
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#include "rrdCommon.h"
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
 
 static void processIssueType(data_buf *rbuf);
-static void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len);
+
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
@@ -166,22 +168,7 @@ static void processIssueType(data_buf *rbuf)
             // Utility to split base and suffix from issue type string
             // Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
             // Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
-            static void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
-                if (!input || !base || !suffix) return;
-                const char *underscore = strchr(input, '_');
-                if (underscore) {
-                    size_t b_len = underscore - input;
-                    if (b_len >= base_len) b_len = base_len - 1;
-                    strncpy(base, input, b_len);
-                    base[b_len] = '\0';
-                    strncpy(suffix, underscore, suffix_len - 1);
-                    suffix[suffix_len - 1] = '\0';
-                } else {
-                    strncpy(base, input, base_len - 1);
-                    base[base_len - 1] = '\0';
-                    suffix[0] = '\0';
-                }
-            }
+
             if (rbuf->appendMode)
             {
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received append request to process static and dynamic profiles... \n", __FUNCTION__, __LINE__);
