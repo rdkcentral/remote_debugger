@@ -17,19 +17,22 @@
  * limitations under the License.
 */
 
+
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#include "rrdCommon.h"
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
 
 static void processIssueType(data_buf *rbuf);
+
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
 static void removeSpecialCharacterfromIssueTypeList(char *str);
-static int issueTypeSplitter(char *input_str, const char delimeter, char ***args);
+static int issueTypeSplitter(char *input_str, char *outsuffix, const char delimeter, char ***args);
 static void freeParsedJson(cJSON *jsonParsed);
 
 /*
@@ -62,13 +65,18 @@ void processIssueTypeEvent(data_buf *rbuf)
     char **cmdMap = NULL;
     int index = 0, count = 0, dataMsgLen = 0;
     data_buf *cmdBuff = NULL;
+    char suffix[128] = {0};
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     if (NULL != rbuf)
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType List [%s]... \n", __FUNCTION__, __LINE__, rbuf->mdata);
-        count = issueTypeSplitter(rbuf->mdata, ',', &cmdMap);
-        
+        count = issueTypeSplitter(rbuf->mdata, suffix, ',', &cmdMap);
+        if (rbuf->suffix) {
+            free(rbuf->suffix);
+        }
+        rbuf->suffix = (suffix[0] != '\0') ? strdup(suffix) : NULL;
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Assigned rbuf->suffix='%s' after issueTypeSplitter\n", __FUNCTION__, __LINE__, rbuf->suffix ? rbuf->suffix : "(null)");
         if (count > 0)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType Count [%d]... \n", __FUNCTION__, __LINE__, count);
@@ -86,8 +94,14 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         cmdBuff->jsonPath = rbuf->jsonPath;
                     }
-		    cmdBuff->appendMode = rbuf->appendMode;
+                    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
+                    /* Persist suffix */
+                    if (rbuf->suffix) {
+                        cmdBuff->suffix = strdup(rbuf->suffix);
+                    } else {
+                        cmdBuff->suffix = NULL;
+                    }
                     if (cmdBuff->mdata)
                     {
                         strncpy((char *)cmdBuff->mdata, cmdMap[index], dataMsgLen);
@@ -97,11 +111,11 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
                     }
-		    if(cmdBuff)
-		    {
+                    if(cmdBuff)
+                    {
                         free(cmdBuff);
-			cmdBuff = NULL;
-		    }
+                        cmdBuff = NULL;
+                    }
                 }
                 else
                 {
@@ -140,13 +154,47 @@ static void processIssueType(data_buf *rbuf)
     issueData *staticprofiledata = NULL;    
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
-    if (rbuf->mdata != NULL) // issue data exits
+
+    if (rbuf->mdata != NULL) // issue data exists
     {
+        // Log the incoming mdata before split
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] processIssueType: incoming mdata='%s'\n", __FUNCTION__, __LINE__, rbuf->mdata);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] processIssueType: split base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, rbuf->mdata, rbuf->suffix);
+        
+        /*
+        // Split base and suffix
+        char base[256] = {0};
+        char suffix[128] = {0};
+
+        split_issue_type(rbuf->mdata, base, sizeof(base), suffix, sizeof(suffix));
+
+        // Log the result of split
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] processIssueType: split base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
+
+        // Overwrite mdata with base for internal processing
+        strncpy(rbuf->mdata, base, strlen(base)+1);
+
+        // Store suffix for later use (persist in struct)
+        if (rbuf->suffix) {
+            free(rbuf->suffix);
+        }
+        if (suffix[0] != '\0') {
+            rbuf->suffix = strdup(suffix);
+        } else {
+            rbuf->suffix = NULL;
+        }
+        
+        */
+
         pIssueNode = (issueNodeData *)malloc(sizeof(issueNodeData));
         if(pIssueNode)
         {
             getIssueInfo((char *)rbuf->mdata, pIssueNode); // issue data extract
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Extracted Node %s and Sub Node %s \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode);
+            // Utility to split base and suffix from issue type string
+            // Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+            // Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+
             if (rbuf->appendMode)
             {
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received append request to process static and dynamic profiles... \n", __FUNCTION__, __LINE__);
@@ -657,11 +705,25 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
  * @param const char delimiter - The character used to split the string.
  * @param char ***args - Pointer to an array of strings where the tokens will be stored.
  * @return int - The number of tokens found in the string.
- */
-static int issueTypeSplitter(char *input_str, const char delimeter, char ***args)
+Splitter */
+static int issueTypeSplitter(char *input_str, char *outsuffix, const char delimeter, char ***args)
 {
     int cnt = 1, i = 0;
+
     char *str = input_str;
+    // Call split_issue_type before removing special characters
+    /**/
+    char base[256] = {0};
+    char suffix[128] = {0};
+    split_issue_type(str, base, sizeof(base), suffix, sizeof(suffix));
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] issueTypeSplitter (pre-clean): input='%s', base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, str, base, suffix);
+
+    // Copy base back to str so only the base is processed
+    strncpy(str, base, sizeof(base));
+    str[sizeof(base)-1] = '\0';
+
+    strncpy(outsuffix, suffix, sizeof(suffix));
+    outsuffix[sizeof(suffix)-1] = '\0';
 
     removeSpecialCharacterfromIssueTypeList(str);
     while (*str == delimeter)
@@ -698,4 +760,3 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
-
