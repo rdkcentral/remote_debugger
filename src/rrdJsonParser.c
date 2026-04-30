@@ -25,6 +25,27 @@
 #include <sys/types.h>
 #include <ctype.h>
 
+
+// Utility to split base and suffix from issue type string
+// Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+// Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+static void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
+    if (!input || !base || !suffix) return;
+    const char *underscore = strchr(input, '_');
+    if (underscore) {
+        size_t b_len = underscore - input;
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+        strncpy(suffix, underscore, suffix_len - 1);
+        suffix[suffix_len - 1] = '\0';
+    } else {
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+}
+
 /*
  * @function removeSpecialChar
  * @brief Removes special characters ('\r' and '\n') from the device properties parameter string.
@@ -896,22 +917,3 @@ const char* getRrdProfileName(devicePropertiesData *devPropData) {
     return "";
 }
 
-// Utility to split base and suffix from issue type string
-// Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
-// Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
-static void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
-    if (!input || !base || !suffix) return;
-    const char *underscore = strchr(input, '_');
-    if (underscore) {
-        size_t b_len = underscore - input;
-        if (b_len >= base_len) b_len = base_len - 1;
-        strncpy(base, input, b_len);
-        base[b_len] = '\0';
-        strncpy(suffix, underscore, suffix_len - 1);
-        suffix[suffix_len - 1] = '\0';
-    } else {
-        strncpy(base, input, base_len - 1);
-        base[base_len - 1] = '\0';
-        suffix[0] = '\0';
-    }
-}
