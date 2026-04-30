@@ -17,8 +17,8 @@
  * limitations under the License.
 */
 
-#ifndef _RRDEVENTPROCESS_H_
-#define _RRDEVENTPROCESS_H_
+#ifndef _RRDEXECUTESCRIPT_H_
+#define _RRDEXECUTESCRIPT_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -26,12 +26,10 @@ extern "C"
 #endif
 
 #include "rrdCommon.h"
-#include <ctype.h>
+#include "rrd_upload.h"
 
-void processIssueTypeEvent(data_buf *rbuf);
-void processWebCfgTypeEvent(data_buf *rbuf);
-issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *pIssueNode);
-issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode);
+int uploadDebugoutput(char *outdir, char *issuename, const char *suffix);
+
 #ifdef __cplusplus
 }
 #endif
