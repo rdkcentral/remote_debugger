@@ -160,10 +160,6 @@ static void processIssueType(data_buf *rbuf)
         {
             getIssueInfo((char *)rbuf->mdata, pIssueNode); // issue data extract
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Extracted Node %s and Sub Node %s \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode);
-            // Utility to split base and suffix from issue type string
-            // Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
-            // Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
-
             if (rbuf->appendMode)
             {
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received append request to process static and dynamic profiles... \n", __FUNCTION__, __LINE__);
@@ -680,8 +676,6 @@ static int issueTypeSplitter(char *input_str, char *outsuffix, const char delime
     int cnt = 1, i = 0;
 
     char *str = input_str;
-    // Call split_issue_type before removing special characters
-    /**/
     char base[256] = {0};
     char suffix[128] = {0};
     split_issue_type(str, base, sizeof(base), suffix, sizeof(suffix));
