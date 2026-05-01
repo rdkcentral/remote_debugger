@@ -17,7 +17,6 @@
  * limitations under the License.
 */
 
-
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
@@ -27,7 +26,6 @@
 #define RRD_TMP_DIR "/tmp/"
 
 static void processIssueType(data_buf *rbuf);
-
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
