@@ -92,7 +92,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         cmdBuff->jsonPath = rbuf->jsonPath;
                     }
-                cmdBuff->appendMode = rbuf->appendMode;
+            cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
                     /* Persist suffix */
                     if (rbuf->suffix) {
