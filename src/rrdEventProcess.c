@@ -675,15 +675,15 @@ static int issueTypeSplitter(char *input_str, char *outsuffix, const char delime
 {
     int cnt = 1, i = 0;
     char *str = input_str;
-    char base[128] = {0};
-    char suffix[128] = {0};
+    char base[ BUF_LEN_128] = {0};
+    char suffix[ BUF_LEN_128] = {0};
     split_issue_type(str, base, sizeof(base), suffix, sizeof(suffix));
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] issueTypeSplitter (pre-clean): input='%s', base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, str, base, suffix);
 
     // Copy base back to str so only the base is processed
-    strncpy(str, base, 128);
+    strncpy(str, base,  BUF_LEN_128);
  
-    strncpy(outsuffix, suffix, 128);
+    strncpy(outsuffix, suffix,  BUF_LEN_128);
 
     removeSpecialCharacterfromIssueTypeList(str);
     while (*str == delimeter)
