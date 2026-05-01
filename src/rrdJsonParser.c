@@ -603,9 +603,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 // Use the persisted suffix from buff for upload
                 char tarName[512] = {0};
                 if (buff->suffix && buff->suffix[0] != '\0') {
-                    snprintf(tarName, sizeof(tarName), "%s%s.tar.gz", buff->mdata, buff->suffix);
+					snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
                 } else {
-                    snprintf(tarName, sizeof(tarName), "%s.tar.gz", buff->mdata);
+                    snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
                 }
                 status = uploadDebugoutput(outdir, tarName);
                 if(status != 0)
