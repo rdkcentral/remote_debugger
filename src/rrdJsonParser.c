@@ -46,9 +46,19 @@ void removeSpecialChar(char *str)
     }
 }
 
-// Utility to split base and suffix from issue type string
-// Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
-// Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+/*
+ * @function split_issue_type
+ * @brief Utility to split base and suffix from issue type string.
+ *        Example: Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *                 Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ * @param const char *input - The input string to split.
+ * @param char *base - Buffer to store the base part (before the first underscore).
+ * @param size_t base_len - Size of the base buffer.
+ * @param char *suffix - Buffer to store the suffix part (from the first underscore onwards).
+ * @param size_t suffix_len - Size of the suffix buffer.
+ * @return void
+ */
+
 void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
     if (!input || !base || !suffix) return;
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
