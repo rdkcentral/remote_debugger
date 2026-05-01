@@ -61,6 +61,7 @@ void removeSpecialChar(char *str)
 
 void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
     if (!input || !base || !suffix) return;
+    if (base_len == 0 || suffix_len == 0) return;
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
     const char *underscore = strchr(input, '_');
     if (underscore) {
