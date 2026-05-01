@@ -41,13 +41,6 @@ int uploadDebugoutput(char *outdir, char *issuename, const char *suffix)
     {
         normalizeIssueName(issuename);
 
-        // Compose tar name with suffix if provided
-        char tarname[512];
-        if (suffix && suffix[0] != '\0') {
-            snprintf(tarname, sizeof(tarname), "%s%s.tar", issuename, suffix);
-        } else {
-            snprintf(tarname, sizeof(tarname), "%s.tar", issuename);
-        }
 #ifdef IARMBUS_SUPPORT
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
