@@ -690,7 +690,7 @@ static int issueTypeSplitter(char *input_str, char *outsuffix, const char delime
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] issueTypeSplitter (pre-clean): input='%s', base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, str, base, suffix);
 
     // Copy base back to str so only the base is processed
-    strncpy(str, base, sizeof(base));
+    strncpy(str, base, sizeof(str));
     str[sizeof(base)-1] = '\0';
 
     strncpy(outsuffix, suffix, sizeof(suffix));
