@@ -674,7 +674,6 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
 static int issueTypeSplitter(char *input_str, char *outsuffix, const char delimeter, char ***args)
 {
     int cnt = 1, i = 0;
-
     char *str = input_str;
     char base[128] = {0};
     char suffix[128] = {0};
