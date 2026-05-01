@@ -230,7 +230,6 @@ void getIssueInfo(char *issuestr, issueNodeData *issue)
     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:  Received Main Node= %s, SubNode= %s\n",__FUNCTION__,__LINE__,issue->Node,issue->subNode);
 }
 
-
 /*
  * @function findIssueInParsedJSON
  * @brief Finds if an issue category and issue type is present in the parsed JSON.
