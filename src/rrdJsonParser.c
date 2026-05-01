@@ -71,8 +71,7 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
         }
         return;
     }
-    if (base_len == 0 || suffix_len == 0) return;
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
     const char *underscore = strchr(input, '_');
     if (underscore) {
         size_t b_len = underscore - input;
@@ -86,7 +85,7 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
         base[base_len - 1] = '\0';
         suffix[0] = '\0';
     }
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
 }
 
 
