@@ -33,7 +33,7 @@ static void normalizeIssueName(char *str);
  * @return int - Returns 0 for success and non-zero for failure.
  */
 // Modified to accept optional suffix for tar name
-int uploadDebugoutput(char *outdir, char *issuename, const char *suffix)
+int uploadDebugoutput(char *outdir, char *issuename)
 {
     int ret = 0;
 
