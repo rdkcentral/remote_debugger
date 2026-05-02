@@ -657,7 +657,7 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
 
     while (str[source] != '\0')
     {
-        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
+        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.' || str[source] == '_')
         {
             str[destination] = str[source];
             ++destination;
