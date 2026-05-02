@@ -62,7 +62,6 @@ void processIssueTypeEvent(data_buf *rbuf)
     char **cmdMap = NULL;
     int index = 0, count = 0, dataMsgLen = 0;
     data_buf *cmdBuff = NULL;
-    char suffix[128] = {0};
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     if (NULL != rbuf)
