@@ -1799,11 +1799,13 @@ TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheNotEqualsRrdCachecnode)
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
+    node->prev = NULL;
     cacheDataNode = node;
     cacheData *node_dummy = (cacheData *)malloc(sizeof(cacheData));
     node_dummy->mdata = strdup("PkgData");
     node_dummy->issueString = strdup("IssueString");
     node_dummy->next = NULL;
+    node_dummy->prev = NULL;
     remove_item(node_dummy);
 
     EXPECT_NE(cacheDataNode, nullptr);
@@ -1865,7 +1867,7 @@ TEST(IssueTypeSplitterTest, HandlesStringWithSpecialCharacters)
 {
     char str[] = "a@,b,&,cd,ef";
     char **args = NULL;
-    int count = issueTypeSplitter(str, ',', &args);
+    int count = issueTypeSplitter(str, NULL, ',', &args);
 
     ASSERT_EQ(count, 4);
     ASSERT_STREQ(args[0], "a");
@@ -1884,7 +1886,7 @@ TEST(IssueTypeSplitterTest, HandlesStringWithNoSpecialCharacters)
 {
     char str[] = "abcd";
     char **args = NULL;
-    int count = issueTypeSplitter(str, ',', &args);
+    int count = issueTypeSplitter(str, NULL, ',', &args);
 
     ASSERT_EQ(count, 1);
     ASSERT_STREQ(args[0], "abcd");
@@ -1900,10 +1902,45 @@ TEST(IssueTypeSplitterTest, HandlesEmptyString)
 {
     char str[] = "";
     char **args = NULL;
-    int count = issueTypeSplitter(str, ',', &args);
+    int count = issueTypeSplitter(str, NULL, ',', &args);
 
     ASSERT_EQ(count, 1);
 
+    free(args);
+}
+
+TEST(IssueTypeSplitterTest, ExtractsSuffixFromIssueType)
+{
+    char str[] = "Device.DeviceTime_Search";
+    char outsuffix[128] = {0};
+    char **args = NULL;
+    int count = issueTypeSplitter(str, outsuffix, ',', &args);
+
+    ASSERT_EQ(count, 1);
+    ASSERT_STREQ(args[0], "Device.DeviceTime");
+    ASSERT_STREQ(outsuffix, "_Search");
+
+    for (int i = 0; i < count; i++)
+    {
+        free(args[i]);
+    }
+    free(args);
+}
+
+TEST(IssueTypeSplitterTest, NoSuffixWhenNoUnderscore)
+{
+    char str[] = "Device.Network";
+    char outsuffix[128] = {0};
+    char **args = NULL;
+    int count = issueTypeSplitter(str, outsuffix, ',', &args);
+
+    ASSERT_EQ(count, 1);
+    ASSERT_STREQ(outsuffix, "");
+
+    for (int i = 0; i < count; i++)
+    {
+        free(args[i]);
+    }
     free(args);
 }
 
@@ -1989,11 +2026,13 @@ TEST(ProcessIssueTypeEvntTest, RBufIsNull){
 }
 
 TEST(ProcessIssueTypeEvntTest, inDynamic_NoJson){
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("a");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
     processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
 }
 
 /* ======================== rrdExecuteScript ==============*/

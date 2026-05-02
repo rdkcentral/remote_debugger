@@ -558,7 +558,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
 
@@ -578,7 +582,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
     else
@@ -638,14 +646,22 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             }
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
 	else
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
     }
 }

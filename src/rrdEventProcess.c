@@ -73,7 +73,7 @@ void processIssueTypeEvent(data_buf *rbuf)
             free(rbuf->suffix);
         }
         rbuf->suffix = (suffix[0] != '\0') ? strdup(suffix) : NULL;
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Assigned rbuf->suffix='%s' after issueTypeSplitter\n", __FUNCTION__, __LINE__, rbuf->suffix ? rbuf->suffix : "(null)");
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Assigned rbuf->suffix='%s' after issueTypeSplitter\n", __FUNCTION__, __LINE__, rbuf->suffix ? rbuf->suffix : "(null)");
         if (count > 0)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType Count [%d]... \n", __FUNCTION__, __LINE__, count);
@@ -111,6 +111,11 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
                     if(cmdBuff)
                     {
+                        if (cmdBuff->suffix)
+                        {
+                            free(cmdBuff->suffix);
+                            cmdBuff->suffix = NULL;
+                        }
                         free(cmdBuff);
                         cmdBuff = NULL;
                     }
@@ -666,8 +671,13 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
  * @function issueTypeSplitter
  * @brief Splits a given string into tokens based on a specified delimiter, and removes any
  *              special characters from the string before splitting.
- * @param char *input_str - The input string to be split.
- * @param const char delimiter - The character used to split the string.
+ *              The first underscore in input_str is treated as a suffix separator: the base
+ *              (part before the underscore) is written back into input_str, and the suffix
+ *              (underscore + remainder) is written into outsuffix.
+ * @param char *input_str - The input string to be split (modified in place: base written back).
+ * @param char *outsuffix - Buffer (at least BUF_LEN_128 bytes) to receive the suffix portion,
+ *                          or NULL if the caller does not need the suffix.
+ * @param const char delimeter - The character used to split the string.
  * @param char ***args - Pointer to an array of strings where the tokens will be stored.
  * @return int - The number of tokens found in the string.
  */
@@ -678,12 +688,16 @@ static int issueTypeSplitter(char *input_str, char *outsuffix, const char delime
     char base[ BUF_LEN_128] = {0};
     char suffix[ BUF_LEN_128] = {0};
     split_issue_type(str, base, sizeof(base), suffix, sizeof(suffix));
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] issueTypeSplitter (pre-clean): input='%s', base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, str, base, suffix);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: issueTypeSplitter (pre-clean): input='%s', base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, str, base, suffix);
 
-    // Copy base back to str so only the base is processed
-    strncpy(str, base,  BUF_LEN_128);
- 
-    strncpy(outsuffix, suffix,  BUF_LEN_128);
+    /* Copy only the actual base string back into str. base is always a prefix
+     * of the original str so it fits within the original allocation. */
+    memmove(str, base, strlen(base) + 1);
+
+    if (outsuffix != NULL)
+    {
+        snprintf(outsuffix, BUF_LEN_128, "%s", suffix);
+    }
 
     removeSpecialCharacterfromIssueTypeList(str);
     while (*str == delimeter)
