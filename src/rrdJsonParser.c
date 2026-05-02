@@ -47,6 +47,49 @@ void removeSpecialChar(char *str)
 }
 
 /*
+ * @function split_issue_type
+ * @brief Utility to split base and suffix from issue type string.
+ *        Example: Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *                 Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ * @param const char *input - The input string to split.
+ * @param char *base - Buffer to store the base part (before the first underscore).
+ * @param size_t base_len - Size of the base buffer.
+ * @param char *suffix - Buffer to store the suffix part (from the first underscore onwards).
+ * @param size_t suffix_len - Size of the suffix buffer.
+ * @return void
+ */
+
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
+    if (!input || !base || !suffix) return;
+
+    if (base_len == 0 || suffix_len == 0) {
+        if (base && base_len > 0) {
+            base[0] = '\0';
+        }
+        if (suffix && suffix_len > 0) {
+            suffix[0] = '\0';
+        }
+        return;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
+    const char *underscore = strchr(input, '_');
+    if (underscore) {
+        size_t b_len = underscore - input;
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+        strncpy(suffix, underscore, suffix_len - 1);
+        suffix[suffix_len - 1] = '\0';
+    } else {
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
+}
+
+
+/*
  * @function getParamcount
  * @brief Calculates the total number of nodes (elements) in the input string, excluding delimiters.
  * @param char *str - The string from TR181 whose nodes are to be counted.
@@ -515,7 +558,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
 
@@ -535,7 +582,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
     else
@@ -576,7 +627,14 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                status = uploadDebugoutput(outdir,buff->mdata);
+                // Use the persisted suffix from buff for upload
+                char tarName[512] = {0};
+                if (buff->suffix && buff->suffix[0] != '\0') {
+					snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
+                } else {
+                    snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
+                }
+                status = uploadDebugoutput(outdir, tarName);
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -588,14 +646,22 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             }
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
 	else
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
     }
 }
