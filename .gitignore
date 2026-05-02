@@ -1,0 +1,36 @@
+# Build artifacts
+*.o
+*.gcda
+*.gcno
+*.gcov
+*.a
+*.so
+*.lo
+*.la
+
+# Autotools build artifacts
+src/unittest/Makefile
+src/unittest/Makefile.in
+src/unittest/aclocal.m4
+src/unittest/autom4te.cache/
+src/unittest/compile
+src/unittest/config.guess
+src/unittest/config.log
+src/unittest/config.status
+src/unittest/config.sub
+src/unittest/configure
+src/unittest/depcomp
+src/unittest/install-sh
+src/unittest/missing
+src/unittest/COPYING
+src/unittest/INSTALL
+src/unittest/.deps/
+
+# Test output directories
+src/unittest/dummy_*/
+
+# Test binaries
+src/unittest/remotedebugger_gtest
+
+# Dependency tracking
+**/.deps/
