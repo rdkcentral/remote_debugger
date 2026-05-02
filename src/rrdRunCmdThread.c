@@ -377,9 +377,10 @@ bool executeCommands(issueData *cmdinfo)
             /*Executing Commands using systemd-run*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Executing following commands using systemd-run:\n \"%s\"\n",__FUNCTION__,__LINE__,cmdData->command);
 
-            strncpy(remoteDebuggerServiceStr, remoteDebuggerPrefix, sizeof(remoteDebuggerServiceStr) - 1);
-            remoteDebuggerServiceStr[sizeof(remoteDebuggerServiceStr) - 1] = '\0';
-            strncat(remoteDebuggerServiceStr, cmdData->rfcvalue, sizeof(remoteDebuggerServiceStr) - strlen(remoteDebuggerServiceStr) - 1);
+			snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr), "%s%s", remoteDebuggerPrefix, dirname)
+            //strncpy(remoteDebuggerServiceStr, remoteDebuggerPrefix, sizeof(remoteDebuggerServiceStr) - 1);
+            //remoteDebuggerServiceStr[sizeof(remoteDebuggerServiceStr) - 1] = '\0';
+            //strncat(remoteDebuggerServiceStr, cmdData->rfcvalue, sizeof(remoteDebuggerServiceStr) - strlen(remoteDebuggerServiceStr) - 1);
 
 	    removeQuotes(cmdData->command);
 	    
