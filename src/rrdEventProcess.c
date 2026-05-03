@@ -107,16 +107,16 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
                     }
-                    if(cmdBuff)
+		    if(cmdBuff)
+		    {
+                    if (cmdBuff->suffix)
                     {
-                        if (cmdBuff->suffix)
-                        {
-                            free(cmdBuff->suffix);
-                            cmdBuff->suffix = NULL;
-                        }
-                        free(cmdBuff);
-                        cmdBuff = NULL;
+                        free(cmdBuff->suffix);
+                        cmdBuff->suffix = NULL;
                     }
+                        free(cmdBuff);
+			cmdBuff = NULL;
+            }
                 }
                 else
                 {
