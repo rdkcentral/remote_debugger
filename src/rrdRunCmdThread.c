@@ -86,19 +86,17 @@ void print_items(cacheData *node)
  * @param char *issueTypeData - The issue type data to store in the cache node.
  * @return cacheData* - Pointer to the created cache node, or NULL on failure.
  */
-cacheData* createCache( char *pkgData, char *issueTypeData)
+cacheData* createCache(char *pkgData, char *issueTypeData, char *suffix)
 {
     cacheData *cache = NULL;
     cache = (cacheData *)malloc(sizeof(cacheData));
-    /*Check if memory alloacted to Cache*/
     if(cache)
     {
-        cache->mdata = NULL;
-        cache->issueString = NULL;
-	cache->next = NULL;
-	cache->prev = NULL;
         cache->mdata = pkgData;
         cache->issueString = issueTypeData;
+        cache->suffix = suffix ? strdup(suffix) : NULL;
+        cache->next = NULL;
+        cache->prev = NULL;
     }
     return cache;
 }
@@ -119,7 +117,7 @@ void append_item(char *pkgData, char *issueTypeData)
     i = pthread_mutex_lock(&rrdCacheMut);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RRD Mutex Lock...%d\n",__FUNCTION__,__LINE__,i);
     
-    cacheData *tmp = createCache(pkgData,issueTypeData);
+    cacheData *tmp = createCache(pkgData, issueTypeData, suffix);
     /* Check If the memory is allocated for new node*/ 
     if(!tmp)
     {
@@ -235,6 +233,10 @@ void freecacheDataCacheNode(cacheData **node)
     {
         free(rrdCachetmpnode->mdata);
         free(rrdCachetmpnode->issueString);
+        if (rrdCachetmpnode->suffix) {
+            free(rrdCachetmpnode->suffix);
+            rrdCachetmpnode->suffix = NULL;
+        }
         rrdCachetmpnode->mdata = NULL;
         rrdCachetmpnode->issueString = NULL;
         free(rrdCachetmpnode);
