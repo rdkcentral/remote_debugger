@@ -29,7 +29,7 @@ extern "C"
 #include "rrd_upload.h"
 
 
-int uploadDebugoutput(char *outdir, char *issuename, const char *suffix);
+int uploadDebugoutput(char *outdir, char *issuename);
 
 #ifdef __cplusplus
 }
