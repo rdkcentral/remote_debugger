@@ -93,10 +93,13 @@ void processIssueTypeEvent(data_buf *rbuf)
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
 
                     /* Store suffix for this issue type */
+                    cmdBuff->suffix = NULL;
                     if (local_suffix[0] != '\0') {
                         cmdBuff->suffix = strdup(local_suffix);
-                    } else {
-                        cmdBuff->suffix = NULL;
+                        if (cmdBuff->suffix == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to allocate memory for suffix... \n", __FUNCTION__, __LINE__);
+                        }
                     }
                     if (cmdBuff->mdata)
                     {
