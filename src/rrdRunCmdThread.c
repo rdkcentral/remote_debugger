@@ -108,32 +108,25 @@ cacheData* createCache(char *pkgData, char *issueTypeData, char *suffix)
  * @param char *issueTypeData - The issue type data to append.
  * @return void
  */
-void append_item(char *pkgData, char *issueTypeData)
+void append_item(char *pkgData, char *issueTypeData, char *suffix)
 {
     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Append Item with PkgData: %s and issue Type: %s to Cache \n",__FUNCTION__,__LINE__,pkgData,issueTypeData);
-	
     cacheData *rrdCachecnode = NULL;
     int i=0;
     i = pthread_mutex_lock(&rrdCacheMut);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RRD Mutex Lock...%d\n",__FUNCTION__,__LINE__,i);
-    
     cacheData *tmp = createCache(pkgData, issueTypeData, suffix);
-    /* Check If the memory is allocated for new node*/ 
     if(!tmp)
     {
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed : Cannot Append Item to Cache\n", __FUNCTION__, __LINE__);
         pthread_mutex_unlock(&rrdCacheMut);
-	    return;
+        return;
     }
-    /* create Cache and store in node's data*/
-    
     rrdCachecnode = cacheDataNode;
-	
-    /*Valid Cache, add node to list*/
     if(rrdCachecnode != NULL)
     {
         tmp->next = rrdCachecnode;
-	rrdCachecnode->prev = tmp;
+        rrdCachecnode->prev = tmp;
     }
     cacheDataNode = tmp;
     pthread_mutex_unlock(&rrdCacheMut);
