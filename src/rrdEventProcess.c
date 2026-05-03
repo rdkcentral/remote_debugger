@@ -155,7 +155,6 @@ static void processIssueType(data_buf *rbuf)
     issueData *staticprofiledata = NULL;    
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
-
     if (rbuf->mdata != NULL) // issue data exist
     {
         pIssueNode = (issueNodeData *)malloc(sizeof(issueNodeData));
