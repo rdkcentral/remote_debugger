@@ -67,10 +67,7 @@ void processIssueTypeEvent(data_buf *rbuf)
     if (NULL != rbuf)
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType List [%s]... \n", __FUNCTION__, __LINE__, rbuf->mdata);
-        // Split by comma only, do not extract suffix yet
         count = issueTypeSplitter(rbuf->mdata, ',', &cmdMap);
-
-        // No global suffix extraction here; do it per-issue below
         if (count > 0)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType Count [%d]... \n", __FUNCTION__, __LINE__, count);
