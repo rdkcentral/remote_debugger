@@ -268,7 +268,6 @@ void getIssueInfo(char *issuestr, issueNodeData *issue)
     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:  Received Main Node= %s, SubNode= %s\n",__FUNCTION__,__LINE__,issue->Node,issue->subNode);
 }
 
-
 /*
  * @function findIssueInParsedJSON
  * @brief Finds if an issue category and issue type is present in the parsed JSON.
@@ -648,11 +647,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 } else {
                     snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
                 }
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
-                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
-                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Directory for upload: '%s'\n", __FUNCTION__, __LINE__, outdir);
-                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Original issue string: '%s'\n", __FUNCTION__, __LINE__, buff->mdata);
-                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Suffix used for upload: '%s'\n", __FUNCTION__, __LINE__, suffix);
                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
                 status = uploadDebugoutput(outdir, tarName);
                 persist_suffix_to_file(""); // Clear the suffix file after upload
