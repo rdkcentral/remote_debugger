@@ -116,7 +116,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
                         free(cmdBuff);
 			cmdBuff = NULL;
-            }
+		    }
                 }
                 else
                 {
