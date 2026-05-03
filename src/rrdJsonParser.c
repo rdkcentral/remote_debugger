@@ -633,15 +633,17 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 // Use the persisted suffix from buff for upload
                 char tarName[512] = {0};
                 int tar_name_len = 0;
-                if (buff->suffix && buff->suffix[0] != '\0') {
+                if (buff->suffix && buff->suffix[0] != '\0') 
+				{
                     tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
-                } else {
+                } 
+				else 
+				{
                     tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
                 }
                 if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
                 {
-                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n",
-                            __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
                     status = -1;
                 }
                 else
