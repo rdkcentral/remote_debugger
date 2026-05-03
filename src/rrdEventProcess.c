@@ -104,12 +104,24 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    if(cmdBuff)
 		    {
-                    /* Persist suffix for this issue type */
-                    if (local_suffix[0] != '\0') {
+				        /* Persist suffix for this issue type */
+                        if (local_suffix[0] != '\0') 
+					    {
                         persist_suffix_to_file(local_suffix);
-                    } else {
+						}   
+						else 
+					    {
                         persist_suffix_to_file("");
-                    }
+                        }
+                        free(cmdBuff);
+			cmdBuff = NULL;
+		    }
+                }
+                else
+                {
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                }
+
 		if( cmdMap[index])
 		{
                     free(cmdMap[index]);
