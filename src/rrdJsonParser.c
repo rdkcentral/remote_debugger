@@ -88,9 +88,6 @@ void read_suffix_from_file_to_buf(char *buf, size_t buflen) {
     if (len > 0 && buf[len-1] == '\n') buf[len-1] = '\0';
 }
 
-// Utility to split base and suffix from issue type string
-// Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
-// Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
 /*
  * @function split_issue_type
  * @brief Utility to split base and suffix from issue type string.
