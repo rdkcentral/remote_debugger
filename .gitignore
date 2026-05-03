@@ -40,3 +40,6 @@ src/unittest/dummy_*/
 
 # Temporary files
 /tmp/
+
+# Test-generated device properties
+src/unittest/UTJson/device.properties
