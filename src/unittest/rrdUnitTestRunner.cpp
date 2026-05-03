@@ -3688,7 +3688,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
     rbuf.mdata = strdup("Test");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
-    rbuf.suffix = nullptr;
+    rbuf.suffix = "_search_b675-657-556-656;
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);
