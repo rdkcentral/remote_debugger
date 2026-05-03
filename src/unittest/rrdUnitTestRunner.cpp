@@ -1975,6 +1975,7 @@ TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
     char suffix[5] = {0};
     split_issue_type("abc_longsuffix", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_lon");
     EXPECT_EQ(suffix[sizeof(suffix) - 1], '\0');
     EXPECT_EQ(strlen(suffix), (size_t)(sizeof(suffix) - 1));
 }
