@@ -92,15 +92,7 @@ void processIssueTypeEvent(data_buf *rbuf)
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
 
-                    /* Store suffix for this issue type */
-                    cmdBuff->suffix = NULL;
-                    if (local_suffix[0] != '\0') {
-                        cmdBuff->suffix = strdup(local_suffix);
-                        if (cmdBuff->suffix == NULL)
-                        {
-                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to allocate memory for suffix... \n", __FUNCTION__, __LINE__);
-                        }
-                    }
+                    /* Suffix is now persisted via file, no struct field needed */
                     if (cmdBuff->mdata)
                     {
                         strncpy((char *)cmdBuff->mdata, base, dataMsgLen);
@@ -112,16 +104,12 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    if(cmdBuff)
 		    {
-                    if (cmdBuff->suffix)
-                    {
-                                        /* Persist suffix for this issue type */
-                                        if (local_suffix[0] != '\0') {
-                                            persist_suffix_to_file(local_suffix);
-                                        } else {
-                                            persist_suffix_to_file("");
-                                        }
-                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
-                }
+                    /* Persist suffix for this issue type */
+                    if (local_suffix[0] != '\0') {
+                        persist_suffix_to_file(local_suffix);
+                    } else {
+                        persist_suffix_to_file("");
+                    }
 		if( cmdMap[index])
 		{
                     free(cmdMap[index]);
