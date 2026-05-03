@@ -1909,6 +1909,85 @@ TEST(IssueTypeSplitterTest, HandlesEmptyString)
     free(args);
 }
 
+/* --------------- Test split_issue_type() from rrdJsonParser --------------- */
+TEST(SplitIssueTypeTest, NoUnderscoreReturnsFull)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, UnderscoreSplitsBaseAndSuffix)
+{
+    char base[64] = {0};
+    char suffix[128] = {0};
+    split_issue_type("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
+}
+
+TEST(SplitIssueTypeTest, MultipleUnderscoresSplitsAtFirst)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_def_ghi", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_def_ghi");
+}
+
+TEST(SplitIssueTypeTest, EmptyInputProducesEmptyOutputs)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    /* Should return without modifying buffers and without crashing */
+    split_issue_type(NULL, base, sizeof(base), suffix, sizeof(suffix));
+    /* buffers remain unchanged (still zero-initialized) */
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, BaseTruncatedWhenTooSmall)
+{
+    /* base buffer is only 4 bytes; "abc_suffix" -> base should be "abc" (3 chars + NUL) */
+    char base[4] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_suffix");
+}
+
+TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
+{
+    /* suffix buffer is only 5 bytes; "_longsuffix" should be truncated to "_lon" + NUL */
+    char base[64] = {0};
+    char suffix[5] = {0};
+    split_issue_type("abc_longsuffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_EQ(suffix[sizeof(suffix) - 1], '\0');
+    EXPECT_EQ(strlen(suffix), (size_t)(sizeof(suffix) - 1));
+}
+
+TEST(SplitIssueTypeTest, LeadingUnderscoreGivesEmptyBase)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("_suffixonly", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "_suffixonly");
+}
+
 /* --------------- Test processIssueTypeInDynamicProfile() from rrdEventProcess --------------- */
 class ProcessIssueTypeInDynamicProfileTest : public ::testing::Test
 {
