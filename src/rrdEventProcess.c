@@ -127,7 +127,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                     free(cmdMap[index]);
 		    cmdMap[index] = NULL;
 		}
-
+		
             }
 	    if( cmdMap)
 	    {
