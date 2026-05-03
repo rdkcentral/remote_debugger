@@ -632,12 +632,22 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
                 // Use the persisted suffix from buff for upload
                 char tarName[512] = {0};
+                int tar_name_len = 0;
                 if (buff->suffix && buff->suffix[0] != '\0') {
-					snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
                 } else {
-                    snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
                 }
-                status = uploadDebugoutput(outdir, tarName);
+                if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
+                {
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n",
+                            __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
+                    status = -1;
+                }
+                else
+                {
+                    status = uploadDebugoutput(outdir, tarName);
+                }
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
