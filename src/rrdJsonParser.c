@@ -57,19 +57,7 @@ void persist_suffix_to_file(const char *suffix) {
     }
 }
 
-char *read_suffix_from_file() {
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
-    if (!fp) return NULL;
-    char buf[128] = {0};
-    if (fgets(buf, sizeof(buf), fp) == NULL) {
-        fclose(fp);
-        return NULL;
-    }
-    fclose(fp);
-    size_t len = strlen(buf);
-    if (len > 0 && buf[len-1] == '\n') buf[len-1] = '\0';
-    return strdup(buf);
-}
+
 
 void read_suffix_from_file_to_buf(char *buf, size_t buflen) {
     if (!buf || buflen == 0) return;
@@ -667,6 +655,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Suffix used for upload: '%s'\n", __FUNCTION__, __LINE__, suffix);
                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
                 status = uploadDebugoutput(outdir, tarName);
+                persist_suffix_to_file(""); // Clear the suffix file after upload
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
