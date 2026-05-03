@@ -1347,7 +1347,8 @@ TEST(CreateCacheTest, HandlesNullPkgDataAndValidIssueTypeData)
 {
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
+    ASSERT_EQ(result->suffix, nullptr);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->mdata, nullptr);
@@ -1363,7 +1364,8 @@ TEST(CreateCacheTest, HandlesValidPkgDataAndIssueTypeData)
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, strdup("mysuffix"));
+    ASSERT_STREQ(result->suffix, "mysuffix");
 
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result->mdata, "ValidPkgData");
@@ -1380,7 +1382,8 @@ TEST(CreateCacheTest, HandlesValidPkgDataAndNullIssueTypeData)
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
+    ASSERT_EQ(result->suffix, nullptr);
 
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result->mdata, "ValidPkgData");
@@ -1396,7 +1399,8 @@ TEST(CreateCacheTest, HandlesNullPkgDataAndIssueTypeData)
 {
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
+    ASSERT_EQ(result->suffix, nullptr);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->mdata, nullptr);

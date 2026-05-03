@@ -338,6 +338,12 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     }
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
                     strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
+                    if (cache->suffix) {
+                        sendbuf->suffix = strdup(cache->suffix);
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Restored suffix from cache: %s\n", __FUNCTION__, __LINE__, cache->suffix);
+                    } else {
+                        sendbuf->suffix = NULL;
+                    }
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
                     snprintf(sendbuf->jsonPath, strlen(eventData->rdm_pkg_info.pkg_inst_path) + rrdjsonlen + 1, "%s%s", eventData->rdm_pkg_info.pkg_inst_path, RRD_JSON_FILE);
                     sendbuf->inDynamic = true;

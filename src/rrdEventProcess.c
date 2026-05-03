@@ -79,7 +79,10 @@ void processIssueTypeEvent(data_buf *rbuf)
                 cmdBuff = (data_buf *)malloc(sizeof(data_buf));
                 if (cmdBuff)
                 {
-                    dataMsgLen = strlen(cmdMap[index]) + 1;
+                    char base[128] = {0};
+                    char local_suffix[128] = {0};
+                    split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
+                    dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
                     if(cmdBuff->inDynamic)
@@ -88,9 +91,19 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
+
+                    /* Store suffix for this issue type */
+                    cmdBuff->suffix = NULL;
+                    if (local_suffix[0] != '\0') {
+                        cmdBuff->suffix = strdup(local_suffix);
+                        if (cmdBuff->suffix == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to allocate memory for suffix... \n", __FUNCTION__, __LINE__);
+                        }
+                    }
                     if (cmdBuff->mdata)
                     {
-                        strncpy((char *)cmdBuff->mdata, cmdMap[index], dataMsgLen);
+                        strncpy((char *)cmdBuff->mdata, base, dataMsgLen);
                         processIssueType(cmdBuff);
                     }
                     else
@@ -99,6 +112,11 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    if(cmdBuff)
 		    {
+                    if (cmdBuff->suffix)
+                    {
+                        free(cmdBuff->suffix);
+                        cmdBuff->suffix = NULL;
+                    }
                         free(cmdBuff);
 			cmdBuff = NULL;
 		    }
@@ -639,7 +657,7 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
 
     while (str[source] != '\0')
     {
-        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
+        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.' || str[source] == '_'|| str[source] == '-')
         {
             str[destination] = str[source];
             ++destination;
@@ -648,7 +666,6 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
     }
     str[destination] = '\0';
 }
-
 /*
  * @function issueTypeSplitter
  * @brief Splits a given string into tokens based on a specified delimiter, and removes any
@@ -698,4 +715,3 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
-
