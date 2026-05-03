@@ -68,6 +68,7 @@ extern "C"
 #define BUF_LEN_128  128
 #define APPEND_SUFFIX "_apnd"
 
+
 /* Enum for Messages Queue*/
 typedef enum {
      RRD_EVENT_MSG_DEFAULT = 0,
@@ -125,6 +126,7 @@ typedef struct cache {
      char *issueString;
      struct cache *next;
      struct cache *prev;
+     char *suffix; // Persist the suffix for later use
 } cacheData;
 
 /*Structure for Device Propertiesr*/
