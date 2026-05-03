@@ -68,7 +68,6 @@ extern "C"
 #define BUF_LEN_128  128
 #define APPEND_SUFFIX "_apnd"
 
-
 /* Enum for Messages Queue*/
 typedef enum {
      RRD_EVENT_MSG_DEFAULT = 0,
