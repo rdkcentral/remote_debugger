@@ -89,7 +89,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         cmdBuff->jsonPath = rbuf->jsonPath;
                     }
-                    cmdBuff->appendMode = rbuf->appendMode;
+		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
 
                     /* Store suffix for this issue type */
