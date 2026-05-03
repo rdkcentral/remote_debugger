@@ -59,31 +59,39 @@ void removeSpecialChar(char *str)
  * @return void
  */
 
-void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
-    if (base && base_len > 0) {
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) 
+{
+    if (base && base_len > 0) 
+	{
         base[0] = '\0';
     }
-    if (suffix && suffix_len > 0) {
+    if (suffix && suffix_len > 0) 
+	{
         suffix[0] = '\0';
     }
 
-    if (!input || !base || !suffix) {
+    if (!input || !base || !suffix) 
+	{
         return;
     }
 
-    if (base_len == 0 || suffix_len == 0) {
+    if (base_len == 0 || suffix_len == 0) 
+	{
         return;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
     const char *underscore = strchr(input, '_');
-    if (underscore) {
+    if (underscore) 
+	{
         size_t b_len = underscore - input;
         if (b_len >= base_len) b_len = base_len - 1;
         strncpy(base, input, b_len);
         base[b_len] = '\0';
         strncpy(suffix, underscore, suffix_len - 1);
         suffix[suffix_len - 1] = '\0';
-    } else {
+    } 
+	else 
+	{
         strncpy(base, input, base_len - 1);
         base[base_len - 1] = '\0';
         suffix[0] = '\0';
