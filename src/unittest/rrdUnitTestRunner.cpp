@@ -5817,6 +5817,208 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
 
+/* ====================== split_issue_type / persist_suffix / read_suffix ================*/
+
+class SuffixUtilsTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Remove suffix temp file to avoid state leakage between tests
+        remove("/tmp/rrd_suffix.txt");
+    }
+};
+
+/* --------------- Test split_issue_type() from rrdJsonParser --------------- */
+
+TEST_F(SuffixUtilsTest, SplitIssueType_WithUnderscore)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_Search123", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_Search123");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_WithNoUnderscore)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_WithMultipleUnderscores)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("foo_bar_baz", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "foo");
+    EXPECT_STREQ(suffix, "_bar_baz");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_StartsWithUnderscore)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("_suffix_only", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "_suffix_only");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_EmptyString)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_NullInputDoesNotCrash)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type(NULL, base, sizeof(base), suffix, sizeof(suffix));
+    // base and suffix should remain unmodified (empty)
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_NullBaseDoesNotCrash)
+{
+    char suffix[64] = {0};
+    // Should not crash when base is NULL
+    split_issue_type("Device.DeviceTime_Search", NULL, 64, suffix, sizeof(suffix));
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_NullSuffixDoesNotCrash)
+{
+    char base[64] = {0};
+    // Should not crash when suffix is NULL
+    split_issue_type("Device.DeviceTime_Search", base, sizeof(base), NULL, 64);
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_BaseTruncation)
+{
+    char base[5] = {0};
+    char suffix[64] = {0};
+    // base_len=5 means max 4 chars + null terminator
+    split_issue_type("ABCDEF_suffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "ABCD");
+    EXPECT_STREQ(suffix, "_suffix");
+}
+
+TEST_F(SuffixUtilsTest, SplitIssueType_RealWorldInput)
+{
+    char base[128] = {0};
+    char suffix[128] = {0};
+    split_issue_type("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
+}
+
+/* --------------- Test persist_suffix_to_file() from rrdJsonParser --------------- */
+
+TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
+{
+    persist_suffix_to_file("_Search123");
+    // Verify the file was written
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    ASSERT_NE(fp, nullptr);
+    char buf[64] = {0};
+    ASSERT_NE(fgets(buf, sizeof(buf), fp), nullptr);
+    fclose(fp);
+    EXPECT_STREQ(buf, "_Search123");
+}
+
+TEST_F(SuffixUtilsTest, PersistSuffix_EmptyString)
+{
+    persist_suffix_to_file("");
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    ASSERT_NE(fp, nullptr);
+    char buf[64] = {0};
+    // fgets may return NULL for an empty file - that's fine, buf stays empty
+    fgets(buf, sizeof(buf), fp);
+    fclose(fp);
+    EXPECT_STREQ(buf, "");
+}
+
+TEST_F(SuffixUtilsTest, PersistSuffix_NullDoesNotCrash)
+{
+    // Passing NULL should not crash; file should be created but empty
+    persist_suffix_to_file(NULL);
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    ASSERT_NE(fp, nullptr);
+    char buf[64] = {0};
+    fgets(buf, sizeof(buf), fp);
+    fclose(fp);
+    EXPECT_STREQ(buf, "");
+}
+
+TEST_F(SuffixUtilsTest, PersistSuffix_OverwritesPreviousValue)
+{
+    persist_suffix_to_file("_OldSuffix");
+    persist_suffix_to_file("_NewSuffix");
+    char buf[64] = {0};
+    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    EXPECT_STREQ(buf, "_NewSuffix");
+}
+
+/* --------------- Test read_suffix_from_file_to_buf() from rrdJsonParser --------------- */
+
+TEST_F(SuffixUtilsTest, ReadSuffix_AfterPersist)
+{
+    persist_suffix_to_file("_Search123");
+    char buf[64] = {0};
+    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    EXPECT_STREQ(buf, "_Search123");
+}
+
+TEST_F(SuffixUtilsTest, ReadSuffix_WhenFileAbsent)
+{
+    remove("/tmp/rrd_suffix.txt");
+    char buf[64] = {0};
+    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    EXPECT_STREQ(buf, "");
+}
+
+TEST_F(SuffixUtilsTest, ReadSuffix_NullBufDoesNotCrash)
+{
+    persist_suffix_to_file("_test");
+    // Should not crash when buf is NULL
+    read_suffix_from_file_to_buf(NULL, 64);
+}
+
+TEST_F(SuffixUtilsTest, ReadSuffix_ZeroBuflenDoesNotCrash)
+{
+    persist_suffix_to_file("_test");
+    char buf[64] = {0};
+    // Should not crash when buflen is 0
+    read_suffix_from_file_to_buf(buf, 0);
+}
+
+TEST_F(SuffixUtilsTest, ReadSuffix_RoundTrip)
+{
+    const char *expected = "_Search-b6877385-9463-45fc-b19d-a24d77fd0790";
+    persist_suffix_to_file(expected);
+    char buf[128] = {0};
+    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    EXPECT_STREQ(buf, expected);
+}
+
+TEST_F(SuffixUtilsTest, ReadSuffix_StripsTrailingNewline)
+{
+    // Write a value with a trailing newline to the file
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "w");
+    ASSERT_NE(fp, nullptr);
+    fputs("_suffix\n", fp);
+    fclose(fp);
+    char buf[64] = {0};
+    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    EXPECT_STREQ(buf, "_suffix");
+}
+
 
 
 
