@@ -5823,7 +5823,7 @@ class SuffixUtilsTest : public ::testing::Test {
 protected:
     void TearDown() override {
         // Remove suffix temp file to avoid state leakage between tests
-        remove("/tmp/rrd_suffix.txt");
+        remove("/tmp/rrd/rrd_suffix.txt");
     }
 };
 
@@ -5924,7 +5924,7 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
 {
     persist_suffix_to_file("_Search123");
     // Verify the file was written
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
     ASSERT_NE(fgets(buf, sizeof(buf), fp), nullptr);
@@ -5935,7 +5935,7 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
 TEST_F(SuffixUtilsTest, PersistSuffix_EmptyString)
 {
     persist_suffix_to_file("");
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
     // fgets may return NULL for an empty file - that's fine, buf stays empty
@@ -5948,7 +5948,7 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NullDoesNotCrash)
 {
     // Passing NULL should not crash; file should be created but empty
     persist_suffix_to_file(NULL);
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
     fgets(buf, sizeof(buf), fp);
@@ -5977,7 +5977,7 @@ TEST_F(SuffixUtilsTest, ReadSuffix_AfterPersist)
 
 TEST_F(SuffixUtilsTest, ReadSuffix_WhenFileAbsent)
 {
-    remove("/tmp/rrd_suffix.txt");
+    remove("/tmp/rrd/rrd_suffix.txt");
     char buf[64] = {0};
     read_suffix_from_file_to_buf(buf, sizeof(buf));
     EXPECT_STREQ(buf, "");
@@ -6010,7 +6010,7 @@ TEST_F(SuffixUtilsTest, ReadSuffix_RoundTrip)
 TEST_F(SuffixUtilsTest, ReadSuffix_StripsTrailingNewline)
 {
     // Write a value with a trailing newline to the file
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "w");
+    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "w");
     ASSERT_NE(fp, nullptr);
     fputs("_suffix\n", fp);
     fclose(fp);
