@@ -98,12 +98,12 @@ void processIssueTypeEvent(data_buf *rbuf)
 						/* Only persist suffix if input contains an underscore (i.e., is not just the base name) */
                         if (strchr(cmdMap[index], '_') && local_suffix[0] != '\0') 
 						{
-                        	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Persisting suffix: '%s' from input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, local_suffix, cmdMap[index], index);
+                        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Persisting suffix: '%s' from input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, local_suffix, cmdMap[index], index);
                         	persist_suffix_to_file(local_suffix);
                         } 
 				    	else 
 					    {
-                        	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Not persisting suffix for input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, cmdMap[index], index);
+                        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Not persisting suffix for input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, cmdMap[index], index);
                         }
                         processIssueType(cmdBuff);
                     }
