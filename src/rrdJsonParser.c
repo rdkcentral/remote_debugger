@@ -53,7 +53,7 @@ void removeSpecialChar(char *str)
 }
 
 void persist_suffix_to_file(const char *suffix) {
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "w");
+    FILE *fp = fopen(RRD_SUFFIX_PATH, "w");
     if (fp) {
         if (suffix) {
             fputs(suffix, fp);
@@ -64,7 +64,7 @@ void persist_suffix_to_file(const char *suffix) {
 
 void read_suffix_from_file_to_buf(char *buf, size_t buflen) {
     if (!buf || buflen == 0) return;
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
+    FILE *fp = fopen(RRD_SUFFIX_PATH, "r");
     if (!fp) {
         buf[0] = '\0';
         return;
