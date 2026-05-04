@@ -47,29 +47,31 @@ void removeSpecialChar(char *str)
     }
 }
 
-void persist_suffix_to_file(const char *filename, const char *suffix) {
-    if (!filename) 
+void persist_suffix_to_file(const char *filename, const char *suffix) 
+{
+    int fd;
+	if (!filename) 
 	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: persist_suffix_to_file called with NULL filename\n", __FUNCTION__, __LINE__);
         return;
     }
-
-    FILE *fp = fopen(filename, "w");
-    if (!fp) 
+    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+    if (fd >= 0) 
 	{
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to open file '%s' for writing: %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
-        return;
-    }
-
-    if (suffix) 
-	{
-        if (fputs(suffix, fp) == EOF) 
+        FILE *fp = fdopen(fd, "w");
+        if (fp) 
 		{
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+            if (fprintf(fp, "%s\n", suffix) > 0) 
+			{
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: write suffix to file '%s'\n", __FUNCTION__, __LINE__, filename);
+            }
+            fclose(fp); // This also closes the underlying fd
+        } 
+		else 
+		{
+            close(fd); // Close fd if fdopen failed
         }
     }
-
-    fclose(fp);
 }
 
 void read_suffix_from_file_to_buf(const char *filename, char *buf, size_t buflen) 
