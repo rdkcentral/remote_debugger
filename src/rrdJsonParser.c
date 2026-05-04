@@ -48,7 +48,8 @@ void removeSpecialChar(char *str)
     }
 }
 
-void persist_suffix_to_file(const char *suffix) {
+void persist_suffix_to_file(const char *suffix) 
+{
     // Ensure directory exists
     if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
@@ -59,21 +60,26 @@ void persist_suffix_to_file(const char *suffix) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to open %s for writing: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
         return;
     }
-    if (suffix && suffix[0] != '\0') {
+    if (suffix && suffix[0] != '\0') 
+	{
         size_t suffix_len = strlen(suffix);
         size_t total_written = 0;
 
-        while (total_written < suffix_len) {
+        while (total_written < suffix_len) 
+		{
             ssize_t written = write(fd, suffix + total_written, suffix_len - total_written);
-            if (written < 0) {
-                if (errno == EINTR) {
+            if (written < 0) 
+			{
+                if (errno == EINTR) 
+				{
                     continue;
                 }
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix: %s\n", __FUNCTION__, __LINE__, strerror(errno));
                 break;
             }
 
-            if (written == 0) {
+            if (written == 0) 
+			{
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Short write while writing suffix to %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
                 break;
             }
@@ -81,14 +87,19 @@ void persist_suffix_to_file(const char *suffix) {
             total_written += (size_t)written;
         }
 
-        if (total_written == suffix_len) {
+        if (total_written == suffix_len) 
+		{
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix '%s' written to %s\n", __FUNCTION__, __LINE__, suffix, RRD_SUFFIX_PATH);
         }
-    } else {
+    } 
+	else 
+	{
         // Truncate file to empty
-        if (ftruncate(fd, 0) != 0) {
+        if (ftruncate(fd, 0) != 0) 
+		{
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix in %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
-        } else {
+        } else 
+		{
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix cleared in %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
         }
     }
