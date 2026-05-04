@@ -23,9 +23,10 @@
 #include "rrdCommandSanity.h"
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <ctype.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <errno.h>
+
 #define RRD_SUFFIX_DIR "/tmp/rrd"
 #define RRD_SUFFIX_PATH "/tmp/rrd/rrd_suffix.txt"
 
@@ -54,14 +55,14 @@ void removeSpecialChar(char *str)
 int persist_suffix_to_file(const char *suffix) {
     struct stat st;
     uid_t uid = getuid();
-    int dirfd = open(RRD_SUFFIX_DIR, O_PATH | O_NOFOLLOW | O_DIRECTORY);
+    int dirfd = open(RRD_SUFFIX_DIR, O_NOFOLLOW | O_DIRECTORY);
     if (dirfd == -1) {
         // Directory does not exist, try to create
         if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
             return -1;
         }
-        dirfd = open(RRD_SUFFIX_DIR, O_PATH | O_NOFOLLOW | O_DIRECTORY);
+        dirfd = open(RRD_SUFFIX_DIR, O_NOFOLLOW | O_DIRECTORY);
         if (dirfd == -1) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Could not open %s after creation: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
             return -1;
