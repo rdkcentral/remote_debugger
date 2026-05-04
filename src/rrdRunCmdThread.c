@@ -287,7 +287,7 @@ bool executeCommands(issueData *cmdinfo)
     char pathname[BUF_LEN_256] = {'\0'};
     char *outdirpath = NULL;
     char finalOutFile[BUF_LEN_256] =  {'\0'};
-    char remoteDebuggerServiceStr[BUF_LEN_256] =  {'\0'};
+    char remoteDebuggerServiceStr[BUF_LEN_512] =  {'\0'};
     char *printbuffer = NULL;
     FILE *filePointer;
     const char *remoteDebuggerPrefix = "remote_debugger_";
@@ -357,7 +357,7 @@ bool executeCommands(issueData *cmdinfo)
             strncat(finalOutFile,RRD_OUTPUT_FILE, strlen(RRD_OUTPUT_FILE) + 1);
 
             /* Open debug_output.txt file*/
-            filePointer = fopen(finalOutFile, "a+");
+            filePointer = fopen(finalOutFile, "w+");
             if (filePointer == NULL)
             {
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Unable to Open File:%s\n",__FUNCTION__,__LINE__,finalOutFile);
@@ -377,9 +377,7 @@ bool executeCommands(issueData *cmdinfo)
             /*Executing Commands using systemd-run*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Executing following commands using systemd-run:\n \"%s\"\n",__FUNCTION__,__LINE__,cmdData->command);
 
-            strncpy(remoteDebuggerServiceStr, remoteDebuggerPrefix, sizeof(remoteDebuggerServiceStr) - 1);
-            remoteDebuggerServiceStr[sizeof(remoteDebuggerServiceStr) - 1] = '\0';
-            strncat(remoteDebuggerServiceStr, cmdData->rfcvalue, sizeof(remoteDebuggerServiceStr) - strlen(remoteDebuggerServiceStr) - 1);
+			snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr), "%s%s", remoteDebuggerPrefix, dirname);
 
 	    removeQuotes(cmdData->command);
 	    
