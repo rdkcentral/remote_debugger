@@ -24,6 +24,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
+#define RRD_SUFFIX_DIR "/tmp"
+#define RRD_SUFFIX_PATH "/tmp/rrd_suffix.txt"
 
 /*
  * @function removeSpecialChar
@@ -46,32 +48,47 @@ void removeSpecialChar(char *str)
     }
 }
 
-
 void persist_suffix_to_file(const char *suffix) {
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "w");
-    if (fp) {
-        if (suffix) {
-            fputs(suffix, fp);
-        }
-        fclose(fp);
+    // Ensure directory exists
+    if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
+        return;
     }
+    int fd = open(RRD_SUFFIX_PATH, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd == -1) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to open %s for writing: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
+        return;
+    }
+    if (suffix && suffix[0] != '\0') {
+        ssize_t written = write(fd, suffix, strlen(suffix));
+        if (written < 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+        } else {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix '%s' written to %s\n", __FUNCTION__, __LINE__, suffix, RRD_SUFFIX_PATH);
+        }
+    } else {
+        // Truncate file to empty
+        ftruncate(fd, 0);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix cleared in %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
+    }
+    close(fd);
 }
-
-
 
 void read_suffix_from_file_to_buf(char *buf, size_t buflen) {
     if (!buf || buflen == 0) return;
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
-    if (!fp) {
+    int fd = open(RRD_SUFFIX_PATH, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd == -1) {
         buf[0] = '\0';
         return;
     }
-    if (fgets(buf, buflen, fp) == NULL) {
+    ssize_t r = read(fd, buf, buflen - 1);
+    if (r < 0) {
         buf[0] = '\0';
-        fclose(fp);
+        close(fd);
         return;
     }
-    fclose(fp);
+    buf[r] = '\0';
+    close(fd);
     size_t len = strlen(buf);
     if (len > 0 && buf[len-1] == '\n') buf[len-1] = '\0';
 }
