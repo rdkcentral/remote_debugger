@@ -79,8 +79,8 @@ void processIssueTypeEvent(data_buf *rbuf)
                 cmdBuff = (data_buf *)malloc(sizeof(data_buf));
                 if (cmdBuff)
                 {
-                    char base[128] = {0};
-                    char local_suffix[128] = {0};
+                    char base[BUF_LEN_128] = {0};
+                    char local_suffix[BUF_LEN_128] = {0};
                     split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
                     dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
