@@ -48,22 +48,24 @@ void removeSpecialChar(char *str)
 }
 
 void persist_suffix_to_file(const char *filename, const char *suffix) {
-    if (!filename) {
+    if (!filename) 
+	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: persist_suffix_to_file called with NULL filename\n", __FUNCTION__, __LINE__);
         return;
     }
 
     FILE *fp = fopen(filename, "w");
-    if (!fp) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to open file '%s' for writing: %s\n",
-                __FUNCTION__, __LINE__, filename, strerror(errno));
+    if (!fp) 
+	{
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to open file '%s' for writing: %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
         return;
     }
 
-    if (suffix) {
-        if (fputs(suffix, fp) == EOF) {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n",
-                    __FUNCTION__, __LINE__, filename, strerror(errno));
+    if (suffix) 
+	{
+        if (fputs(suffix, fp) == EOF) 
+		{
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
         }
     }
 
