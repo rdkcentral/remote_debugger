@@ -642,7 +642,7 @@ static void freeParsedJson(cJSON *jsonParsed)
 /*
  * @function removeSpecialCharacterfromIssueTypeList
  * @brief Removes special characters from the issue type list, retaining only alphanumeric
- *              characters, commas, and periods.
+ *              characters, commas, periods, underscores and hyphens
  * @param char *str - The string from which special characters will be removed.
  * @return void
  */
