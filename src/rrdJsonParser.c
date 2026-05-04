@@ -94,15 +94,36 @@ void persist_suffix_to_file(const char *filename, const char *suffix)
 
 void read_suffix_from_file_to_buf(const char *filename, char *buf, size_t buflen) 
 {
-    if (!buf || buflen == 0 || !filename) return;
-    FILE *fp = fopen(filename, "r");
-    if (!fp) 
-    {
+    if (!buf || buflen == 0 || !filename) {
+        return;
+    }
+    int fd = open(filename, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd < 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to open '%s' for reading: %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
         buf[0] = '\0';
         return;
     }
-    if (fgets(buf, buflen, fp) == NULL) 
-    {
+    struct stat st;
+    if (fstat(fd, &st) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fstat failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        buf[0] = '\0';
+        return;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: '%s' is not a regular file!\n", __FUNCTION__, __LINE__, filename);
+        close(fd);
+        buf[0] = '\0';
+        return;
+    }
+    FILE *fp = fdopen(fd, "r");
+    if (!fp) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fdopen failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        buf[0] = '\0';
+        return;
+    }
+    if (fgets(buf, buflen, fp) == NULL) {
         buf[0] = '\0';
         fclose(fp);
         return;
