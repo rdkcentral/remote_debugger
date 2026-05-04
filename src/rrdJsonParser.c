@@ -51,7 +51,7 @@ void removeSpecialChar(char *str)
 }
 
 void persist_suffix_to_file(const char *suffix) {
-    FILE *fp = fopen("/tmp/rrd_suffix.txt", "w");
+    FILE *fp = fopen(RRD_SUFFIX_PATH, "w");
     if (fp) {
         if (suffix) {
             fputs(suffix, fp);
