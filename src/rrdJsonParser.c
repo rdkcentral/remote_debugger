@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 
 #define RRD_SUFFIX_DIR "/tmp/rrd"
 #define RRD_SUFFIX_PATH "/tmp/rrd/rrd_suffix.txt"
