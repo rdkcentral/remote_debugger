@@ -67,7 +67,7 @@ extern "C"
 
 #define BUF_LEN_128  128
 #define APPEND_SUFFIX "_apnd"
-#define RRD_SUFFIX_PATH "/tmp/rrd/rrd_suffix.txt"
+#define RRD_SUFFIX_PATH "/tmp/rrd_suffix.txt"
 
 /* Enum for Messages Queue*/
 typedef enum {
