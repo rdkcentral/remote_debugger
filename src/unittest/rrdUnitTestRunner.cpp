@@ -5821,6 +5821,15 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
 
 class SuffixUtilsTest : public ::testing::Test {
 protected:
+    void SetUp() override {
+        struct stat dir_stat = {};
+
+        if (mkdir("/tmp/rrd", 0777) != 0) {
+            ASSERT_EQ(stat("/tmp/rrd", &dir_stat), 0) << "Failed to access /tmp/rrd";
+            ASSERT_TRUE(S_ISDIR(dir_stat.st_mode)) << "/tmp/rrd exists but is not a directory";
+        }
+    }
+
     void TearDown() override {
         // Remove suffix temp file to avoid state leakage between tests
         remove("/tmp/rrd/rrd_suffix.txt");
