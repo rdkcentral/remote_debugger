@@ -598,6 +598,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+		persist_suffix_to_file(""); // Clear the suffix file on early exit
         return;
     }
 
@@ -618,6 +619,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+		persist_suffix_to_file(""); // Clear the suffix file on early exit
         return;
     }
     else
@@ -689,6 +691,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
+		    persist_suffix_to_file(""); // Clear the suffix file 
 	}
     }
 }
