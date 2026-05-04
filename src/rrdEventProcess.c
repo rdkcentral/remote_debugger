@@ -79,7 +79,17 @@ void processIssueTypeEvent(data_buf *rbuf)
                 cmdBuff = (data_buf *)malloc(sizeof(data_buf));
                 if (cmdBuff)
                 {
-                    dataMsgLen = strlen(cmdMap[index]) + 1;
+                    char base[BUF_LEN_128] = {0};
+                    char local_suffix[BUF_LEN_128] = {0};
+                    split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid IssueType [%s] - empty base after split, skipping\n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        continue;
+                    }
+                    dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
                     if(cmdBuff->inDynamic)
@@ -88,9 +98,20 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
+                    /* Suffix is now persisted via file, no struct field needed */
                     if (cmdBuff->mdata)
                     {
-                        strncpy((char *)cmdBuff->mdata, cmdMap[index], dataMsgLen);
+                    	strncpy((char *)cmdBuff->mdata, base, dataMsgLen);
+						/* Only persist suffix if input contains an underscore (i.e., is not just the base name) */
+                        if (strchr(cmdMap[index], '_') && local_suffix[0] != '\0') 
+						{
+                        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Persisting suffix: '%s' from input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, local_suffix, cmdMap[index], index);
+                        	persist_suffix_to_file(RRD_SUFFIX_PATH,local_suffix);
+                        } 
+				    	else 
+					    {
+                        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Not persisting suffix for input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, cmdMap[index], index);
+                        }
                         processIssueType(cmdBuff);
                     }
                     else
@@ -628,7 +649,7 @@ static void freeParsedJson(cJSON *jsonParsed)
 /*
  * @function removeSpecialCharacterfromIssueTypeList
  * @brief Removes special characters from the issue type list, retaining only alphanumeric
- *              characters, commas, and periods.
+ *              characters, commas, periods, underscores and hyphens
  * @param char *str - The string from which special characters will be removed.
  * @return void
  */
@@ -639,7 +660,7 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
 
     while (str[source] != '\0')
     {
-        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
+        if (isalnum((unsigned char)str[source]) || str[source] == ',' || str[source] == '.' || str[source] == '_'|| str[source] == '-')
         {
             str[destination] = str[source];
             ++destination;

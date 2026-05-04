@@ -24,6 +24,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 
 /*
  * @function removeSpecialChar
@@ -45,6 +47,143 @@ void removeSpecialChar(char *str)
         }
     }
 }
+
+void persist_suffix_to_file(const char *filename, const char *suffix) 
+{
+    int fd;
+    if (!filename)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: persist_suffix_to_file called with NULL filename\n", __FUNCTION__, __LINE__);
+        return;
+    }
+    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd < 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to open '%s' for writing: %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        return;
+    }
+    struct stat st;
+    if (fstat(fd, &st) != 0) 
+	{
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fstat failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        return;
+    }
+    if (!S_ISREG(st.st_mode)) 
+	{
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: '%s' is not a regular file!\n", __FUNCTION__, __LINE__, filename);
+        close(fd);
+        return;
+    }
+    FILE *fp = fdopen(fd, "w");
+    if (!fp)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fdopen failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        return;
+    }
+    if (suffix)
+    {
+        if (fputs(suffix, fp) == EOF)
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        }
+    }
+    fclose(fp); // This also closes the underlying fd
+}
+
+void read_suffix_from_file_to_buf(const char *filename, char *buf, size_t buflen) 
+{
+    if (!buf || buflen == 0 || !filename) {
+        return;
+    }
+    int fd = open(filename, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd < 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to open '%s' for reading: %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        buf[0] = '\0';
+        return;
+    }
+    struct stat st;
+    if (fstat(fd, &st) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fstat failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        buf[0] = '\0';
+        return;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: '%s' is not a regular file!\n", __FUNCTION__, __LINE__, filename);
+        close(fd);
+        buf[0] = '\0';
+        return;
+    }
+    FILE *fp = fdopen(fd, "r");
+    if (!fp) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fdopen failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        buf[0] = '\0';
+        return;
+    }
+    if (fgets(buf, buflen, fp) == NULL) {
+        buf[0] = '\0';
+        fclose(fp);
+        return;
+    }
+    fclose(fp);
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len-1] == '\n') buf[len-1] = '\0';
+}
+
+/*
+ * @function split_issue_type
+ * @brief Utility to split base and suffix from issue type string.
+ *        Example: Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *                 Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ * @param const char *input - The input string to split.
+ * @param char *base - Buffer to store the base part (before the first underscore).
+ * @param size_t base_len - Size of the base buffer.
+ * @param char *suffix - Buffer to store the suffix part (from the first underscore onwards).
+ * @param size_t suffix_len - Size of the suffix buffer.
+ * @return void
+ */
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
+    if (base && base_len > 0) 
+	{
+        base[0] = '\0';
+    }
+    if (suffix && suffix_len > 0) 
+	{
+        suffix[0] = '\0';
+    }
+
+    if (!input || !base || !suffix) 
+	{
+        return;
+    }
+
+    if (base_len == 0 || suffix_len == 0) 
+	{
+        return;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
+    const char *underscore = strchr(input, '_');
+    if (underscore) 
+	{
+        size_t b_len = underscore - input;
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+        strncpy(suffix, underscore, suffix_len - 1);
+        suffix[suffix_len - 1] = '\0';
+    } 
+	else 
+	{
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
+}
+
 
 /*
  * @function getParamcount
@@ -516,6 +655,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+		persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file on early exit
         return;
     }
 
@@ -536,6 +676,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+		persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file on early exit
         return;
     }
     else
@@ -576,7 +717,29 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                status = uploadDebugoutput(outdir,buff->mdata);
+                // Use the persisted suffix from file for upload
+                char suffix[128] = {0};
+                read_suffix_from_file_to_buf(RRD_SUFFIX_PATH , suffix, sizeof(suffix));
+                char tarName[512] = {0};
+				int tar_name_len = 0;
+                if (suffix[0] != '\0') {
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, suffix);
+                } 
+				else 
+				{
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
+                }
+				if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
+                {
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
+                    status = -1;
+                }
+				else
+				{
+                   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
+                   status = uploadDebugoutput(outdir, tarName);
+				}
+				
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -589,6 +752,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
+		    persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file after upload
 	}
 	else
 	{
@@ -596,6 +760,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
+		    persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file 
 	}
     }
 }
