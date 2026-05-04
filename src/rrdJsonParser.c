@@ -62,10 +62,14 @@ void persist_suffix_to_file(const char *filename, const char *suffix)
         FILE *fp = fdopen(fd, "w");
         if (fp) 
 		{
-            if (fprintf(fp, "%s\n", suffix) > 0) 
-			{
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: write suffix to file '%s'\n", __FUNCTION__, __LINE__, filename);
+			if (suffix) 
+	        {
+                if (fputs(suffix, fp) == EOF) 
+		        {
+                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+                }
             }
+			
             fclose(fp); // This also closes the underlying fd
         } 
 		else 
