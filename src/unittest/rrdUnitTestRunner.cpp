@@ -5922,7 +5922,7 @@ TEST_F(SuffixUtilsTest, SplitIssueType_RealWorldInput)
 
 TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
 {
-    persist_suffix_to_file("_Search123");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt", "_Search123");
     // Verify the file was written
     FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
@@ -5934,7 +5934,7 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
 
 TEST_F(SuffixUtilsTest, PersistSuffix_EmptyString)
 {
-    persist_suffix_to_file("");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt", "");
     FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
@@ -5947,7 +5947,7 @@ TEST_F(SuffixUtilsTest, PersistSuffix_EmptyString)
 TEST_F(SuffixUtilsTest, PersistSuffix_NullDoesNotCrash)
 {
     // Passing NULL should not crash; file should be created but empty
-    persist_suffix_to_file(NULL);
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt",NULL);
     FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
@@ -5958,10 +5958,10 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NullDoesNotCrash)
 
 TEST_F(SuffixUtilsTest, PersistSuffix_OverwritesPreviousValue)
 {
-    persist_suffix_to_file("_OldSuffix");
-    persist_suffix_to_file("_NewSuffix");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_OldSuffix");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_NewSuffix");
     char buf[64] = {0};
-    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "_NewSuffix");
 }
 
@@ -5969,9 +5969,9 @@ TEST_F(SuffixUtilsTest, PersistSuffix_OverwritesPreviousValue)
 
 TEST_F(SuffixUtilsTest, ReadSuffix_AfterPersist)
 {
-    persist_suffix_to_file("_Search123");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_Search123");
     char buf[64] = {0};
-    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "_Search123");
 }
 
@@ -5979,31 +5979,31 @@ TEST_F(SuffixUtilsTest, ReadSuffix_WhenFileAbsent)
 {
     remove("/tmp/rrd/rrd_suffix.txt");
     char buf[64] = {0};
-    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "");
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_NullBufDoesNotCrash)
 {
-    persist_suffix_to_file("_test");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_test");
     // Should not crash when buf is NULL
-    read_suffix_from_file_to_buf(NULL, 64);
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",NULL, 64);
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_ZeroBuflenDoesNotCrash)
 {
-    persist_suffix_to_file("_test");
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_test");
     char buf[64] = {0};
     // Should not crash when buflen is 0
-    read_suffix_from_file_to_buf(buf, 0);
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, 0);
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_RoundTrip)
 {
     const char *expected = "_Search-b6877385-9463-45fc-b19d-a24d77fd0790";
-    persist_suffix_to_file(expected);
+    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt",expected);
     char buf[128] = {0};
-    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, expected);
 }
 
@@ -6015,7 +6015,7 @@ TEST_F(SuffixUtilsTest, ReadSuffix_StripsTrailingNewline)
     fputs("_suffix\n", fp);
     fclose(fp);
     char buf[64] = {0};
-    read_suffix_from_file_to_buf(buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "_suffix");
 }
 
