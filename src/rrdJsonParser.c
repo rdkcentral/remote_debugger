@@ -705,7 +705,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
-		persist_suffix_to_file(""); // Clear the suffix file on early exit
+        if (persist_suffix_to_file("") != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file on early exit\n", __FUNCTION__, __LINE__);
+        }
         return;
     }
 
@@ -726,7 +728,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
-		persist_suffix_to_file(""); // Clear the suffix file on early exit
+        if (persist_suffix_to_file("") != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file on early exit\n", __FUNCTION__, __LINE__);
+        }
         return;
     }
     else
@@ -802,7 +806,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
-		    persist_suffix_to_file(""); // Clear the suffix file after upload
+            if (persist_suffix_to_file("") != 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file after upload\n", __FUNCTION__, __LINE__);
+            }
 	}
 	else
 	{
@@ -810,7 +816,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
-		    persist_suffix_to_file(""); // Clear the suffix file 
+            if (persist_suffix_to_file("") != 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file after upload\n", __FUNCTION__, __LINE__);
+            }
 	}
     }
 }
