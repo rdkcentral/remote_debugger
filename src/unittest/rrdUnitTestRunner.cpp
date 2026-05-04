@@ -1799,11 +1799,13 @@ TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheNotEqualsRrdCachecnode)
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
+    node->prev = NULL;
     cacheDataNode = node;
     cacheData *node_dummy = (cacheData *)malloc(sizeof(cacheData));
     node_dummy->mdata = strdup("PkgData");
     node_dummy->issueString = strdup("IssueString");
     node_dummy->next = NULL;
+    node_dummy->prev = NULL;
     remove_item(node_dummy);
 
     EXPECT_NE(cacheDataNode, nullptr);
@@ -1907,6 +1909,86 @@ TEST(IssueTypeSplitterTest, HandlesEmptyString)
     free(args);
 }
 
+/* --------------- Test split_issue_type() from rrdJsonParser --------------- */
+TEST(SplitIssueTypeTest, NoUnderscoreReturnsFull)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, UnderscoreSplitsBaseAndSuffix)
+{
+    char base[64] = {0};
+    char suffix[128] = {0};
+    split_issue_type("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
+}
+
+TEST(SplitIssueTypeTest, MultipleUnderscoresSplitsAtFirst)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_def_ghi", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_def_ghi");
+}
+
+TEST(SplitIssueTypeTest, EmptyInputProducesEmptyOutputs)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    /* Should return without crashing and clear provided outputs to empty strings */
+    split_issue_type(NULL, base, sizeof(base), suffix, sizeof(suffix));
+    /* NULL input clears the output buffers when buffer pointers are provided */
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, BaseTruncatedWhenTooSmall)
+{
+    /* base buffer is only 4 bytes; "abc_suffix" -> base should be "abc" (3 chars + NUL) */
+    char base[4] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_suffix");
+}
+
+TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
+{
+    /* suffix buffer is only 5 bytes; "_longsuffix" should be truncated to "_lon" + NUL */
+    char base[64] = {0};
+    char suffix[5] = {0};
+    split_issue_type("abc_longsuffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_lon");
+    EXPECT_EQ(suffix[sizeof(suffix) - 1], '\0');
+    EXPECT_EQ(strlen(suffix), (size_t)(sizeof(suffix) - 1));
+}
+
+TEST(SplitIssueTypeTest, LeadingUnderscoreGivesEmptyBase)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("_suffixonly", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "_suffixonly");
+}
+
 /* --------------- Test processIssueTypeInDynamicProfile() from rrdEventProcess --------------- */
 class ProcessIssueTypeInDynamicProfileTest : public ::testing::Test
 {
@@ -1989,11 +2071,13 @@ TEST(ProcessIssueTypeEvntTest, RBufIsNull){
 }
 
 TEST(ProcessIssueTypeEvntTest, inDynamic_NoJson){
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("a");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
     processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
 }
 
 /* ======================== rrdExecuteScript ==============*/
@@ -3684,6 +3768,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
     rbuf.mdata = strdup("Test");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
+    rbuf.suffix = strdup("_search_b675-657-556-656");
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);
