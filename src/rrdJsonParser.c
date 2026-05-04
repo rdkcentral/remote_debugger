@@ -60,16 +60,37 @@ void persist_suffix_to_file(const char *suffix) {
         return;
     }
     if (suffix && suffix[0] != '\0') {
-        ssize_t written = write(fd, suffix, strlen(suffix));
-        if (written < 0) {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix: %s\n", __FUNCTION__, __LINE__, strerror(errno));
-        } else {
+        size_t suffix_len = strlen(suffix);
+        size_t total_written = 0;
+
+        while (total_written < suffix_len) {
+            ssize_t written = write(fd, suffix + total_written, suffix_len - total_written);
+            if (written < 0) {
+                if (errno == EINTR) {
+                    continue;
+                }
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+                break;
+            }
+
+            if (written == 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Short write while writing suffix to %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
+                break;
+            }
+
+            total_written += (size_t)written;
+        }
+
+        if (total_written == suffix_len) {
             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix '%s' written to %s\n", __FUNCTION__, __LINE__, suffix, RRD_SUFFIX_PATH);
         }
     } else {
         // Truncate file to empty
-        ftruncate(fd, 0);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix cleared in %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
+        if (ftruncate(fd, 0) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix in %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
+        } else {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Suffix cleared in %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
+        }
     }
     close(fd);
 }
