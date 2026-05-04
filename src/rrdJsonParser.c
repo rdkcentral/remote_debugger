@@ -52,35 +52,76 @@ void removeSpecialChar(char *str)
 
 int persist_suffix_to_file(const char *suffix) {
     struct stat st;
-    if (lstat(RRD_SUFFIX_DIR, &st) == 0) 
-	{
-        if (!S_ISDIR(st.st_mode)) 
-		{
+    uid_t uid = getuid();
+    if (lstat(RRD_SUFFIX_DIR, &st) == 0) {
+        if (!S_ISDIR(st.st_mode)) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] %s exists but is not a directory!\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR);
             return -1;
         }
-    } 
-	else 
-	{
-        if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) 
-		{
+        if (st.st_uid != uid || (st.st_mode & 0777) != 0700) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] %s not owned by current user or not mode 0700!\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR);
+            return -1;
+        }
+    } else {
+        if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
             return -1;
         }
+        // After creation, check ownership and mode
+        if (lstat(RRD_SUFFIX_DIR, &st) != 0 || !S_ISDIR(st.st_mode) || st.st_uid != uid || (st.st_mode & 0777) != 0700) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] %s not owned by current user or not mode 0700 after creation!\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR);
+            return -1;
+        }
     }
-    FILE *fp = fopen(RRD_SUFFIX_PATH, "w");
-    if (!fp) 
-	{
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to open %s for writing: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
+
+    // Write to a temp file first
+    char tmp_path[256];
+    snprintf(tmp_path, sizeof(tmp_path), "%s/.rrd_suffix.tmpXXXXXX", RRD_SUFFIX_DIR);
+    int tmpfd = mkstemp(tmp_path);
+    if (tmpfd == -1) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create temp file in %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
         return -1;
     }
-    if (suffix && fputs(suffix, fp) < 0) 
-	{
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix to %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
-        fclose(fp);
+    // Set restrictive permissions
+    if (fchmod(tmpfd, 0600) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to set permissions on temp file: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+        close(tmpfd);
+        unlink(tmp_path);
         return -1;
     }
-    fclose(fp);
+    // Write suffix
+    if (suffix && suffix[0] != '\0') {
+        size_t len = strlen(suffix);
+        ssize_t written = write(tmpfd, suffix, len);
+        if (written != (ssize_t)len) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix to temp file: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+            close(tmpfd);
+            unlink(tmp_path);
+            return -1;
+        }
+    }
+    // Flush and verify
+    if (fsync(tmpfd) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] fsync failed on temp file: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+        close(tmpfd);
+        unlink(tmp_path);
+        return -1;
+    }
+    struct stat fst;
+    if (fstat(tmpfd, &fst) != 0 || !S_ISREG(fst.st_mode)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Temp file is not a regular file!\n", __FUNCTION__, __LINE__);
+        close(tmpfd);
+        unlink(tmp_path);
+        return -1;
+    }
+    close(tmpfd);
+
+    // Atomically rename temp file to target
+    if (rename(tmp_path, RRD_SUFFIX_PATH) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to rename temp file to %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
+        unlink(tmp_path);
+        return -1;
+    }
     return 0;
 }
 
