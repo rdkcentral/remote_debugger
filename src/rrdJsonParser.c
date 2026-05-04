@@ -26,7 +26,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <errno.h>
-#include <limits.h>
 
 #define RRD_SUFFIX_DIR "/tmp/rrd"
 #define RRD_SUFFIX_PATH "/tmp/rrd/rrd_suffix.txt"
@@ -118,7 +117,25 @@ int persist_suffix_to_file(const char *suffix) {
                 }
                 return -1;
             }
-            ssize_t written = write(tmpfd, suffix + total_written, (ssize_t)to_write);
+            if (to_write == 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] to_write is 0, nothing to write\n", __FUNCTION__, __LINE__);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            /* Defensive: never cast a negative value, but size_t is unsigned, so only check upper bound */
+            ssize_t write_len = (ssize_t)to_write;
+            if (write_len <= 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] write_len (%zd) <= 0, refusing to write\n", __FUNCTION__, __LINE__, write_len);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            ssize_t written = write(tmpfd, suffix + total_written, write_len);
             if (written == -1) {
                 if (errno == EINTR)
                     continue;
