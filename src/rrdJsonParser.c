@@ -51,32 +51,43 @@ void removeSpecialChar(char *str)
 void persist_suffix_to_file(const char *filename, const char *suffix) 
 {
     int fd;
-	if (!filename) 
-	{
+    if (!filename)
+    {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: persist_suffix_to_file called with NULL filename\n", __FUNCTION__, __LINE__);
         return;
     }
-    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
-    if (fd >= 0) 
-	{
-        FILE *fp = fdopen(fd, "w");
-        if (fp) 
-		{
-			if (suffix) 
-	        {
-                if (fputs(suffix, fp) == EOF) 
-		        {
-                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
-                }
-            }
-			
-            fclose(fp); // This also closes the underlying fd
-        } 
-		else 
-		{
-            close(fd); // Close fd if fdopen failed
+    fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd < 0)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to open '%s' for writing: %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        return;
+    }
+    struct stat st;
+    if (fstat(fd, &st) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fstat failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        return;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: '%s' is not a regular file!\n", __FUNCTION__, __LINE__, filename);
+        close(fd);
+        return;
+    }
+    FILE *fp = fdopen(fd, "w");
+    if (!fp)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fdopen failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
+        close(fd);
+        return;
+    }
+    if (suffix)
+    {
+        if (fputs(suffix, fp) == EOF)
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: failed to write suffix to file '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
         }
     }
+    fclose(fp); // This also closes the underlying fd
 }
 
 void read_suffix_from_file_to_buf(const char *filename, char *buf, size_t buflen) 
