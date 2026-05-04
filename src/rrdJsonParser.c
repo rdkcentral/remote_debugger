@@ -126,16 +126,19 @@ void read_suffix_from_file_to_buf(char *buf, size_t buflen) {
 
     if (!buf || buflen == 0) return;
     int fd = open(RRD_SUFFIX_PATH, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
-    if (fd == -1) {
+    if (fd == -1) 
+	{
         buf[0] = '\0';
         return;
     }
 
-    do {
+    do 
+	{
         r = read(fd, buf, buflen - 1);
     } while (r < 0 && errno == EINTR);
 
-    if (r < 0) {
+    if (r < 0) 
+	{
         buf[0] = '\0';
         close(fd);
         return;
