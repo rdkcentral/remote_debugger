@@ -50,8 +50,8 @@ void removeSpecialChar(char *str)
     }
 }
 
-void persist_suffix_to_file(const char *suffix) {
-    FILE *fp = fopen(RRD_SUFFIX_PATH, "w");
+void persist_suffix_to_file(const char *filename, const char *suffix) {
+    FILE *fp = fopen(filename, "w");
     if (fp) {
         if (suffix) {
             fputs(suffix, fp);
@@ -60,17 +60,17 @@ void persist_suffix_to_file(const char *suffix) {
     }
 }
 
-void read_suffix_from_file_to_buf(char *buf, size_t buflen) 
+void read_suffix_from_file_to_buf(const char *filename, char *buf, size_t buflen) 
 {
-    if (!buf || buflen == 0) return;
-    FILE *fp = fopen(RRD_SUFFIX_PATH, "r");
+    if (!buf || buflen == 0 || !filename) return;
+    FILE *fp = fopen(filename, "r");
     if (!fp) 
-	{
+    {
         buf[0] = '\0';
         return;
     }
     if (fgets(buf, buflen, fp) == NULL) 
-	{
+    {
         buf[0] = '\0';
         fclose(fp);
         return;
@@ -602,7 +602,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
-		persist_suffix_to_file(""); // Clear the suffix file on early exit
+		persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file on early exit
         return;
     }
 
@@ -623,7 +623,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
-		persist_suffix_to_file(""); // Clear the suffix file on early exit
+		persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file on early exit
         return;
     }
     else
@@ -666,7 +666,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
                 // Use the persisted suffix from file for upload
                 char suffix[128] = {0};
-                read_suffix_from_file_to_buf(suffix, sizeof(suffix));
+                read_suffix_from_file_to_buf(RRD_SUFFIX_PATH , suffix, sizeof(suffix));
                 char tarName[512] = {0};
 				int tar_name_len = 0;
                 if (suffix[0] != '\0') {
@@ -699,7 +699,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
-		    persist_suffix_to_file(""); // Clear the suffix file after upload
+		    persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file after upload
 	}
 	else
 	{
@@ -707,7 +707,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
-		    persist_suffix_to_file(""); // Clear the suffix file 
+		    persist_suffix_to_file(RRD_SUFFIX_PATH,""); // Clear the suffix file 
 	}
     }
 }
