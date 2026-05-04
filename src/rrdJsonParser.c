@@ -664,13 +664,25 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 char suffix[128] = {0};
                 read_suffix_from_file_to_buf(suffix, sizeof(suffix));
                 char tarName[512] = {0};
+				int tar_name_len = 0;
                 if (suffix[0] != '\0') {
-                    snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, suffix);
-                } else {
-                    snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, suffix);
+                } 
+				else 
+				{
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
                 }
-                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
-                status = uploadDebugoutput(outdir, tarName);
+				if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
+                {
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
+                    status = -1;
+                }
+				else
+				{
+                   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
+                   status = uploadDebugoutput(outdir, tarName);
+				}
+				
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
