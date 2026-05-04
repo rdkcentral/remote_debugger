@@ -669,7 +669,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 }
                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
                 status = uploadDebugoutput(outdir, tarName);
-                persist_suffix_to_file(""); // Clear the suffix file after upload
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -682,6 +681,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
+		    persist_suffix_to_file(""); // Clear the suffix file after upload
 	}
 	else
 	{
