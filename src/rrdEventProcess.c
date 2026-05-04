@@ -678,6 +678,7 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
     }
     str[destination] = '\0';
 }
+
 /*
  * @function issueTypeSplitter
  * @brief Splits a given string into tokens based on a specified delimiter, and removes any
@@ -727,3 +728,4 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
+
