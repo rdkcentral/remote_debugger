@@ -63,12 +63,14 @@ void persist_suffix_to_file(const char *filename, const char *suffix)
         return;
     }
     struct stat st;
-    if (fstat(fd, &st) != 0) {
+    if (fstat(fd, &st) != 0) 
+	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: fstat failed on '%s': %s\n", __FUNCTION__, __LINE__, filename, strerror(errno));
         close(fd);
         return;
     }
-    if (!S_ISREG(st.st_mode)) {
+    if (!S_ISREG(st.st_mode)) 
+	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: '%s' is not a regular file!\n", __FUNCTION__, __LINE__, filename);
         close(fd);
         return;
