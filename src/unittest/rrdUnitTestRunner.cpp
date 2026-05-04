@@ -5832,7 +5832,7 @@ protected:
 
     void TearDown() override {
         // Remove suffix temp file to avoid state leakage between tests
-        remove("/tmp/rrd/rrd_suffix.txt");
+        remove("/tmp/rrd_suffix.txt");
     }
 };
 
@@ -5931,9 +5931,9 @@ TEST_F(SuffixUtilsTest, SplitIssueType_RealWorldInput)
 
 TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
 {
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_Search123");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","_Search123");
     // Verify the file was written
-    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
     ASSERT_NE(fgets(buf, sizeof(buf), fp), nullptr);
@@ -5943,8 +5943,8 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NormalValue)
 
 TEST_F(SuffixUtilsTest, PersistSuffix_EmptyString)
 {
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","");
-    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","");
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
     // fgets may return NULL for an empty file - that's fine, buf stays empty
@@ -5956,8 +5956,8 @@ TEST_F(SuffixUtilsTest, PersistSuffix_EmptyString)
 TEST_F(SuffixUtilsTest, PersistSuffix_NullDoesNotCrash)
 {
     // Passing NULL should not crash; file should be created but empty
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt",NULL);
-    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "r");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt",NULL);
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "r");
     ASSERT_NE(fp, nullptr);
     char buf[64] = {0};
     fgets(buf, sizeof(buf), fp);
@@ -5967,8 +5967,8 @@ TEST_F(SuffixUtilsTest, PersistSuffix_NullDoesNotCrash)
 
 TEST_F(SuffixUtilsTest, PersistSuffix_OverwritesPreviousValue)
 {
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_OldSuffix");
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_NewSuffix");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","_OldSuffix");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","_NewSuffix");
     char buf[64] = {0};
     read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "_NewSuffix");
@@ -5978,53 +5978,53 @@ TEST_F(SuffixUtilsTest, PersistSuffix_OverwritesPreviousValue)
 
 TEST_F(SuffixUtilsTest, ReadSuffix_AfterPersist)
 {
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_Search123");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","_Search123");
     char buf[64] = {0};
-    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "_Search123");
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_WhenFileAbsent)
 {
-    remove("/tmp/rrd/rrd_suffix.txt");
+    remove("/tmp/rrd_suffix.txt");
     char buf[64] = {0};
-    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "");
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_NullBufDoesNotCrash)
 {
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_test");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","_test");
     // Should not crash when buf is NULL
-    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",NULL, 64);
+    read_suffix_from_file_to_buf("/tmp/rrd_suffix.txt",NULL, 64);
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_ZeroBuflenDoesNotCrash)
 {
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt","_test");
+    persist_suffix_to_file("/tmp/rrd_suffix.txt","_test");
     char buf[64] = {0};
     // Should not crash when buflen is 0
-    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, 0);
+    read_suffix_from_file_to_buf("/tmp/rrd_suffix.txt",buf, 0);
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_RoundTrip)
 {
     const char *expected = "_Search-b6877385-9463-45fc-b19d-a24d77fd0790";
-    persist_suffix_to_file("/tmp/rrd/rrd_suffix.txt",expected);
+    persist_suffix_to_file("/tmp/rrd_suffix.txt",expected);
     char buf[128] = {0};
-    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, expected);
 }
 
 TEST_F(SuffixUtilsTest, ReadSuffix_StripsTrailingNewline)
 {
     // Write a value with a trailing newline to the file
-    FILE *fp = fopen("/tmp/rrd/rrd_suffix.txt", "w");
+    FILE *fp = fopen("/tmp/rrd_suffix.txt", "w");
     ASSERT_NE(fp, nullptr);
     fputs("_suffix\n", fp);
     fclose(fp);
     char buf[64] = {0};
-    read_suffix_from_file_to_buf("/tmp/rrd/rrd_suffix.txt",buf, sizeof(buf));
+    read_suffix_from_file_to_buf("/tmp/rrd_suffix.txt",buf, sizeof(buf));
     EXPECT_STREQ(buf, "_suffix");
 }
 
