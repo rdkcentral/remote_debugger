@@ -24,8 +24,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
 #define RRD_SUFFIX_DIR "/tmp/rrd"
 #define RRD_SUFFIX_PATH "/tmp/rrd/rrd_suffix.txt"
+
 
 /*
  * @function removeSpecialChar
