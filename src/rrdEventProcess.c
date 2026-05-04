@@ -82,6 +82,18 @@ void processIssueTypeEvent(data_buf *rbuf)
                     char base[128] = {0};
                     char local_suffix[128] = {0};
                     split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty issue type after parsing token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
                     dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
