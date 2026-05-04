@@ -99,7 +99,25 @@ int persist_suffix_to_file(const char *suffix) {
         size_t len = strlen(suffix);
         size_t total_written = 0;
         while (total_written < len) {
-            ssize_t written = write(tmpfd, suffix + total_written, len - total_written);
+            /* Coverity fix: ensure no underflow/overflow in len - total_written */
+            if (total_written > len) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] total_written (%zu) > len (%zu), possible integer overflow\n", __FUNCTION__, __LINE__, total_written, len);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            size_t to_write = len - total_written;
+            if (to_write > SSIZE_MAX) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] to_write (%zu) > SSIZE_MAX (%zd), refusing to write\n", __FUNCTION__, __LINE__, to_write, (ssize_t)SSIZE_MAX);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            ssize_t written = write(tmpfd, suffix + total_written, (ssize_t)to_write);
             if (written == -1) {
                 if (errno == EINTR)
                     continue;
