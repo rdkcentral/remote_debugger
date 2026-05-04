@@ -49,7 +49,7 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
 
 
 void persist_suffix_to_file(const char *suffix);
-void read_suffix_from_file_to_buf(char *buf, size_t buflen);
+void read_suffix_from_file_to_buf(const char *filename, char *buf, size_t buflen);
 void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len);
 
 #ifdef __cplusplus
