@@ -91,16 +91,6 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
-					/*
-                    if (local_suffix[0] != '\0') 
-					{
-                        persist_suffix_to_file(local_suffix);
-					}   
-					else 
-					{
-                        persist_suffix_to_file("");
-                    }
-                    */
                     /* Suffix is now persisted via file, no struct field needed */
                     if (cmdBuff->mdata)
                     {
