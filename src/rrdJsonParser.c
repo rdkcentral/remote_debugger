@@ -76,7 +76,9 @@ int persist_suffix_to_file(const char *suffix) {
     // Write to a temp file first
     char tmp_path[256];
     snprintf(tmp_path, sizeof(tmp_path), "%s/.rrd_suffix.tmpXXXXXX", RRD_SUFFIX_DIR);
+    mode_t old_umask = umask(077);
     int tmpfd = mkstemp(tmp_path);
+    umask(old_umask);
     if (tmpfd == -1) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create temp file in %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
         return -1;
