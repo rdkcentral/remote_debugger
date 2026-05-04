@@ -1951,9 +1951,9 @@ TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
 {
     char base[64] = {0};
     char suffix[64] = {0};
-    /* Should return without crashing and leave outputs as empty strings */
+    /* Should return without crashing and clear provided outputs to empty strings */
     split_issue_type(NULL, base, sizeof(base), suffix, sizeof(suffix));
-    /* implementation clears the output buffers to empty strings */
+    /* NULL input clears the output buffers when buffer pointers are provided */
     EXPECT_STREQ(base, "");
     EXPECT_STREQ(suffix, "");
 }
