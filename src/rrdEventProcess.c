@@ -99,7 +99,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                         if (strchr(cmdMap[index], '_') && local_suffix[0] != '\0') 
 						{
                         	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [DEBUG] Persisting suffix: '%s' from input: '%s' (index=%d)\n", __FUNCTION__, __LINE__, local_suffix, cmdMap[index], index);
-                        	persist_suffix_to_file(local_suffix);
+                        	persist_suffix_to_file(RRD_SUFFIX_PATH,local_suffix);
                         } 
 				    	else 
 					    {
