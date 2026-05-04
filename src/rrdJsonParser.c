@@ -54,15 +54,26 @@ void removeSpecialChar(char *str)
 void persist_suffix_to_file(const char *suffix) 
 {
     // Ensure directory exists
-    if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
+    if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) 
+	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
         return;
     }
+	
     int fd = open(RRD_SUFFIX_PATH, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0600);
     if (fd == -1) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to open %s for writing: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
         return;
     }
+	
+	struct stat st;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode)) 
+	{
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] %s is not a regular file!\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH);
+        close(fd);
+        return;
+    }
+	
     if (suffix && suffix[0] != '\0') 
 	{
         size_t suffix_len = strlen(suffix);
