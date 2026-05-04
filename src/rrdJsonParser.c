@@ -23,7 +23,14 @@
 #include "rrdCommandSanity.h"
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+
+#define RRD_SUFFIX_DIR "/tmp/rrd"
+#define RRD_SUFFIX_PATH "/tmp/rrd/rrd_suffix.txt"
+
 
 /*
  * @function removeSpecialChar
@@ -45,6 +52,225 @@ void removeSpecialChar(char *str)
         }
     }
 }
+
+int persist_suffix_to_file(const char *suffix) {
+    struct stat st;
+    uid_t uid = getuid();
+    int dirfd = open(RRD_SUFFIX_DIR, O_NOFOLLOW | O_DIRECTORY);
+    if (dirfd == -1) {
+        // Directory does not exist, try to create
+        if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
+            return -1;
+        }
+        dirfd = open(RRD_SUFFIX_DIR, O_NOFOLLOW | O_DIRECTORY);
+        if (dirfd == -1) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Could not open %s after creation: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
+            return -1;
+        }
+    }
+    if (fstat(dirfd, &st) != 0 || !S_ISDIR(st.st_mode) || st.st_uid != uid || (st.st_mode & 0777) != 0700) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] %s not owned by current user or not mode 0700!\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR);
+        close(dirfd);
+        return -1;
+    }
+    close(dirfd);
+
+    // Write to a temp file first
+    char tmp_path[256];
+    snprintf(tmp_path, sizeof(tmp_path), "%s/.rrd_suffix.tmpXXXXXX", RRD_SUFFIX_DIR);
+    mode_t old_umask = umask(077);
+    int tmpfd = mkstemp(tmp_path);
+    umask(old_umask);
+    if (tmpfd == -1) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create temp file in %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
+        return -1;
+    }
+    // Set restrictive permissions
+    if (fchmod(tmpfd, 0600) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to set permissions on temp file: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+        close(tmpfd);
+        if (unlink(tmp_path) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+        }
+        return -1;
+    }
+    // Write suffix
+    if (suffix && suffix[0] != '\0') {
+        size_t len = strlen(suffix);
+        size_t total_written = 0;
+        while (total_written < len) {
+            /* Coverity fix: ensure no underflow/overflow in len - total_written */
+            if (total_written > len) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] total_written (%zu) > len (%zu), possible integer overflow\n", __FUNCTION__, __LINE__, total_written, len);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            size_t to_write = len - total_written;
+            if (to_write > SSIZE_MAX) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] to_write (%zu) > SSIZE_MAX (%zd), refusing to write\n", __FUNCTION__, __LINE__, to_write, (ssize_t)SSIZE_MAX);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            if (to_write == 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] to_write is 0, nothing to write\n", __FUNCTION__, __LINE__);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            /* Defensive: never cast a negative value, but size_t is unsigned, so only check upper bound */
+            ssize_t write_len = (ssize_t)to_write;
+            if (write_len <= 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] write_len (%zd) <= 0, refusing to write\n", __FUNCTION__, __LINE__, write_len);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            ssize_t written = write(tmpfd, suffix + total_written, write_len);
+            if (written == -1) {
+                if (errno == EINTR)
+                    continue;
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix to temp file: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            if (written == 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Short write (0 bytes) to temp file\n", __FUNCTION__, __LINE__);
+                close(tmpfd);
+                if (unlink(tmp_path) != 0) {
+                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+                }
+                return -1;
+            }
+            total_written += (size_t)written;
+        }
+    }
+    // Flush and verify
+    if (fsync(tmpfd) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] fsync failed on temp file: %s\n", __FUNCTION__, __LINE__, strerror(errno));
+        close(tmpfd);
+        if (unlink(tmp_path) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+        }
+        return -1;
+    }
+    struct stat fst;
+    if (fstat(tmpfd, &fst) != 0 || !S_ISREG(fst.st_mode)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Temp file is not a regular file!\n", __FUNCTION__, __LINE__);
+        close(tmpfd);
+        if (unlink(tmp_path) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+        }
+        return -1;
+    }
+    close(tmpfd);
+
+    // Atomically rename temp file to target
+    if (rename(tmp_path, RRD_SUFFIX_PATH) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to rename temp file to %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
+        if (unlink(tmp_path) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] unlink failed on %s: %s\n", __FUNCTION__, __LINE__, tmp_path, strerror(errno));
+        }
+        return -1;
+    }
+    return 0;
+}
+
+void read_suffix_from_file_to_buf(char *buf, size_t buflen) 
+{
+    if (!buf || buflen == 0) return;
+    int fd = open(RRD_SUFFIX_PATH, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+    if (fd == -1) {
+        buf[0] = '\0';
+        return;
+    }
+    struct stat st;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != getuid() || (st.st_mode & 022) != 0) {
+        // Not a regular file, not owned by us, or group/other-writable
+        buf[0] = '\0';
+        close(fd);
+        return;
+    }
+    FILE *fp = fdopen(fd, "r");
+    if (!fp) {
+        buf[0] = '\0';
+        close(fd);
+        return;
+    }
+    if (fgets(buf, buflen, fp) == NULL) {
+        buf[0] = '\0';
+        fclose(fp);
+        return;
+    }
+    fclose(fp);
+    size_t len = strlen(buf);
+    if (len > 0 && buf[len-1] == '\n') buf[len-1] = '\0';
+}
+
+/*
+ * @function split_issue_type
+ * @brief Utility to split base and suffix from issue type string.
+ *        Example: Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *                 Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ * @param const char *input - The input string to split.
+ * @param char *base - Buffer to store the base part (before the first underscore).
+ * @param size_t base_len - Size of the base buffer.
+ * @param char *suffix - Buffer to store the suffix part (from the first underscore onwards).
+ * @param size_t suffix_len - Size of the suffix buffer.
+ * @return void
+ */
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) {
+    if (base && base_len > 0) 
+	{
+        base[0] = '\0';
+    }
+    if (suffix && suffix_len > 0) 
+	{
+        suffix[0] = '\0';
+    }
+
+    if (!input || !base || !suffix) 
+	{
+        return;
+    }
+
+    if (base_len == 0 || suffix_len == 0) 
+	{
+        return;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
+    const char *underscore = strchr(input, '_');
+    if (underscore) 
+	{
+        size_t b_len = underscore - input;
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+        strncpy(suffix, underscore, suffix_len - 1);
+        suffix[suffix_len - 1] = '\0';
+    } 
+	else 
+	{
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
+}
+
 
 /*
  * @function getParamcount
@@ -516,6 +742,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+        if (persist_suffix_to_file("") != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file on early exit\n", __FUNCTION__, __LINE__);
+        }
         return;
     }
 
@@ -536,6 +765,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
         free(buff->jsonPath); // free rrd path info
+        if (persist_suffix_to_file("") != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file on early exit\n", __FUNCTION__, __LINE__);
+        }
         return;
     }
     else
@@ -576,7 +808,29 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                status = uploadDebugoutput(outdir,buff->mdata);
+                // Use the persisted suffix from file for upload
+                char suffix[128] = {0};
+                read_suffix_from_file_to_buf(suffix, sizeof(suffix));
+                char tarName[512] = {0};
+				int tar_name_len = 0;
+                if (suffix[0] != '\0') {
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, suffix);
+                } 
+				else 
+				{
+                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
+                }
+				if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
+                {
+                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
+                    status = -1;
+                }
+				else
+				{
+                   RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: [INFO] Tar file name for upload: '%s'\n", __FUNCTION__, __LINE__, tarName);
+                   status = uploadDebugoutput(outdir, tarName);
+				}
+				
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -589,6 +843,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
+            if (persist_suffix_to_file("") != 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file after upload\n", __FUNCTION__, __LINE__);
+            }
 	}
 	else
 	{
@@ -596,6 +853,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
             free(buff->jsonPath); // free rrd path info
+            if (persist_suffix_to_file("") != 0) {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to clear suffix file after upload\n", __FUNCTION__, __LINE__);
+            }
 	}
     }
 }
