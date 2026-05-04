@@ -51,23 +51,30 @@ void removeSpecialChar(char *str)
 
 int persist_suffix_to_file(const char *suffix) {
     struct stat st;
-    if (lstat(RRD_SUFFIX_DIR, &st) == 0) {
-        if (!S_ISDIR(st.st_mode)) {
+    if (lstat(RRD_SUFFIX_DIR, &st) == 0) 
+	{
+        if (!S_ISDIR(st.st_mode)) 
+		{
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] %s exists but is not a directory!\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR);
             return -1;
         }
-    } else {
-        if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) {
+    } 
+	else 
+	{
+        if (mkdir(RRD_SUFFIX_DIR, 0700) != 0 && errno != EEXIST) 
+		{
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to create %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_DIR, strerror(errno));
             return -1;
         }
     }
     FILE *fp = fopen(RRD_SUFFIX_PATH, "w");
-    if (!fp) {
+    if (!fp) 
+	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to open %s for writing: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
         return -1;
     }
-    if (suffix && fputs(suffix, fp) < 0) {
+    if (suffix && fputs(suffix, fp) < 0) 
+	{
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: [ERROR] Failed to write suffix to %s: %s\n", __FUNCTION__, __LINE__, RRD_SUFFIX_PATH, strerror(errno));
         fclose(fp);
         return -1;
@@ -76,14 +83,17 @@ int persist_suffix_to_file(const char *suffix) {
     return 0;
 }
 
-void read_suffix_from_file_to_buf(char *buf, size_t buflen) {
+void read_suffix_from_file_to_buf(char *buf, size_t buflen) 
+{
     if (!buf || buflen == 0) return;
     FILE *fp = fopen(RRD_SUFFIX_PATH, "r");
-    if (!fp) {
+    if (!fp) 
+	{
         buf[0] = '\0';
         return;
     }
-    if (fgets(buf, buflen, fp) == NULL) {
+    if (fgets(buf, buflen, fp) == NULL) 
+	{
         buf[0] = '\0';
         fclose(fp);
         return;
