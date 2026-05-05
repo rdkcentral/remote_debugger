@@ -44,3 +44,4 @@ src/unittest/dummy_*/
 
 # Generated test data files
 src/unittest/UTJson/device.properties
+dummy_*/
