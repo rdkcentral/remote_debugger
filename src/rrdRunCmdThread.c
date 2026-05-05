@@ -383,7 +383,7 @@ bool executeCommands(issueData *cmdinfo)
                 return false;
             }
 
-            snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr),"%s%s_%ld", remoteDebuggerPrefix, cmdData->rfcvalue, (long)epochTime);
+            snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr),"%s%s%ld", remoteDebuggerPrefix, cmdData->rfcvalue, (long)epochTime);
 			//snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr), "%s%s", remoteDebuggerPrefix, dirname);
 
 	    removeQuotes(cmdData->command);
