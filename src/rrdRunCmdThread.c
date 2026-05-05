@@ -287,7 +287,7 @@ bool executeCommands(issueData *cmdinfo)
     char pathname[BUF_LEN_256] = {'\0'};
     char *outdirpath = NULL;
     char finalOutFile[BUF_LEN_256] =  {'\0'};
-    char remoteDebuggerServiceStr[BUF_LEN_256] =  {'\0'};
+    char remoteDebuggerServiceStr[BUF_LEN_512] =  {'\0'};
     char *printbuffer = NULL;
     FILE *filePointer;
     const char *remoteDebuggerPrefix = "remote_debugger_";
@@ -357,7 +357,7 @@ bool executeCommands(issueData *cmdinfo)
             strncat(finalOutFile,RRD_OUTPUT_FILE, strlen(RRD_OUTPUT_FILE) + 1);
 
             /* Open debug_output.txt file*/
-            filePointer = fopen(finalOutFile, "a+");
+            filePointer = fopen(finalOutFile, "w+");
             if (filePointer == NULL)
             {
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Unable to Open File:%s\n",__FUNCTION__,__LINE__,finalOutFile);
@@ -376,21 +376,25 @@ bool executeCommands(issueData *cmdinfo)
 
             /*Executing Commands using systemd-run*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Executing following commands using systemd-run:\n \"%s\"\n",__FUNCTION__,__LINE__,cmdData->command);
+            time_t epochTime = time(NULL);
+            if (epochTime == ((time_t)-1))
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to get epoch time\n", __FUNCTION__, __LINE__);
+            }
 
-            strncpy(remoteDebuggerServiceStr, remoteDebuggerPrefix, sizeof(remoteDebuggerServiceStr) - 1);
-            remoteDebuggerServiceStr[sizeof(remoteDebuggerServiceStr) - 1] = '\0';
-            strncat(remoteDebuggerServiceStr, cmdData->rfcvalue, sizeof(remoteDebuggerServiceStr) - strlen(remoteDebuggerServiceStr) - 1);
+            snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr),"%s%s%ld", remoteDebuggerPrefix, cmdData->rfcvalue, (long)epochTime);
+			//snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr), "%s%s", remoteDebuggerPrefix, dirname);
 
 	    removeQuotes(cmdData->command);
 	    
 	    FILE *systemdfp = v_secure_popen("r", "systemd-run -r --unit=%s --service-type=oneshot -p RemainAfterExit=yes /bin/sh -c %s", remoteDebuggerServiceStr, cmdData->command);
             if(systemdfp == NULL)
             {
-                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service failed!!!\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Starting %s service failed!!!\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
             }
             else
             {
-                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
+                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting %s service success...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
 		copyDebugLogDestFile(systemdfp, filePointer);
                 v_secure_pclose(systemdfp);
             }
@@ -400,11 +404,11 @@ bool executeCommands(issueData *cmdinfo)
 	    FILE *journalctlfp = v_secure_popen("r", "journalctl -a -u %s", remoteDebuggerServiceStr);
             if(journalctlfp == NULL)
             {
-                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: journalctl remote_debugger_%s service failed!!!\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: journalctl %s service failed!!!\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
             }
             else
             {
-                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: journalctl remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
+                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: journalctl remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
 		copyDebugLogDestFile(journalctlfp, filePointer);
                 v_secure_pclose(journalctlfp);
             }
@@ -417,7 +421,7 @@ bool executeCommands(issueData *cmdinfo)
             sleep(cmdData->timeout);
 
             /*Stop or Reset runtime service for issue*/
-            RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping remote_debugger_%s service...\n",__FUNCTION__,__LINE__,cmdData->rfcvalue);
+            RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping %s service...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
 #if !defined(GTEST_ENABLE)
 	    v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
             free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
