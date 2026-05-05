@@ -1931,12 +1931,12 @@ TEST(SplitIssueTypeTest, UnderscoreSplitsBaseAndSuffix)
 
 TEST(SplitIssueTypeTest, MultipleUnderscoresSplitsAtFirst)
 {
-    /* "abc_def_ghi": suffix "_def_ghi" does not start with "_Search-" or "_LogSearch-",
-     * so the full input is returned as the base with an empty suffix. */
+    /* "abc_def_ghi": suffix "_def_ghi" does not start with "_Search-" or "_LogSearch-".
+     * Base is always the part before the first '_'; invalid suffix is discarded. */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_def_ghi", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "abc_def_ghi");
+    EXPECT_STREQ(base, "abc");
     EXPECT_STREQ(suffix, "");
 }
 
@@ -1962,9 +1962,8 @@ TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
 
 TEST(SplitIssueTypeTest, BaseTruncatedWhenTooSmall)
 {
-    /* "abc_suffix": suffix "_suffix" is not a valid prefix, so the full input
-     * is treated as the base. With a 4-byte buffer, "abc_suffix" is truncated
-     * to "abc" (3 chars + NUL). No suffix is returned. */
+    /* "abc_suffix": invalid suffix prefix, so suffix is discarded.
+     * Base = "abc" (before '_'); with a 4-byte buffer this fits exactly. */
     char base[4] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
@@ -1987,12 +1986,11 @@ TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
 
 TEST(SplitIssueTypeTest, LeadingUnderscoreGivesEmptyBase)
 {
-    /* "_suffixonly": suffix "_suffixonly" does not start with "_Search-" or
-     * "_LogSearch-", so the full input is treated as the base (no split). */
+    /* "_suffixonly": split at '_' gives empty base, invalid suffix is discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("_suffixonly", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "_suffixonly");
+    EXPECT_STREQ(base, "");
     EXPECT_STREQ(suffix, "");
 }
 
@@ -2036,8 +2034,8 @@ TEST(SplitIssueTypeTest, ZeroSuffixLenDoesNotCrash)
 
 TEST(SplitIssueTypeTest, ExactFitBase)
 {
-    /* "abc_suffix": suffix "_suffix" is not a valid prefix, so full input is the
-     * base. With a 4-byte buffer, it is truncated to "abc" (3 chars + NUL). */
+    /* "abc_suffix": invalid suffix prefix, so suffix is discarded.
+     * Base = "abc" (before '_'); 4-byte buffer fits exactly. */
     char base[4] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
@@ -2048,11 +2046,11 @@ TEST(SplitIssueTypeTest, ExactFitBase)
 
 TEST(SplitIssueTypeTest, OnlyUnderscoreInput)
 {
-    /* "_" is not a valid suffix prefix → treated as base, empty suffix */
+    /* "_": split at '_' gives empty base, empty (invalid) suffix is discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("_", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "_");
+    EXPECT_STREQ(base, "");
     EXPECT_STREQ(suffix, "");
 }
 
@@ -2078,33 +2076,33 @@ TEST(SplitIssueTypeTest, SearchSuffixIsValid)
     EXPECT_STREQ(suffix, "_Search-1a2b3c4d");
 }
 
-TEST(SplitIssueTypeTest, InvalidSuffixPrefixTreatedAsBase)
+TEST(SplitIssueTypeTest, InvalidSuffixPrefixDiscarded)
 {
-    /* "_Random-token" is not an allowed prefix → full input is the base */
+    /* "_Random-token" is not an allowed prefix → base = "Device.DeviceTime", suffix discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("Device.DeviceTime_Random-token", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "Device.DeviceTime_Random-token");
+    EXPECT_STREQ(base, "Device.DeviceTime");
     EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, SearchWithoutHyphenIsInvalid)
 {
-    /* "_Search_something" does not start with "_Search-" → treated as base */
+    /* "_Search_something" does not start with "_Search-" → split at first '_', suffix discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_Search_something", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "abc_Search_something");
+    EXPECT_STREQ(base, "abc");
     EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, LogSearchWithoutHyphenIsInvalid)
 {
-    /* "_LogSearch_something" does not start with "_LogSearch-" → treated as base */
+    /* "_LogSearch_something" does not start with "_LogSearch-" → split at first '_', suffix discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_LogSearch_something", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "abc_LogSearch_something");
+    EXPECT_STREQ(base, "abc");
     EXPECT_STREQ(suffix, "");
 }
 
@@ -2224,12 +2222,12 @@ TEST(ProcessIssueTypeEvntTest, IssueTypeWithLogSearchSuffix_inDynamic_NoJson){
 }
 
 TEST(ProcessIssueTypeEvntTest, IssueTypeWithInvalidSuffixTreatedAsBase){
-    /* "_Random-token" is not an allowed prefix; the full string is the base, no suffix */
+    /* "_Random-token" is not an allowed prefix; base = "Device.DeviceTime", suffix discarded */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceTime_Random-token");
     rbuf.inDynamic = false;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; full string is treated as base, no suffix stored */
+    /* Should not crash; base is split at '_', invalid suffix is discarded */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;

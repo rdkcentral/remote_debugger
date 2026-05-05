@@ -53,20 +53,24 @@ void removeSpecialChar(char *str)
 /*
  * @function split_issue_type
  * @brief Utility to split base and suffix from issue type string.
- *        The suffix is only recognised when it starts with "_Search-" or
- *        "_LogSearch-". Any other underscore-delimited token is treated as
- *        part of the base (no suffix is returned).
- *        Example (valid):
- *          Input:  Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
- *          Output: base = Device.DeviceTime,
- *                  suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
- *        Example (invalid suffix prefix):
- *          Input:  Device.DeviceTime_Other-token
- *          Output: base = Device.DeviceTime_Other-token, suffix = ""
+ *        The input is always split at the first '_'. The base is the part
+ *        before the underscore (never contains '_'). The suffix is only
+ *        populated when it starts with "_Search-" or "_LogSearch-"; any
+ *        other underscore-delimited token is discarded (suffix returns "").
+ *        If no underscore is present the full input is the base.
+ *        Examples:
+ *          "Device.DeviceTime_Search-b6877385"  → base="Device.DeviceTime",
+ *                                                  suffix="_Search-b6877385"
+ *          "Device.DeviceTime_LogSearch-1a2b"   → base="Device.DeviceTime",
+ *                                                  suffix="_LogSearch-1a2b"
+ *          "Device.DeviceTime_Other-token"      → base="Device.DeviceTime",
+ *                                                  suffix=""
+ *          "Device.DeviceTime"                  → base="Device.DeviceTime",
+ *                                                  suffix=""
  * @param const char *input - The input string to split.
- * @param char *base - Buffer to store the base part.
+ * @param char *base - Buffer to store the base part (never contains '_').
  * @param size_t base_len - Size of the base buffer.
- * @param char *suffix - Buffer to store the suffix part (from the first valid underscore onwards).
+ * @param char *suffix - Buffer to store the suffix part when valid, else "".
  * @param size_t suffix_len - Size of the suffix buffer.
  * @return void
  */
@@ -93,25 +97,30 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
     }
 
     const char *underscore = strchr(input, '_');
-    if (underscore &&
-        (strncmp(underscore, VALID_SUFFIX_SEARCH,    sizeof(VALID_SUFFIX_SEARCH)    - 1) == 0 ||
-         strncmp(underscore, VALID_SUFFIX_LOGSEARCH, sizeof(VALID_SUFFIX_LOGSEARCH) - 1) == 0))
+    if (underscore)
     {
-        /* Suffix starts with an allowed prefix — split at the underscore */
+        /* Always split at the first underscore — base never contains '_' */
         size_t b_len = (size_t)(underscore - input);
         if (b_len >= base_len) b_len = base_len - 1;
         strncpy(base, input, b_len);
         base[b_len] = '\0';
-        strncpy(suffix, underscore, suffix_len - 1);
-        suffix[suffix_len - 1] = '\0';
+
+        /* Only carry the suffix when it starts with an allowed prefix */
+        if (strncmp(underscore, VALID_SUFFIX_SEARCH,    sizeof(VALID_SUFFIX_SEARCH)    - 1) == 0 ||
+            strncmp(underscore, VALID_SUFFIX_LOGSEARCH, sizeof(VALID_SUFFIX_LOGSEARCH) - 1) == 0)
+        {
+            strncpy(suffix, underscore, suffix_len - 1);
+            suffix[suffix_len - 1] = '\0';
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' does not start with an allowed prefix; discarding suffix\n", __FUNCTION__, __LINE__, base);
+            suffix[0] = '\0';
+        }
     }
     else
     {
-        /* No underscore, or suffix prefix is not allowed — return full input as base */
-        if (underscore)
-        {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix in '%s' does not start with an allowed prefix; treating full string as base\n", __FUNCTION__, __LINE__, input);
-        }
+        /* No underscore — full input is the base */
         strncpy(base, input, base_len - 1);
         base[base_len - 1] = '\0';
         suffix[0] = '\0';
