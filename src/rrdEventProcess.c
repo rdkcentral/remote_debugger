@@ -95,6 +95,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                         continue;
                     }
                     dataMsgLen = strlen(base) + 1;
+					removeSpecialCharacterfromIssueTypeList(base);
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
                     if(cmdBuff->inDynamic)
@@ -694,7 +695,6 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
     int cnt = 1, i = 0;
     char *str = input_str;
 
-    removeSpecialCharacterfromIssueTypeList(str);
     while (*str == delimeter)
         str++;
 
