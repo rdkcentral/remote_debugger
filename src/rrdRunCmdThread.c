@@ -391,11 +391,11 @@ bool executeCommands(issueData *cmdinfo)
 	    FILE *systemdfp = v_secure_popen("r", "systemd-run -r --unit=%s --service-type=oneshot -p RemainAfterExit=yes /bin/sh -c %s", remoteDebuggerServiceStr, cmdData->command);
             if(systemdfp == NULL)
             {
-                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service failed!!!\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Starting %s service failed!!!\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
             }
             else
             {
-                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
+                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting %s service success...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
 		copyDebugLogDestFile(systemdfp, filePointer);
                 v_secure_pclose(systemdfp);
             }
@@ -405,7 +405,7 @@ bool executeCommands(issueData *cmdinfo)
 	    FILE *journalctlfp = v_secure_popen("r", "journalctl -a -u %s", remoteDebuggerServiceStr);
             if(journalctlfp == NULL)
             {
-                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: journalctl remote_debugger_%s service failed!!!\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: journalctl %s service failed!!!\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
             }
             else
             {
@@ -422,7 +422,7 @@ bool executeCommands(issueData *cmdinfo)
             sleep(cmdData->timeout);
 
             /*Stop or Reset runtime service for issue*/
-            RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping remote_debugger_%s service...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
+            RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Stopping %s service...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
 #if !defined(GTEST_ENABLE)
 	    v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
             free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
