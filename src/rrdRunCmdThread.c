@@ -380,7 +380,6 @@ bool executeCommands(issueData *cmdinfo)
             if (epochTime == ((time_t)-1))
             {
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to get epoch time\n", __FUNCTION__, __LINE__);
-                return false;
             }
 
             snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr),"%s%s%ld", remoteDebuggerPrefix, cmdData->rfcvalue, (long)epochTime);
