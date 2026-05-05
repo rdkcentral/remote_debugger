@@ -585,11 +585,6 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 #else
-    if (rbuf->jsonPath == NULL)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL, skipping installed-package check.\n", __FUNCTION__, __LINE__);
-        return;
-    }
     int utjsonlen = strlen(rbuf->jsonPath);
     dynJSONPath = (char *)malloc(utjsonlen + 1);
 #endif
