@@ -376,8 +376,15 @@ bool executeCommands(issueData *cmdinfo)
 
             /*Executing Commands using systemd-run*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Executing following commands using systemd-run:\n \"%s\"\n",__FUNCTION__,__LINE__,cmdData->command);
+            time_t epochTime = time(NULL);
+            if (epochTime == ((time_t)-1))
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to get epoch time\n", __FUNCTION__, __LINE__);
+                return false;
+            }
 
-			snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr), "%s%s", remoteDebuggerPrefix, dirname);
+            snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr),"%s%s_%ld", remoteDebuggerPrefix, cmdData->rfcvalue, (long)epochTime);
+			//snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr), "%s%s", remoteDebuggerPrefix, dirname);
 
 	    removeQuotes(cmdData->command);
 	    
