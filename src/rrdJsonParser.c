@@ -46,15 +46,27 @@ void removeSpecialChar(char *str)
     }
 }
 
+/* Valid suffix prefixes: only "_Search-" and "_LogSearch-" are accepted */
+#define VALID_SUFFIX_SEARCH    "_Search-"
+#define VALID_SUFFIX_LOGSEARCH "_LogSearch-"
+
 /*
  * @function split_issue_type
  * @brief Utility to split base and suffix from issue type string.
- *        Example: Input: Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
- *                 Output: base = Device.DeviceTime, suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *        The suffix is only recognised when it starts with "_Search-" or
+ *        "_LogSearch-". Any other underscore-delimited token is treated as
+ *        part of the base (no suffix is returned).
+ *        Example (valid):
+ *          Input:  Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *          Output: base = Device.DeviceTime,
+ *                  suffix = _Search-b6877385-9463-45fc-b19d-a24d77fd0790
+ *        Example (invalid suffix prefix):
+ *          Input:  Device.DeviceTime_Other-token
+ *          Output: base = Device.DeviceTime_Other-token, suffix = ""
  * @param const char *input - The input string to split.
- * @param char *base - Buffer to store the base part (before the first underscore).
+ * @param char *base - Buffer to store the base part.
  * @param size_t base_len - Size of the base buffer.
- * @param char *suffix - Buffer to store the suffix part (from the first underscore onwards).
+ * @param char *suffix - Buffer to store the suffix part (from the first valid underscore onwards).
  * @param size_t suffix_len - Size of the suffix buffer.
  * @return void
  */
@@ -79,24 +91,31 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
 	{
         return;
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type called with input='%s'\n", __FUNCTION__, __LINE__, input);
+
     const char *underscore = strchr(input, '_');
-    if (underscore) 
-	{
-        size_t b_len = underscore - input;
+    if (underscore &&
+        (strncmp(underscore, VALID_SUFFIX_SEARCH,    sizeof(VALID_SUFFIX_SEARCH)    - 1) == 0 ||
+         strncmp(underscore, VALID_SUFFIX_LOGSEARCH, sizeof(VALID_SUFFIX_LOGSEARCH) - 1) == 0))
+    {
+        /* Suffix starts with an allowed prefix — split at the underscore */
+        size_t b_len = (size_t)(underscore - input);
         if (b_len >= base_len) b_len = base_len - 1;
         strncpy(base, input, b_len);
         base[b_len] = '\0';
         strncpy(suffix, underscore, suffix_len - 1);
         suffix[suffix_len - 1] = '\0';
-    } 
-	else 
-	{
+    }
+    else
+    {
+        /* No underscore, or suffix prefix is not allowed — return full input as base */
+        if (underscore)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix in '%s' does not start with an allowed prefix; treating full string as base\n", __FUNCTION__, __LINE__, input);
+        }
         strncpy(base, input, base_len - 1);
         base[base_len - 1] = '\0';
         suffix[0] = '\0';
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: split_issue_type result: base='%s', suffix='%s'\n", __FUNCTION__, __LINE__, base, suffix);
 }
 
 

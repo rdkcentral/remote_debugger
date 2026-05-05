@@ -1931,11 +1931,13 @@ TEST(SplitIssueTypeTest, UnderscoreSplitsBaseAndSuffix)
 
 TEST(SplitIssueTypeTest, MultipleUnderscoresSplitsAtFirst)
 {
+    /* "abc_def_ghi": suffix "_def_ghi" does not start with "_Search-" or "_LogSearch-",
+     * so the full input is returned as the base with an empty suffix. */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_def_ghi", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "abc");
-    EXPECT_STREQ(suffix, "_def_ghi");
+    EXPECT_STREQ(base, "abc_def_ghi");
+    EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, EmptyInputProducesEmptyOutputs)
@@ -1960,33 +1962,38 @@ TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
 
 TEST(SplitIssueTypeTest, BaseTruncatedWhenTooSmall)
 {
-    /* base buffer is only 4 bytes; "abc_suffix" -> base should be "abc" (3 chars + NUL) */
+    /* "abc_suffix": suffix "_suffix" is not a valid prefix, so the full input
+     * is treated as the base. With a 4-byte buffer, "abc_suffix" is truncated
+     * to "abc" (3 chars + NUL). No suffix is returned. */
     char base[4] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
-    EXPECT_STREQ(suffix, "_suffix");
+    EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
 {
-    /* suffix buffer is only 5 bytes; "_longsuffix" should be truncated to "_lon" + NUL */
+    /* "abc_LogSearch-longsuffix": valid suffix prefix "_LogSearch-". Suffix buffer
+     * is only 5 bytes so suffix is truncated to "_Log" + NUL. */
     char base[64] = {0};
     char suffix[5] = {0};
-    split_issue_type("abc_longsuffix", base, sizeof(base), suffix, sizeof(suffix));
+    split_issue_type("abc_LogSearch-longsuffix", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
-    EXPECT_STREQ(suffix, "_lon");
+    EXPECT_STREQ(suffix, "_Log");
     EXPECT_EQ(suffix[sizeof(suffix) - 1], '\0');
     EXPECT_EQ(strlen(suffix), (size_t)(sizeof(suffix) - 1));
 }
 
 TEST(SplitIssueTypeTest, LeadingUnderscoreGivesEmptyBase)
 {
+    /* "_suffixonly": suffix "_suffixonly" does not start with "_Search-" or
+     * "_LogSearch-", so the full input is treated as the base (no split). */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("_suffixonly", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "");
-    EXPECT_STREQ(suffix, "_suffixonly");
+    EXPECT_STREQ(base, "_suffixonly");
+    EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, NullBaseDoesNotCrash)
@@ -2029,22 +2036,76 @@ TEST(SplitIssueTypeTest, ZeroSuffixLenDoesNotCrash)
 
 TEST(SplitIssueTypeTest, ExactFitBase)
 {
-    /* base buffer is exactly large enough for "abc" + NUL = 4 bytes */
+    /* "abc_suffix": suffix "_suffix" is not a valid prefix, so full input is the
+     * base. With a 4-byte buffer, it is truncated to "abc" (3 chars + NUL). */
     char base[4] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
     EXPECT_EQ(base[3], '\0');
-    EXPECT_STREQ(suffix, "_suffix");
+    EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, OnlyUnderscoreInput)
 {
+    /* "_" is not a valid suffix prefix → treated as base, empty suffix */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("_", base, sizeof(base), suffix, sizeof(suffix));
-    EXPECT_STREQ(base, "");
-    EXPECT_STREQ(suffix, "_");
+    EXPECT_STREQ(base, "_");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, LogSearchSuffixIsValid)
+{
+    /* "_LogSearch-uuid" is an allowed suffix prefix → split */
+    char base[64] = {0};
+    char suffix[128] = {0};
+    split_issue_type("Device.DeviceTime_LogSearch-b6877385-9463-45fc-b19d-a24d77fd0790",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_LogSearch-b6877385-9463-45fc-b19d-a24d77fd0790");
+}
+
+TEST(SplitIssueTypeTest, SearchSuffixIsValid)
+{
+    /* "_Search-uuid" is an allowed suffix prefix → split (mirrors UnderscoreSplitsBaseAndSuffix) */
+    char base[64] = {0};
+    char suffix[128] = {0};
+    split_issue_type("Device.DeviceInfo_Search-1a2b3c4d",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceInfo");
+    EXPECT_STREQ(suffix, "_Search-1a2b3c4d");
+}
+
+TEST(SplitIssueTypeTest, InvalidSuffixPrefixTreatedAsBase)
+{
+    /* "_Random-token" is not an allowed prefix → full input is the base */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_Random-token", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime_Random-token");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, SearchWithoutHyphenIsInvalid)
+{
+    /* "_Search_something" does not start with "_Search-" → treated as base */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_Search_something", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc_Search_something");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, LogSearchWithoutHyphenIsInvalid)
+{
+    /* "_LogSearch_something" does not start with "_LogSearch-" → treated as base */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_LogSearch_something", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc_LogSearch_something");
+    EXPECT_STREQ(suffix, "");
 }
 
 /* --------------- Test processIssueTypeInDynamicProfile() from rrdEventProcess --------------- */
@@ -2138,37 +2199,49 @@ TEST(ProcessIssueTypeEvntTest, inDynamic_NoJson){
     rbuf.mdata = NULL;
 }
 
-TEST(ProcessIssueTypeEvntTest, IssueTypeWithSuffix_inDynamic_NoJson){
-    /* Issue type with underscore suffix: base "Device.DeviceTime" + suffix "_Search-uuid" */
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithSearchSuffix_inDynamic_NoJson){
+    /* Issue type with valid "_Search-" suffix: base is "Device.DeviceTime", suffix is preserved */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; suffix is parsed and stored then freed internally */
+    /* Should not crash; suffix is parsed, stored, and freed internally */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;
 }
 
-TEST(ProcessIssueTypeEvntTest, IssueTypeStartingWithUnderscore_isSkipped){
-    /* An issue type that starts with '_' produces an empty base, so it should be skipped */
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithLogSearchSuffix_inDynamic_NoJson){
+    /* Issue type with valid "_LogSearch-" suffix: base is "Device.DeviceInfo", suffix is preserved */
     data_buf rbuf = {};
-    rbuf.mdata = strdup("_suffixonly");
+    rbuf.mdata = strdup("Device.DeviceInfo_LogSearch-9abc1def-0000-1111-2222-3333aaaabbbb");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = nullptr;
+    /* Should not crash; suffix is parsed, stored, and freed internally */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithInvalidSuffixTreatedAsBase){
+    /* "_Random-token" is not an allowed prefix; the full string is the base, no suffix */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("Device.DeviceTime_Random-token");
     rbuf.inDynamic = false;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; empty base is detected and the entry is skipped */
+    /* Should not crash; full string is treated as base, no suffix stored */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;
 }
 
 TEST(ProcessIssueTypeEvntTest, MultipleIssueTypesWithAndWithoutSuffix){
-    /* Comma-separated list: one plain type and one with underscore suffix */
+    /* Comma-separated list: one plain type, one with valid suffix, one with invalid suffix */
     data_buf rbuf = {};
-    rbuf.mdata = strdup("Device.DeviceTime,Device.DeviceInfo_Search-1234");
+    rbuf.mdata = strdup("Device.DeviceTime,Device.DeviceInfo_Search-1234,Device.Net_BadSuffix");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; both entries are processed correctly */
+    /* Should not crash; all entries are processed without leaks */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;
