@@ -423,7 +423,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
 #if !defined(GTEST_ENABLE)
     jsonParsed = readAndParseJSON(RRD_JSON_FILE);
 #else
-    jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    if (rbuf->jsonPath != NULL)
+    {
+        jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    }
 #endif
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
@@ -586,6 +589,11 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 #else
+    if (rbuf->jsonPath == NULL)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL in GTEST mode, skipping installed package check... \n", __FUNCTION__, __LINE__);
+        return;
+    }
     int utjsonlen = strlen(rbuf->jsonPath);
     dynJSONPath = (char *)malloc(utjsonlen + 1);
 #endif
