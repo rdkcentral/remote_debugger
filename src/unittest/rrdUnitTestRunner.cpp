@@ -2221,7 +2221,8 @@ TEST(ProcessIssueTypeEvntTest, IssueTypeWithLogSearchSuffix_inDynamic_NoJson){
     rbuf.mdata = NULL;
 }
 
-TEST(ProcessIssueTypeEvntTest, IssueTypeWithInvalidSuffixTreatedAsBase){
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithInvalidSuffixTreatedAsBase)
+{    
     /* "_Random-token" is not an allowed prefix; base = "Device.DeviceTime", suffix discarded */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceTime_Random-token");
