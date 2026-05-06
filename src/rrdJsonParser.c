@@ -47,8 +47,12 @@ void removeSpecialChar(char *str)
 }
 
 /* Maximum allowed suffix length (including the leading '_').
- * Suffixes longer than this are discarded to avoid extra '_' delimiters
- * in the archive filename that break the analytics portal parser. */
+ * The analytics portal parses archive filenames by splitting on '_'. A suffix
+ * longer than this limit would introduce extra '_' delimiters that shift the
+ * timestamp field to a wrong position, causing download failures.
+ * 9 characters = '_' + up to 8 alphanumeric/short-token chars: long UUID-based
+ * suffixes (e.g. "_Search-b6877385-...") are always > 9 and are therefore
+ * discarded before the archive name is built. */
 #define RRD_MAX_SUFFIX_LEN  9
 
 /*

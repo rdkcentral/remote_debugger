@@ -2076,13 +2076,13 @@ TEST(SplitIssueTypeTest, LongSuffixIsDiscarded)
     /* Suffix longer than 9 chars is discarded regardless of its content */
     char base[64] = {0};
     char suffix[128] = {0};
-    split_issue_type("Device.DeviceInfo_Search-1a2b3c4d",
+    split_issue_type("Device.DeviceInfo_1234567890",
                      base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "Device.DeviceInfo");
     EXPECT_STREQ(suffix, "");
 }
 
-TEST(SplitIssueTypeTest, InvalidSuffixPrefixDiscarded)
+TEST(SplitIssueTypeTest, SuffixExceedingMaxLengthDiscarded)
 {
     /* "_Random-token" is 13 chars (> 9) → suffix discarded */
     char base[64] = {0};
@@ -2092,7 +2092,7 @@ TEST(SplitIssueTypeTest, InvalidSuffixPrefixDiscarded)
     EXPECT_STREQ(suffix, "");
 }
 
-TEST(SplitIssueTypeTest, SearchWithoutHyphenIsInvalid)
+TEST(SplitIssueTypeTest, SuffixSeventeenCharsDiscarded)
 {
     /* "_Search_something" is 17 chars (> 9) → suffix discarded */
     char base[64] = {0};
@@ -2102,7 +2102,7 @@ TEST(SplitIssueTypeTest, SearchWithoutHyphenIsInvalid)
     EXPECT_STREQ(suffix, "");
 }
 
-TEST(SplitIssueTypeTest, LogSearchWithoutHyphenIsInvalid)
+TEST(SplitIssueTypeTest, SuffixTwentyCharsDiscarded)
 {
     /* "_LogSearch_something" is 20 chars (> 9) → suffix discarded */
     char base[64] = {0};
