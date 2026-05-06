@@ -373,13 +373,20 @@ int rrd_archive_create(const char *source_dir, const char *working_dir, const ch
     }
 }
 
-// Generate archive filename: <mac>_<issue_type>_<timestamp>_RRD_DEBUG_LOGS.tgz
-int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, char *filename, size_t size) {
+// Generate archive filename.
+// Without suffix: <mac>_<issue_type>_<timestamp>_RRD_DEBUG_LOGS.tgz
+// With suffix:    <mac>_<issue_type>_<timestamp>_<suffix>_RRD_DEBUG_LOGS.tgz
+int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, const char *suffix, char *filename, size_t size) {
     if (!mac || !issue_type || !timestamp || !filename || size < 128) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Invalid parameters\n", __FUNCTION__);
         return -1;
     }
-    int ret = snprintf(filename, size, "%s_%s_%s_RRD_DEBUG_LOGS.tgz", mac, issue_type, timestamp);
+    int ret;
+    if (suffix && suffix[0] != '\0') {
+        ret = snprintf(filename, size, "%s_%s_%s_%s_RRD_DEBUG_LOGS.tgz", mac, issue_type, timestamp, suffix);
+    } else {
+        ret = snprintf(filename, size, "%s_%s_%s_RRD_DEBUG_LOGS.tgz", mac, issue_type, timestamp);
+    }
     if (ret < 0 || (size_t)ret >= size) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Filename truncated\n", __FUNCTION__);
         return -1;

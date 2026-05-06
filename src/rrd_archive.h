@@ -23,7 +23,9 @@
 #include <stddef.h>
 
 int rrd_archive_create(const char *source_dir, const char *working_dir, const char *archive_filename);
-int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, char *filename, size_t size);
+/* suffix is optional (NULL or ""); when non-empty it is appended AFTER the
+ * timestamp field: {MAC}_{ISSUE_TYPE}_{TIMESTAMP}_{SUFFIX}_RRD_DEBUG_LOGS.tgz */
+int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, const char *suffix, char *filename, size_t size);
 int rrd_archive_cleanup(const char *archive_path);
 int rrd_archive_check_cpu_usage(float *cpu_usage);
 int rrd_archive_adjust_priority(float cpu_usage);
