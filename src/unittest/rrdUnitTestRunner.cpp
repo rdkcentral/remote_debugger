@@ -1865,15 +1865,19 @@ TEST(RemoveSpecialCharacterfromIssueTypeListTest, HandlesStringWithConsecutiveSp
 /* --------------- Test issueTypeSplitter() from rrdEventProcess --------------- */
 TEST(IssueTypeSplitterTest, HandlesStringWithSpecialCharacters)
 {
+    /* issueTypeSplitter now performs pure token splitting only; special-character
+     * removal is done separately by the caller (processIssueTypeEvent) on the
+     * extracted base, so raw tokens including special chars are returned here. */
     char str[] = "a@,b,&,cd,ef";
     char **args = NULL;
     int count = issueTypeSplitter(str, ',', &args);
 
-    ASSERT_EQ(count, 4);
-    ASSERT_STREQ(args[0], "a");
+    ASSERT_EQ(count, 5);
+    ASSERT_STREQ(args[0], "a@");
     ASSERT_STREQ(args[1], "b");
-    ASSERT_STREQ(args[2], "cd");
-    ASSERT_STREQ(args[3], "ef");
+    ASSERT_STREQ(args[2], "&");
+    ASSERT_STREQ(args[3], "cd");
+    ASSERT_STREQ(args[4], "ef");
 
     for (int i = 0; i < count; i++)
     {
