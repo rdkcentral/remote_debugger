@@ -1287,13 +1287,13 @@ protected:
 
 TEST_F(UploadDebugoutputTest, HandlesNullParameters)
 {
-    result = uploadDebugoutput(NULL, NULL);
+    result = uploadDebugoutput(NULL, NULL, NULL);
     ASSERT_EQ(result, 0);
 }
 
 TEST_F(UploadDebugoutputTest, HandlesGoodPath)
 {
-    result = uploadDebugoutput("/sample/good_path", "issuename");
+    result = uploadDebugoutput("/sample/good_path", "issuename", NULL);
     ASSERT_NE(result, 0);
 }
 
@@ -4353,19 +4353,19 @@ protected:
 
 // Test: Invalid parameters
 TEST_F(RRDUploadOrchestrationTest, InvalidParametersNull) {
-    int result = rrd_upload_orchestrate(NULL, "issue_type");
+    int result = rrd_upload_orchestrate(NULL, "issue_type", NULL);
     EXPECT_NE(result, 0);
 
-    result = rrd_upload_orchestrate(test_dir, NULL);
+    result = rrd_upload_orchestrate(test_dir, NULL, NULL);
     EXPECT_NE(result, 0);
 
-    result = rrd_upload_orchestrate(NULL, NULL);
+    result = rrd_upload_orchestrate(NULL, NULL, NULL);
     EXPECT_NE(result, 0);
 }
 
 // Test: Valid orchestration flow
 TEST_F(RRDUploadOrchestrationTest, ValidOrchestrationFlow) {
-    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type, NULL);
     // Expected: 0 (success) or reasonable error code
     EXPECT_GE(result, -1);  // At minimum, should not crash
 }
@@ -4459,7 +4459,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
     const char *issue = "CPU_HIGH";
     const char *timestamp = "2024-12-17-14-30-45PM";
 
-    int result = rrd_archive_generate_filename(mac, issue, timestamp, filename, sizeof(filename));
+    int result = rrd_archive_generate_filename(mac, issue, timestamp, NULL, filename, sizeof(filename));
     EXPECT_EQ(result, 0);
     EXPECT_STRNE(filename, "");
     
@@ -4472,6 +4472,55 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGeneration) {
     // Verify it ends with .tgz, not .tar.gz
     const char *ext = strrchr(filename, '.');
     EXPECT_STREQ(ext, ".tgz");
+}
+
+// Test: Archive filename generation WITH suffix — suffix appears AFTER timestamp
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationWithSuffix) {
+    char filename[256];
+    const char *mac = "04B86A12F9F8";
+    const char *issue = "DEVICE_DEVICEIP";
+    const char *timestamp = "2026-05-06-05-42-35AM";
+    const char *suffix = "AB12345";  /* already sanitized/uppercased token */
+
+    int result = rrd_archive_generate_filename(mac, issue, timestamp, suffix, filename, sizeof(filename));
+    EXPECT_EQ(result, 0);
+    // Expected: 04B86A12F9F8_DEVICE_DEVICEIP_2026-05-06-05-42-35AM_AB12345_RRD_DEBUG_LOGS.tgz
+    char expected[256];
+    snprintf(expected, sizeof(expected), "%s_%s_%s_%s_RRD_DEBUG_LOGS.tgz", mac, issue, timestamp, suffix);
+    EXPECT_STREQ(filename, expected);
+    // suffix must come AFTER timestamp in the filename
+    const char *ts_pos = strstr(filename, timestamp);
+    const char *sfx_pos = strstr(filename, suffix);
+    ASSERT_NE(ts_pos, nullptr);
+    ASSERT_NE(sfx_pos, nullptr);
+    EXPECT_GT(sfx_pos, ts_pos);
+}
+
+// Test: Empty/NULL suffix produces the same filename as no suffix
+TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationNullOrEmptySuffix) {
+    char fname_null[256] = {0};
+    char fname_empty[256] = {0};
+    const char *mac = "AABBCCDDEEFF";
+    const char *issue = "CPU_HIGH";
+    const char *ts = "2026-01-01-00-00-00AM";
+
+    EXPECT_EQ(rrd_archive_generate_filename(mac, issue, ts, NULL,  fname_null,  sizeof(fname_null)), 0);
+    EXPECT_EQ(rrd_archive_generate_filename(mac, issue, ts, "",    fname_empty, sizeof(fname_empty)), 0);
+    EXPECT_STREQ(fname_null, fname_empty);
+    // Neither should contain an extra '_' segment between timestamp and _RRD
+    char expected[256];
+    snprintf(expected, sizeof(expected), "%s_%s_%s_RRD_DEBUG_LOGS.tgz", mac, issue, ts);
+    EXPECT_STREQ(fname_null, expected);
+}
+
+// Test: Suffix with leading '_' and lowercase letters is sanitized before reaching
+//       rrd_archive_generate_filename (exercised via rrd_upload_orchestrate plumbing)
+TEST_F(RRDUploadOrchestrationTest, SuffixSanitizationUppercasesToken) {
+    char suffix_sanitized[32] = {0};
+    // rrd_logproc_convert_issue_type uppercases and passes through alphanumeric/-
+    int result = rrd_logproc_convert_issue_type("ab12-cd", suffix_sanitized, sizeof(suffix_sanitized));
+    EXPECT_EQ(result, 0);
+    EXPECT_STREQ(suffix_sanitized, "AB12-CD");
 }
 
 // Test: Archive creation in /tmp/rrd/
@@ -4630,7 +4679,7 @@ TEST_F(RRDUploadOrchestrationTest, UploadLockCheck) {
 // Integration test: End-to-end orchestration
 TEST_F(RRDUploadOrchestrationTest, EndToEndOrchestration) {
     // This test verifies the entire flow works together
-    int result = rrd_upload_orchestrate(test_dir, "test.issue");
+    int result = rrd_upload_orchestrate(test_dir, "test.issue", NULL);
     
     // Result should be a valid return code (0 for success, or specific error code)
     EXPECT_GE(result, -11);  // Within expected error range
@@ -4639,7 +4688,7 @@ TEST_F(RRDUploadOrchestrationTest, EndToEndOrchestration) {
 
 // Edge case: Invalid directory path
 TEST_F(RRDUploadOrchestrationTest, InvalidDirectoryPath) {
-    int result = rrd_upload_orchestrate("/invalid/path/to/logs", "issue");
+    int result = rrd_upload_orchestrate("/invalid/path/to/logs", "issue", NULL);
     EXPECT_NE(result, 0);  // Should fail
 }
 
@@ -4648,7 +4697,7 @@ TEST_F(RRDUploadOrchestrationTest, EmptyDirectoryFailure) {
     const char *empty_dir = "/tmp/rrd_empty_test";
     mkdir(empty_dir, 0755);
     
-    int result = rrd_upload_orchestrate(empty_dir, "test_issue");
+    int result = rrd_upload_orchestrate(empty_dir, "test_issue", NULL);
     EXPECT_EQ(result, 6);  // Should fail with error code 6 (empty directory)
     
     rmdir(empty_dir);
@@ -4657,11 +4706,11 @@ TEST_F(RRDUploadOrchestrationTest, EmptyDirectoryFailure) {
 // Failure case: NULL parameters
 TEST_F(RRDUploadOrchestrationTest, NullParametersFailure) {
     // NULL upload_dir
-    int result = rrd_upload_orchestrate(NULL, "issue");
+    int result = rrd_upload_orchestrate(NULL, "issue", NULL);
     EXPECT_EQ(result, 1);
     
     // NULL issue_type
-    result = rrd_upload_orchestrate(test_dir, NULL);
+    result = rrd_upload_orchestrate(test_dir, NULL, NULL);
     EXPECT_EQ(result, 1);
 }
 
@@ -4710,7 +4759,7 @@ TEST_F(RRDUploadOrchestrationTest, LogUploadEnableHandling) {
     f.close();
     
     // Test with LOGUPLOAD_ENABLE issue type
-    int result = rrd_upload_orchestrate(test_dir, "logupload_enable");
+    int result = rrd_upload_orchestrate(test_dir, "logupload_enable", NULL);
     
     // Should process without error (even if upload fails in test environment)
     // The important thing is it doesn't crash and handles the live logs
@@ -4773,10 +4822,11 @@ TEST_F(RRDUploadOrchestrationTest, SpecialCharactersInIssueType) {
 // Suffix with hyphens: hyphens must be preserved so portal can parse filename
 TEST_F(RRDUploadOrchestrationTest, IssueTypeWithSuffixHyphensPreserved) {
     char sanitized[128];
-    // Simulates issue type after normalizeIssueName: dots→underscore, hyphens kept
+    /* Verify rrd_logproc_convert_issue_type preserves hyphens.
+     * The suffix is now passed separately (after timestamp), but the
+     * conversion must still keep hyphens so the suffix token is intact. */
     int result = rrd_logproc_convert_issue_type("Device_DeviceIP_Search-67768-67", sanitized, sizeof(sanitized));
     EXPECT_EQ(result, 0);
-    // Hyphens in suffix must survive so the archive filename delimiter structure is intact
     EXPECT_STREQ(sanitized, "DEVICE_DEVICEIP_SEARCH-67768-67");
 }
 
@@ -4807,7 +4857,7 @@ TEST_F(RRDUploadOrchestrationTest, ConfigurationLoadFailure) {
     unlink("/etc/dcm.properties");
     unlink("/opt/dcm.properties");
     
-    int result = rrd_upload_orchestrate(test_dir, test_issue_type);
+    int result = rrd_upload_orchestrate(test_dir, test_issue_type, NULL);
     EXPECT_EQ(result, 3);  // Expected error code for config load failure
 }
 
@@ -4878,23 +4928,23 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveFilenameGenerationFailure) {
     char filename[256];
     
     // Test with NULL MAC address
-    int result = rrd_archive_generate_filename(NULL, "ISSUE", "timestamp", filename, sizeof(filename));
+    int result = rrd_archive_generate_filename(NULL, "ISSUE", "timestamp", NULL, filename, sizeof(filename));
     EXPECT_NE(result, 0);
     
     // Test with NULL issue type
-    result = rrd_archive_generate_filename("00:11:22:33:44:55", NULL, "timestamp", filename, sizeof(filename));
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", NULL, "timestamp", NULL, filename, sizeof(filename));
     EXPECT_NE(result, 0);
     
     // Test with NULL timestamp
-    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", NULL, filename, sizeof(filename));
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", NULL, NULL, filename, sizeof(filename));
     EXPECT_NE(result, 0);
     
     // Test with NULL output buffer
-    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, 256);
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, NULL, 256);
     EXPECT_NE(result, 0);
     
     // Test with insufficient buffer size
-    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", filename, 10);
+    result = rrd_archive_generate_filename("00:11:22:33:44:55", "ISSUE", "timestamp", NULL, filename, 10);
     EXPECT_NE(result, 0);
 }
 

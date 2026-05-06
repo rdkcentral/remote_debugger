@@ -671,17 +671,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                // Use the persisted suffix from buff for upload
+                /* Pass only the base issue type as tarName; the suffix is threaded
+                 * separately so it can be placed AFTER the timestamp in the archive
+                 * filename: {MAC}_{BASE}_{TIMESTAMP}_{SUFFIX}_RRD_DEBUG_LOGS.tgz */
                 char tarName[512] = {0};
-                int tar_name_len = 0;
-                if (buff->suffix && buff->suffix[0] != '\0') 
-				{
-                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
-                } 
-				else 
-				{
-                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
-                }
+                int tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
                 if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
@@ -689,7 +683,8 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 }
                 else
                 {
-                    status = uploadDebugoutput(outdir, tarName);
+                    const char *issueSuffix = (buff->suffix && buff->suffix[0] != '\0') ? buff->suffix : NULL;
+                    status = uploadDebugoutput(outdir, tarName, issueSuffix);
                 }
                 if(status != 0)
                 {

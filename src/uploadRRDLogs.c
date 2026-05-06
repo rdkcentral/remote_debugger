@@ -34,7 +34,7 @@
 
 // --- Main Orchestration Layer ---
 
-int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
+int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type, const char *suffix)
 {
     // Validate input parameters
     if (!upload_dir || !issue_type) {
@@ -81,10 +81,7 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Log directory validated and prepared\n", __FUNCTION__);
 
-    // 6. Convert/sanitize issue type
-    /* Buffer must be large enough for a base issue type (~32 chars) plus a
-     * full UUID suffix (_Search-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx = 47 chars)
-     * plus the NUL terminator.  256 bytes matches the archive_filename convention. */
+    // 6. Convert/sanitize issue type (base only — no suffix)
     char issue_type_sanitized[256] = {0};
     if (rrd_logproc_convert_issue_type(issue_type, issue_type_sanitized, sizeof(issue_type_sanitized)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to sanitize issue type\n", __FUNCTION__);
@@ -92,7 +89,21 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Issue type sanitized: %s\n", __FUNCTION__, issue_type_sanitized);
 
-    // 6.5. Handle LOGUPLOAD_ENABLE special case (matching shell script lines 128-131)
+    // 6.5. Sanitize suffix (strip leading '_', uppercase); empty when no suffix provided.
+    /* Convention (enforced by split_issue_type / checkIssueNodeInfo):
+     *   suffix == NULL or suffix[0] == '\0'  → no suffix
+     *   suffix starts with '_', then 1-8 data chars (total <= RRD_MAX_SUFFIX_LEN=9)
+     * After stripping the leading '_', the data portion is at most 8 chars, so
+     * a 32-byte buffer is more than sufficient (8 data + NUL + headroom). */
+    char suffix_sanitized[32] = {0};
+    if (suffix && suffix[0] == '_' && suffix[1] != '\0') {
+        if (rrd_logproc_convert_issue_type(suffix + 1, suffix_sanitized, sizeof(suffix_sanitized)) != 0) {
+            RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Failed to sanitize suffix '%s', ignoring\n", __FUNCTION__, suffix);
+            suffix_sanitized[0] = '\0';
+        }
+    }
+
+    // 6.6. Handle LOGUPLOAD_ENABLE special case (matching shell script lines 128-131)
     if (strcmp(issue_type_sanitized, "LOGUPLOAD_ENABLE") == 0) {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Check and upload live device logs for the issuetype\n", __FUNCTION__);
         if (rrd_logproc_handle_live_logs(upload_dir) != 0) {
@@ -101,8 +112,12 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     }
 
     // 7. Generate archive filename
+    // Format: {MAC}_{ISSUE_TYPE}_{TIMESTAMP}_RRD_DEBUG_LOGS.tgz
+    // With suffix: {MAC}_{ISSUE_TYPE}_{TIMESTAMP}_{SUFFIX}_RRD_DEBUG_LOGS.tgz
     char archive_filename[256] = {0};
-    if (rrd_archive_generate_filename(mac_addr, issue_type_sanitized, timestamp, archive_filename, sizeof(archive_filename)) != 0) {
+    if (rrd_archive_generate_filename(mac_addr, issue_type_sanitized, timestamp,
+                                      suffix_sanitized[0] != '\0' ? suffix_sanitized : NULL,
+                                      archive_filename, sizeof(archive_filename)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to generate archive filename\n", __FUNCTION__);
         return 9;
     }

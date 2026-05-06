@@ -32,7 +32,7 @@ static void normalizeIssueName(char *str);
  * @param char *issuename - Issue type from RFC.
  * @return int - Returns 0 for success and non-zero for failure.
  */
-int uploadDebugoutput(char *outdir, char *issuename)
+int uploadDebugoutput(char *outdir, char *issuename, const char *suffix)
 {
     int ret = 0;
 
@@ -42,7 +42,7 @@ int uploadDebugoutput(char *outdir, char *issuename)
 #ifdef IARMBUS_SUPPORT
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
-        ret = rrd_upload_orchestrate(outdir, issuename);
+        ret = rrd_upload_orchestrate(outdir, issuename, suffix);
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Upload orchestration failed with code: %d\n",__FUNCTION__,__LINE__, ret);
@@ -52,11 +52,24 @@ int uploadDebugoutput(char *outdir, char *issuename)
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Upload orchestration completed successfully\n",__FUNCTION__,__LINE__);
         }
 #else
-		RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output Script: %s... \n",__FUNCTION__,__LINE__,RRD_SCRIPT);
-        if(v_secure_system("%s %s %s",RRD_SCRIPT,outdir,issuename) != 0)
-		{
-            ret = 1;
-        }			
+        /* Shell-script path: suffix is appended to issuename so the script
+         * retains the old combined-name behaviour.
+         * Buffer: issuename is at most ~64 chars, suffix is at most 9 chars
+         * (RRD_MAX_SUFFIX_LEN), so 256 bytes gives ample headroom. */
+        if (suffix && suffix[0] != '\0') {
+            char issue_with_suffix[256];
+            int n = snprintf(issue_with_suffix, sizeof(issue_with_suffix), "%s%s", issuename, suffix);
+            if (n < 0 || (size_t)n >= sizeof(issue_with_suffix)) {
+                ret = 1;
+            } else if (v_secure_system("%s %s %s", RRD_SCRIPT, outdir, issue_with_suffix) != 0) {
+                ret = 1;
+            }
+        } else {
+            if(v_secure_system("%s %s %s",RRD_SCRIPT,outdir,issuename) != 0)
+            {
+                ret = 1;
+            }
+        }
 #endif
     }
 
