@@ -4761,10 +4761,20 @@ TEST_F(RRDUploadOrchestrationTest, SpecialCharactersInIssueType) {
     char sanitized[64];
     int result = rrd_logproc_convert_issue_type("test-issue.sub@special!", sanitized, sizeof(sanitized));
     EXPECT_EQ(result, 0);
-    // Should only contain alphanumeric and underscore
+    // Should only contain alphanumeric, underscore, and hyphen
     for (const char *p = sanitized; *p; ++p) {
-        EXPECT_TRUE(isalnum(*p) || *p == '_');
+        EXPECT_TRUE(isalnum(*p) || *p == '_' || *p == '-');
     }
+}
+
+// Suffix with hyphens: hyphens must be preserved so portal can parse filename
+TEST_F(RRDUploadOrchestrationTest, IssueTypeWithSuffixHyphensPreserved) {
+    char sanitized[128];
+    // Simulates issue type after normalizeIssueName: dots→underscore, hyphens kept
+    int result = rrd_logproc_convert_issue_type("Device_DeviceIP_Search-67768-67", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    // Hyphens in suffix must survive so the archive filename delimiter structure is intact
+    EXPECT_STREQ(sanitized, "DEVICE_DEVICEIP_SEARCH-67768-67");
 }
 
 // Performance test: Large directory
