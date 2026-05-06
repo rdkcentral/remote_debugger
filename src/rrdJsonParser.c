@@ -46,27 +46,27 @@ void removeSpecialChar(char *str)
     }
 }
 
-/* Valid suffix prefixes: only "_Search-" and "_LogSearch-" are accepted */
-#define VALID_SUFFIX_SEARCH    "_Search-"
-#define VALID_SUFFIX_LOGSEARCH "_LogSearch-"
+/* Maximum allowed suffix length (including the leading '_').
+ * Suffixes longer than this are discarded to avoid extra '_' delimiters
+ * in the archive filename that break the analytics portal parser. */
+#define RRD_MAX_SUFFIX_LEN  9
 
 /*
  * @function split_issue_type
  * @brief Utility to split base and suffix from issue type string.
  *        The input is always split at the first '_'. The base is the part
  *        before the underscore (never contains '_'). The suffix is only
- *        populated when it starts with "_Search-" or "_LogSearch-"; any
- *        other underscore-delimited token is discarded (suffix returns "").
+ *        kept when its total length (including the leading '_') is at most
+ *        RRD_MAX_SUFFIX_LEN (9) characters; longer suffixes are discarded.
  *        If no underscore is present the full input is the base.
  *        Examples:
- *          "Device.DeviceTime_Search-b6877385"  → base="Device.DeviceTime",
- *                                                  suffix="_Search-b6877385"
- *          "Device.DeviceTime_LogSearch-1a2b"   → base="Device.DeviceTime",
- *                                                  suffix="_LogSearch-1a2b"
- *          "Device.DeviceTime_Other-token"      → base="Device.DeviceTime",
- *                                                  suffix=""
- *          "Device.DeviceTime"                  → base="Device.DeviceTime",
- *                                                  suffix=""
+ *          "Device.DeviceTime_ab12345" → base="Device.DeviceTime",
+ *                                        suffix="_ab12345"  (8 chars, accepted)
+ *          "Device.DeviceTime_Search-uuid-very-long"
+ *                                      → base="Device.DeviceTime",
+ *                                        suffix=""          (>9 chars, discarded)
+ *          "Device.DeviceTime"         → base="Device.DeviceTime",
+ *                                        suffix=""
  * @param const char *input - The input string to split.
  * @param char *base - Buffer to store the base part (never contains '_').
  * @param size_t base_len - Size of the base buffer.
@@ -105,16 +105,17 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
         strncpy(base, input, b_len);
         base[b_len] = '\0';
 
-        /* Only carry the suffix when it starts with an allowed prefix */
-        if (strncmp(underscore, VALID_SUFFIX_SEARCH,    sizeof(VALID_SUFFIX_SEARCH)    - 1) == 0 ||
-            strncmp(underscore, VALID_SUFFIX_LOGSEARCH, sizeof(VALID_SUFFIX_LOGSEARCH) - 1) == 0)
+        /* Keep the suffix only when its total length (including '_') is
+         * within the allowed limit; longer tokens are discarded. */
+        if (strlen(underscore) <= RRD_MAX_SUFFIX_LEN)
         {
             strncpy(suffix, underscore, suffix_len - 1);
             suffix[suffix_len - 1] = '\0';
         }
         else
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' does not start with an allowed prefix; discarding suffix\n", __FUNCTION__, __LINE__, base);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
+                    __FUNCTION__, __LINE__, base, strlen(underscore), RRD_MAX_SUFFIX_LEN);
             suffix[0] = '\0';
         }
     }

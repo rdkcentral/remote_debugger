@@ -1925,23 +1925,24 @@ TEST(SplitIssueTypeTest, NoUnderscoreReturnsFull)
 
 TEST(SplitIssueTypeTest, UnderscoreSplitsBaseAndSuffix)
 {
+    /* Short suffix (total length including '_' is ≤ 9) is accepted and preserved */
     char base[64] = {0};
-    char suffix[128] = {0};
-    split_issue_type("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790",
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_ab12345",
                      base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "Device.DeviceTime");
-    EXPECT_STREQ(suffix, "_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
+    EXPECT_STREQ(suffix, "_ab12345");
 }
 
 TEST(SplitIssueTypeTest, MultipleUnderscoresSplitsAtFirst)
 {
-    /* "abc_def_ghi": suffix "_def_ghi" does not start with "_Search-" or "_LogSearch-".
-     * Base is always the part before the first '_'; invalid suffix is discarded. */
+    /* "abc_def_ghi": suffix "_def_ghi" is 8 chars (≤ 9) → accepted and preserved.
+     * Only the first '_' is used as the split point; base never contains '_'. */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_def_ghi", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
-    EXPECT_STREQ(suffix, "");
+    EXPECT_STREQ(suffix, "_def_ghi");
 }
 
 TEST(SplitIssueTypeTest, EmptyInputProducesEmptyOutputs)
@@ -1966,31 +1967,32 @@ TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
 
 TEST(SplitIssueTypeTest, BaseTruncatedWhenTooSmall)
 {
-    /* "abc_suffix": invalid suffix prefix, so suffix is discarded.
+    /* "abc_suffix": suffix "_suffix" is 7 chars (≤ 9) → accepted.
      * Base = "abc" (before '_'); with a 4-byte buffer this fits exactly. */
     char base[4] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
-    EXPECT_STREQ(suffix, "");
+    EXPECT_STREQ(suffix, "_suffix");
 }
 
 TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
 {
-    /* "abc_LogSearch-longsuffix": valid suffix prefix "_LogSearch-". Suffix buffer
-     * is only 5 bytes so suffix is truncated to "_Log" + NUL. */
+    /* "abc_12345678": suffix "_12345678" is 9 chars (≤ 9, accepted). Suffix buffer
+     * is only 5 bytes so suffix is truncated to "_123" + NUL. */
     char base[64] = {0};
     char suffix[5] = {0};
-    split_issue_type("abc_LogSearch-longsuffix", base, sizeof(base), suffix, sizeof(suffix));
+    split_issue_type("abc_12345678", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
-    EXPECT_STREQ(suffix, "_Log");
+    EXPECT_STREQ(suffix, "_123");
     EXPECT_EQ(suffix[sizeof(suffix) - 1], '\0');
     EXPECT_EQ(strlen(suffix), (size_t)(sizeof(suffix) - 1));
 }
 
 TEST(SplitIssueTypeTest, LeadingUnderscoreGivesEmptyBase)
 {
-    /* "_suffixonly": split at '_' gives empty base, invalid suffix is discarded */
+    /* "_suffixonly": split at '_' gives empty base; suffix "_suffixonly" is 11 chars
+     * (> 9) so it is discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("_suffixonly", base, sizeof(base), suffix, sizeof(suffix));
@@ -2038,51 +2040,51 @@ TEST(SplitIssueTypeTest, ZeroSuffixLenDoesNotCrash)
 
 TEST(SplitIssueTypeTest, ExactFitBase)
 {
-    /* "abc_suffix": invalid suffix prefix, so suffix is discarded.
+    /* "abc_suffix": suffix "_suffix" is 7 chars (≤ 9, accepted).
      * Base = "abc" (before '_'); 4-byte buffer fits exactly. */
     char base[4] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "abc");
     EXPECT_EQ(base[3], '\0');
-    EXPECT_STREQ(suffix, "");
+    EXPECT_STREQ(suffix, "_suffix");
 }
 
 TEST(SplitIssueTypeTest, OnlyUnderscoreInput)
 {
-    /* "_": split at '_' gives empty base, empty (invalid) suffix is discarded */
+    /* "_": split at '_' gives empty base; suffix is "_" (1 char, ≤ 9 → accepted) */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("_", base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "");
-    EXPECT_STREQ(suffix, "");
+    EXPECT_STREQ(suffix, "_");
 }
 
-TEST(SplitIssueTypeTest, LogSearchSuffixIsValid)
+TEST(SplitIssueTypeTest, NineCharSuffixIsAccepted)
 {
-    /* "_LogSearch-uuid" is an allowed suffix prefix → split */
+    /* Suffix of exactly 9 chars (the upper boundary, inclusive) must be accepted */
     char base[64] = {0};
-    char suffix[128] = {0};
-    split_issue_type("Device.DeviceTime_LogSearch-b6877385-9463-45fc-b19d-a24d77fd0790",
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_12345678",
                      base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "Device.DeviceTime");
-    EXPECT_STREQ(suffix, "_LogSearch-b6877385-9463-45fc-b19d-a24d77fd0790");
+    EXPECT_STREQ(suffix, "_12345678");
 }
 
-TEST(SplitIssueTypeTest, SearchSuffixIsValid)
+TEST(SplitIssueTypeTest, LongSuffixIsDiscarded)
 {
-    /* "_Search-uuid" is an allowed suffix prefix → split (mirrors UnderscoreSplitsBaseAndSuffix) */
+    /* Suffix longer than 9 chars is discarded regardless of its content */
     char base[64] = {0};
     char suffix[128] = {0};
     split_issue_type("Device.DeviceInfo_Search-1a2b3c4d",
                      base, sizeof(base), suffix, sizeof(suffix));
     EXPECT_STREQ(base, "Device.DeviceInfo");
-    EXPECT_STREQ(suffix, "_Search-1a2b3c4d");
+    EXPECT_STREQ(suffix, "");
 }
 
 TEST(SplitIssueTypeTest, InvalidSuffixPrefixDiscarded)
 {
-    /* "_Random-token" is not an allowed prefix → base = "Device.DeviceTime", suffix discarded */
+    /* "_Random-token" is 13 chars (> 9) → suffix discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("Device.DeviceTime_Random-token", base, sizeof(base), suffix, sizeof(suffix));
@@ -2092,7 +2094,7 @@ TEST(SplitIssueTypeTest, InvalidSuffixPrefixDiscarded)
 
 TEST(SplitIssueTypeTest, SearchWithoutHyphenIsInvalid)
 {
-    /* "_Search_something" does not start with "_Search-" → split at first '_', suffix discarded */
+    /* "_Search_something" is 17 chars (> 9) → suffix discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_Search_something", base, sizeof(base), suffix, sizeof(suffix));
@@ -2102,7 +2104,7 @@ TEST(SplitIssueTypeTest, SearchWithoutHyphenIsInvalid)
 
 TEST(SplitIssueTypeTest, LogSearchWithoutHyphenIsInvalid)
 {
-    /* "_LogSearch_something" does not start with "_LogSearch-" → split at first '_', suffix discarded */
+    /* "_LogSearch_something" is 20 chars (> 9) → suffix discarded */
     char base[64] = {0};
     char suffix[64] = {0};
     split_issue_type("abc_LogSearch_something", base, sizeof(base), suffix, sizeof(suffix));
@@ -2202,24 +2204,24 @@ TEST(ProcessIssueTypeEvntTest, inDynamic_NoJson){
 }
 
 TEST(ProcessIssueTypeEvntTest, IssueTypeWithSearchSuffix_inDynamic_NoJson){
-    /* Issue type with valid "_Search-" suffix: base is "Device.DeviceTime", suffix is preserved */
+    /* Issue type with a long suffix (> 9 chars): suffix is discarded; base "Device.DeviceTime" is used */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; suffix is parsed, stored, and freed internally */
+    /* Should not crash; long suffix is discarded, base is processed normally */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;
 }
 
 TEST(ProcessIssueTypeEvntTest, IssueTypeWithLogSearchSuffix_inDynamic_NoJson){
-    /* Issue type with valid "_LogSearch-" suffix: base is "Device.DeviceInfo", suffix is preserved */
+    /* Issue type with a long suffix (> 9 chars): suffix is discarded; base "Device.DeviceInfo" is used */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceInfo_LogSearch-9abc1def-0000-1111-2222-3333aaaabbbb");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; suffix is parsed, stored, and freed internally */
+    /* Should not crash; long suffix is discarded, base is processed normally */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;
@@ -2227,19 +2229,20 @@ TEST(ProcessIssueTypeEvntTest, IssueTypeWithLogSearchSuffix_inDynamic_NoJson){
 
 TEST(ProcessIssueTypeEvntTest, IssueTypeWithInvalidSuffixTreatedAsBase)
 {    
-    /* "_Random-token" is not an allowed prefix; base = "Device.DeviceTime", suffix discarded */
+    /* "_Random-token" is 13 chars (> 9): suffix discarded; base = "Device.DeviceTime" */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceTime_Random-token");
     rbuf.inDynamic = false;
     rbuf.jsonPath = nullptr;
-    /* Should not crash; base is split at '_', invalid suffix is discarded */
+    /* Should not crash; long suffix is discarded, base is processed normally */
     processIssueTypeEvent(&rbuf);
     free(rbuf.mdata);
     rbuf.mdata = NULL;
 }
 
 TEST(ProcessIssueTypeEvntTest, MultipleIssueTypesWithAndWithoutSuffix){
-    /* Comma-separated list: one plain type, one with valid suffix, one with invalid suffix */
+    /* Comma-separated list: one plain type, one with long suffix (> 9, discarded),
+     * one with another long suffix (> 9, discarded) */
     data_buf rbuf = {};
     rbuf.mdata = strdup("Device.DeviceTime,Device.DeviceInfo_Search-1234,Device.Net_BadSuffix");
     rbuf.inDynamic = true;
@@ -4000,7 +4003,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
     rbuf.mdata = strdup("Test");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
-    rbuf.suffix = strdup("_search_b675-657-556-656");
+    rbuf.suffix = strdup("_ab12345");
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);
