@@ -2250,6 +2250,36 @@ TEST(ProcessIssueTypeEvntTest, MultipleIssueTypesWithAndWithoutSuffix){
     rbuf.mdata = NULL;
 }
 
+TEST(ProcessIssueTypeEvntTest, WhitespaceOnlyIssueTypeIsSkipped)
+{
+    /* When the IssueType value from RBUS is whitespace (e.g. a space),
+     * removeSpecialCharacterfromIssueTypeList() strips it to an empty string.
+     * processIssueTypeEvent() must detect the post-sanitization empty base
+     * and skip processing without crashing or invoking processIssueType. */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup(" ");  /* single space — all-special after split */
+    rbuf.inDynamic = false;
+    rbuf.jsonPath = nullptr;
+    /* Must not crash and must not reach getIssueInfo with an empty mdata */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, EmptyStringIssueTypeIsSkipped)
+{
+    /* An empty-string mdata must be handled gracefully — issueTypeSplitter
+     * returns 1 token that is an empty string, which split_issue_type then
+     * maps to an empty base, causing the entry to be skipped. */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("");
+    rbuf.inDynamic = false;
+    rbuf.jsonPath = nullptr;
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
 /* ======================== rrdExecuteScript ==============*/
 
 /* --------------- Test processIssueTypeInInstalledPackage() from rrdExecuteScript --------------- */
