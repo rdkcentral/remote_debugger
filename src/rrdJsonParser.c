@@ -53,7 +53,7 @@ void removeSpecialChar(char *str)
  * 9 characters = '_' + up to 8 alphanumeric/short-token chars: long UUID-based
  * suffixes (e.g. "_Search-b6877385-...") are always > 9 and are therefore
  * discarded before the archive name is built. */
-#define RRD_MAX_SUFFIX_LEN  9
+#define RRD_MAX_SUFFIX_LEN  50
 
 /*
  * @function split_issue_type
