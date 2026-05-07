@@ -359,12 +359,12 @@ protected:
 
 TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsNumber_CommandIsNull)
 {
-    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true, NULL));
 }
 
 TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntFalse_TypeIsNumber_CommandIsNull)
 {
-    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, false));
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, false, NULL));
 }
 
 TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_CommandIsNull)
@@ -378,7 +378,7 @@ TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_Command
     cJSON_AddItemToObject(root, "testNode", category);
     cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
 
-    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true, NULL));
 }
 
 TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsNumber_CommandIsNotNull_IsCommandsValidReturnsZero)
@@ -393,7 +393,7 @@ TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsNumber_Command
     cJSON_AddItemToObject(root, "testNode", category);
     cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
 
-    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true, NULL));
 }
 
 TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_CommandIsNotNull_IsCommandsValidReturnsNonZero)
@@ -407,7 +407,7 @@ TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_Command
     cJSON_AddItemToObject(root, "testNode", category);
     cJSON_AddItemToObject(jsoncfg, "DEEP_SLEEP_STR", root);
 
-    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
+    EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true, NULL));
 }
 
 /* --------------- Test processAllDebugCommand() from rrdJsonParser --------------- */
@@ -4121,6 +4121,7 @@ TEST(ExecuteCommandsTest, ReturnsTrueIfCommandIsPresentAndAllSucceed) {
     cmd.command = strdup("echo hello");
     cmd.rfcvalue = strdup("dummy");
     cmd.timeout = 0;
+    cmd.suffix = NULL; // must be initialised — executeCommands dereferences this field
     MockSecure secureApi;
     FILE *fp = fopen(RRD_DEVICE_PROP_FILE, "w");
     // Mock dependencies like mkdir, fopen, etc., as needed

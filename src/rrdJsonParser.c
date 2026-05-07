@@ -398,6 +398,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     issuestdata->rfcvalue = NULL;
     issuestdata->command = NULL;
     issuestdata->timeout = 0;
+    issuestdata->suffix = NULL;
 
     /* Read Command and Timeout information for Issuetype */
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Command and Timeout information for Debug Issue\n",__FUNCTION__,__LINE__);
@@ -468,9 +469,10 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
  * @param       cJSON *jsoncfg - Parsed JSON content.
  * @param char *buf - Issue string.
  * @param bool deepSleepAwkEvnt - Flag indicating if it is a deep sleep wake event.
+ * @param const char *suffix - Optional suffix to append to RRD_OUTPUT_FILE (may be NULL).
  * @return bool - Returns true for successful execution and false for failure.
  */
-bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, char *buf, bool deepSleepAwkEvnt)
+bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, char *buf, bool deepSleepAwkEvnt, const char *suffix)
 {
     int nitems = 0, j = 0, ret = 0;
     issueData *issuestdata = NULL;
@@ -507,6 +509,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     issuestdata->rfcvalue = NULL;
     issuestdata->command = NULL;
     issuestdata->timeout = 0;
+    issuestdata->suffix = NULL;
 
     /* Read Command and Timeout information for Issuetype */
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Command and Timeout information for Debug Issue\n",__FUNCTION__,__LINE__);
@@ -565,6 +568,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         else
         { 
             issuestdata->rfcvalue = strdup(buf);
+            issuestdata->suffix = (suffix && suffix[0] != '\0') ? strdup(suffix) : NULL;
             if(issuestdata->timeout == 0)
             {
                 issuestdata->timeout = DEFAULT_TIMEOUT; // Use Default Systemd service timeout of 90 seconds
@@ -645,13 +649,14 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 // Execute the command for received Issue Type of the Issue Category
                 if (buff->appendMode)
                 {
+                    appendprofiledata->suffix = (buff->suffix && buff->suffix[0] != '\0') ? strdup(buff->suffix) : NULL;
                     execstatus = executeCommands(appendprofiledata);
                     free(issuestructNode->Node); // free main node
                     free(issuestructNode->subNode); // free sub node
                 }
                 else
                 {
-                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, rfcbuf, false);
+                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, rfcbuf, false, buff->suffix);
                 }		
             }
             else if(isDeepSleepAwakeEventValid)
@@ -671,26 +676,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                // Use the persisted suffix from buff for upload
-                char tarName[512] = {0};
-                int tar_name_len = 0;
-                if (buff->suffix && buff->suffix[0] != '\0') 
-				{
-                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s%s", buff->mdata, buff->suffix);
-                } 
-				else 
-				{
-                    tar_name_len = snprintf(tarName, sizeof(tarName), "%s", buff->mdata);
-                }
-                if ((tar_name_len < 0) || ((size_t)tar_name_len >= sizeof(tarName)))
-                {
-                    RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to build upload file name for %s. snprintf result:%d, buffer size:%zu\n", __FUNCTION__,__LINE__,buff->mdata,tar_name_len,sizeof(tarName));
-                    status = -1;
-                }
-                else
-                {
-                    status = uploadDebugoutput(outdir, tarName);
-                }
+                status = uploadDebugoutput(outdir, buff->mdata);
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -789,7 +775,7 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
                      RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %d:%s\n", __FUNCTION__, __LINE__, i + 1, issuetypearray[i]);
                      RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %s:%s\n", __FUNCTION__, __LINE__, issuestructNode->Node, issuestructNode->subNode);
                      RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]##################################################\n", __FUNCTION__, __LINE__);
-                     execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuetypearray[i], false);
+                     execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuetypearray[i], false, NULL);
                      free(issuetypearray[i]);
 	         }
 	    }
@@ -868,7 +854,7 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %d:%s\n", __FUNCTION__, __LINE__, _sindex + 1, issuedCommand[_sindex]);
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %s:%s\n", __FUNCTION__, __LINE__, issuestructNode->Node, issuestructNode->subNode);
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]##################################################\n", __FUNCTION__, __LINE__);
-                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuedCommand[_sindex], true);
+                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuedCommand[_sindex], true, NULL);
                     free(issuedCommand[_sindex]);
                 }
         }

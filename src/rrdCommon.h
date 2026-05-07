@@ -111,6 +111,7 @@ typedef struct jsondata {
      char * rfcvalue;
      char * command;
      int  timeout;
+     char * suffix; // Holds the suffix to append to RRD_OUTPUT_FILE, if any
 } issueData;
 
 /*Structure for Issue Node*/
