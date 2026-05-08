@@ -165,6 +165,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
     char *paramString = NULL;
     char *msgDataString = NULL;
     char *cacheIssueString = NULL;
+    char *cachePkgString = NULL;
     unsigned char objSize = sizeof(unsigned char);
     int mSGLength = -1;
     int msgDataStringSize = -1;
@@ -273,9 +274,20 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                                 else
                                 {
                                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, strlen(cacheIssueString));
-                                    append_item(strdup(msgDataString), cacheIssueString);
-                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, strlen(cacheIssueString));
-                                    cacheIssueString = NULL;
+                                    cachePkgString = strdup(msgDataString);
+                                    if (cachePkgString == NULL)
+                                    {
+                                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for cache package string.\n", __FUNCTION__, __LINE__);
+                                        free(cacheIssueString);
+                                        cacheIssueString = NULL;
+                                    }
+                                    else
+                                    {
+                                        append_item(cachePkgString, cacheIssueString);
+                                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, strlen(cacheIssueString));
+                                        cachePkgString = NULL;
+                                        cacheIssueString = NULL;
+                                    }
                                 }
                             }
                             else
