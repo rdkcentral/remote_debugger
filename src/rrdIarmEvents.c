@@ -338,10 +338,27 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     }
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
                     strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
-                    if (cache->suffix && cache->suffix[0] != '\0') {
-                        sendbuf->suffix = strdup(cache->suffix);
-                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Restored suffix from cache: %s\n", __FUNCTION__, __LINE__, cache->suffix);
-                    } else {
+		            if (cache->suffix && cache->suffix[0] != '\0') 
+					{
+			            sendbuf->suffix = strdup(cache->suffix);
+			            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Restored suffix from cache struct: %s\n", __FUNCTION__, __LINE__, cache->suffix);
+						// Append suffix to mdata
+			            size_t mdata_len = strlen(sendbuf->mdata);
+			            size_t suffix_len = strlen(sendbuf->suffix);
+			            size_t total_len = mdata_len + suffix_len + 1;
+			            char *new_mdata = realloc(sendbuf->mdata, total_len);
+			            if (new_mdata) 
+						{
+			                sendbuf->mdata = new_mdata;
+			                strncat(sendbuf->mdata, sendbuf->suffix, suffix_len);
+			            } 
+						else 
+						{
+			                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to realloc mdata for suffix append\n", __FUNCTION__, __LINE__);
+			            }
+			        }
+					else 
+					{
                         sendbuf->suffix = NULL;
                     }
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
