@@ -53,7 +53,6 @@ extern "C"
 void initCache(void);
 cacheData* createCache(char *pkgData, char *issueTypeData, char *suffix);
 void append_item(char *pkgData, char *issueTypeData, char *suffix);
-void append_item(char *pkgData, char *issueTypeData);
 void remove_item(cacheData *cache);
 void freecacheDataCacheNode(cacheData **node);
 cacheData* findPresentInCache(char *pkgData);
