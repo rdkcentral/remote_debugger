@@ -522,7 +522,14 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
             free(dynJSONPath);
             // Get the command for received Issue Type of the Issue Category
             dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+            if (dynamicdata != NULL)
+            {
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile command info is empty/invalid for issue %s, skip append path... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+            }
         }
         else
         {
@@ -560,7 +567,14 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
         // Get the command for received Issue Type of the Issue Category
         staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+        if (staticdata != NULL)
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile command info is empty/invalid for issue %s... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+        }
     }
     else
     {
@@ -749,4 +763,3 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
-
