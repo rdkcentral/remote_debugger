@@ -611,6 +611,11 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
                 free(rbuf->mdata);
                 rbuf->mdata = NULL;
             }
+			if (rbuf->suffix != NULL)
+            {
+                free(rbuf->suffix);
+                rbuf->suffix = NULL;
+            }
             if (rbuf->jsonPath != NULL)
             {
                 free(rbuf->jsonPath);
