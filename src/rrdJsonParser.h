@@ -42,10 +42,12 @@ cJSON* readAndParseJSON(char *jsonFile);
 void getIssueInfo(char *issuestr, issueNodeData *issue);
 bool findIssueInParsedJSON(issueNodeData *issuestructNode, cJSON *jsoncfg);
 void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf *buff, bool isDeepSleepAwakeEventValid, issueData *appendprofiledata);
-bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg,char *buf, bool deepSleepAwkEvnt);
+bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg,char *buf, bool deepSleepAwkEvnt, const char *suffix);
 issueData* getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg,char *buf);
 bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char *rfcbuf);
 bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issuestructNode, char *rfcbuf);
+
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len);
 
 #ifdef __cplusplus
 }

@@ -46,6 +46,93 @@ void removeSpecialChar(char *str)
     }
 }
 
+/* Maximum allowed suffix length (including the leading '_').
+ * The analytics portal parses archive filenames by splitting on '_'. A suffix
+ * longer than this limit would introduce extra '_' delimiters that shift the
+ * timestamp field to a wrong position, causing download failures.
+ * 9 characters = '_' + up to 8 alphanumeric/short-token chars: long UUID-based
+ * suffixes (e.g. "_Search-b6877385-...") are always > 9 and are therefore
+ * discarded before the archive name is built. */
+#define RRD_MAX_SUFFIX_LEN  50
+
+/*
+ * @function split_issue_type
+ * @brief Utility to split base and suffix from issue type string.
+ *        The input is always split at the first '_'. The base is the part
+ *        before the underscore (never contains '_'). The suffix is only
+ *        kept when its total length (including the leading '_') is at most
+ *        RRD_MAX_SUFFIX_LEN (9) characters; longer suffixes are discarded.
+ *        If no underscore is present the full input is the base.
+ *        Examples:
+ *          "Device.DeviceTime_ab12345" → base="Device.DeviceTime",
+ *                                        suffix="_ab12345"  (8 chars, accepted)
+ *          "Device.DeviceTime_Search-uuid-very-long"
+ *                                      → base="Device.DeviceTime",
+ *                                        suffix=""          (>9 chars, discarded)
+ *          "Device.DeviceTime"         → base="Device.DeviceTime",
+ *                                        suffix=""
+ * @param const char *input - The input string to split.
+ * @param char *base - Buffer to store the base part (never contains '_').
+ * @param size_t base_len - Size of the base buffer.
+ * @param char *suffix - Buffer to store the suffix part when valid, else "".
+ * @param size_t suffix_len - Size of the suffix buffer.
+ * @return void
+ */
+
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) 
+{
+    if (base && base_len > 0) 
+	{
+        base[0] = '\0';
+    }
+    if (suffix && suffix_len > 0) 
+	{
+        suffix[0] = '\0';
+    }
+
+    if (!input || !base || !suffix) 
+	{
+        return;
+    }
+
+    if (base_len == 0 || suffix_len == 0) 
+	{
+        return;
+    }
+
+    const char *underscore = strchr(input, '_');
+    if (underscore)
+    {
+        /* Always split at the first underscore — base never contains '_' */
+        size_t b_len = (size_t)(underscore - input);
+        if (b_len >= base_len) b_len = base_len - 1;
+        strncpy(base, input, b_len);
+        base[b_len] = '\0';
+
+        /* Keep the suffix only when its total length (including '_') is
+         * within the allowed limit; longer tokens are discarded. */
+        if (strlen(underscore) <= RRD_MAX_SUFFIX_LEN)
+        {
+            strncpy(suffix, underscore, suffix_len - 1);
+            suffix[suffix_len - 1] = '\0';
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
+                    __FUNCTION__, __LINE__, base, strlen(underscore), RRD_MAX_SUFFIX_LEN);
+            suffix[0] = '\0';
+        }
+    }
+    else
+    {
+        /* No underscore — full input is the base */
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
+    }
+}
+
+
 /*
  * @function getParamcount
  * @brief Calculates the total number of nodes (elements) in the input string, excluding delimiters.
@@ -311,6 +398,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     issuestdata->rfcvalue = NULL;
     issuestdata->command = NULL;
     issuestdata->timeout = 0;
+    issuestdata->suffix = NULL;
 
     /* Read Command and Timeout information for Issuetype */
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Command and Timeout information for Debug Issue\n",__FUNCTION__,__LINE__);
@@ -381,9 +469,10 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
  * @param       cJSON *jsoncfg - Parsed JSON content.
  * @param char *buf - Issue string.
  * @param bool deepSleepAwkEvnt - Flag indicating if it is a deep sleep wake event.
+ * @param const char *suffix - Optional suffix to append to RRD_OUTPUT_FILE (may be NULL).
  * @return bool - Returns true for successful execution and false for failure.
  */
-bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, char *buf, bool deepSleepAwkEvnt)
+bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, char *buf, bool deepSleepAwkEvnt, const char *suffix)
 {
     int nitems = 0, j = 0, ret = 0;
     issueData *issuestdata = NULL;
@@ -420,6 +509,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     issuestdata->rfcvalue = NULL;
     issuestdata->command = NULL;
     issuestdata->timeout = 0;
+    issuestdata->suffix = NULL;
 
     /* Read Command and Timeout information for Issuetype */
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Command and Timeout information for Debug Issue\n",__FUNCTION__,__LINE__);
@@ -478,6 +568,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         else
         { 
             issuestdata->rfcvalue = strdup(buf);
+            issuestdata->suffix = (suffix && suffix[0] != '\0') ? strdup(suffix) : NULL;
             if(issuestdata->timeout == 0)
             {
                 issuestdata->timeout = DEFAULT_TIMEOUT; // Use Default Systemd service timeout of 90 seconds
@@ -515,7 +606,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for rfcbuf\n",__FUNCTION__,__LINE__);
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
 
@@ -535,7 +630,11 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(rfcbuf); // free duplicated rfc data
         free(buff->mdata); // free rfc data
+        buff->mdata = NULL;
         free(buff->jsonPath); // free rrd path info
+        buff->jsonPath = NULL;
+        free(buff->suffix); // free suffix
+        buff->suffix = NULL;
         return;
     }
     else
@@ -550,13 +649,14 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 // Execute the command for received Issue Type of the Issue Category
                 if (buff->appendMode)
                 {
+                    appendprofiledata->suffix = (buff->suffix && buff->suffix[0] != '\0') ? strdup(buff->suffix) : NULL;
                     execstatus = executeCommands(appendprofiledata);
                     free(issuestructNode->Node); // free main node
                     free(issuestructNode->subNode); // free sub node
                 }
                 else
                 {
-                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, rfcbuf, false);
+                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, rfcbuf, false, buff->suffix);
                 }		
             }
             else if(isDeepSleepAwakeEventValid)
@@ -576,7 +676,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             else
             {
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Continue uploading Debug Report for %s from %s... \n",__FUNCTION__,__LINE__,buff->mdata,outdir);
-                status = uploadDebugoutput(outdir,buff->mdata);
+                status = uploadDebugoutput(outdir, buff->mdata);
                 if(status != 0)
                 {
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: RRD Upload Script Execution Failed!!! status:%d\n",__FUNCTION__,__LINE__,status);
@@ -588,14 +688,22 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             }
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
 	else
 	{
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Command excuted as RRD Failed to change directory:%s\n",__FUNCTION__,__LINE__,outdir);
             free(rfcbuf); // free duplicated rfc data
             free(buff->mdata); // free rfc data
+            buff->mdata = NULL;
             free(buff->jsonPath); // free rrd path info
+            buff->jsonPath = NULL;
+            free(buff->suffix); // free suffix
+            buff->suffix = NULL;
 	}
     }
 }
@@ -667,7 +775,7 @@ bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char
                      RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %d:%s\n", __FUNCTION__, __LINE__, i + 1, issuetypearray[i]);
                      RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %s:%s\n", __FUNCTION__, __LINE__, issuestructNode->Node, issuestructNode->subNode);
                      RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]##################################################\n", __FUNCTION__, __LINE__);
-                     execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuetypearray[i], false);
+                     execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuetypearray[i], false, NULL);
                      free(issuetypearray[i]);
 	         }
 	    }
@@ -746,7 +854,7 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %d:%s\n", __FUNCTION__, __LINE__, _sindex + 1, issuedCommand[_sindex]);
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Issue Type %s:%s\n", __FUNCTION__, __LINE__, issuestructNode->Node, issuestructNode->subNode);
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]##################################################\n", __FUNCTION__, __LINE__);
-                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuedCommand[_sindex], true);
+                    execstatus = invokeSanityandCommandExec(issuestructNode, jsoncfg, issuedCommand[_sindex], true, NULL);
                     free(issuedCommand[_sindex]);
                 }
         }

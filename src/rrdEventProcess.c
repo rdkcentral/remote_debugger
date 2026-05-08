@@ -79,7 +79,35 @@ void processIssueTypeEvent(data_buf *rbuf)
                 cmdBuff = (data_buf *)malloc(sizeof(data_buf));
                 if (cmdBuff)
                 {
-                    dataMsgLen = strlen(cmdMap[index]) + 1;
+                    char base[128] = {0};
+                    char local_suffix[128] = {0};
+                    split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty issue type after parsing token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
+                    removeSpecialCharacterfromIssueTypeList(base);
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty base after sanitization for token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
+                    dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
                     if(cmdBuff->inDynamic)
@@ -88,9 +116,19 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
+
+                    /* Store suffix for this issue type */
+                    cmdBuff->suffix = NULL;
+                    if (local_suffix[0] != '\0') {
+                        cmdBuff->suffix = strdup(local_suffix);
+                        if (cmdBuff->suffix == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to allocate memory for suffix... \n", __FUNCTION__, __LINE__);
+                        }
+                    }
                     if (cmdBuff->mdata)
                     {
-                        strncpy((char *)cmdBuff->mdata, cmdMap[index], dataMsgLen);
+                        strncpy((char *)cmdBuff->mdata, base, dataMsgLen);
                         processIssueType(cmdBuff);
                     }
                     else
@@ -99,6 +137,11 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    if(cmdBuff)
 		    {
+                    if (cmdBuff->suffix)
+                    {
+                        free(cmdBuff->suffix);
+                        cmdBuff->suffix = NULL;
+                    }
                         free(cmdBuff);
 			cmdBuff = NULL;
 		    }
@@ -392,7 +435,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
 #if !defined(GTEST_ENABLE)
     jsonParsed = readAndParseJSON(RRD_JSON_FILE);
 #else
-    jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    if (rbuf->jsonPath != NULL)
+    {
+        jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    }
 #endif
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
@@ -476,7 +522,14 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
             free(dynJSONPath);
             // Get the command for received Issue Type of the Issue Category
             dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+            if (dynamicdata != NULL)
+            {
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile command info is empty/invalid for issue %s, skip append path... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+            }
         }
         else
         {
@@ -514,7 +567,14 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
         // Get the command for received Issue Type of the Issue Category
         staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+        if (staticdata != NULL)
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile command info is empty/invalid for issue %s... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+        }
     }
     else
     {
@@ -555,6 +615,11 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 #else
+    if (rbuf->jsonPath == NULL)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL in GTEST mode, skipping installed package check... \n", __FUNCTION__, __LINE__);
+        return;
+    }
     int utjsonlen = strlen(rbuf->jsonPath);
     dynJSONPath = (char *)malloc(utjsonlen + 1);
 #endif
@@ -639,7 +704,8 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
 
     while (str[source] != '\0')
     {
-        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
+        //if (isalnum(str[source]) || str[source] == ',' || str[source] == '.' || str[source] == '_'|| str[source] == '-')
+		if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
         {
             str[destination] = str[source];
             ++destination;
@@ -663,7 +729,6 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
     int cnt = 1, i = 0;
     char *str = input_str;
 
-    removeSpecialCharacterfromIssueTypeList(str);
     while (*str == delimeter)
         str++;
 
@@ -698,4 +763,3 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
-

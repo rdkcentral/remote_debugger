@@ -310,6 +310,7 @@ bool executeCommands(issueData *cmdinfo)
            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,dirname);
            free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
            free(cmdData->command); // free command received from RRDEventThreadFunc
+           free(cmdData->suffix); // free suffix received from RRDEventThreadFunc
            free(cmdData); // free structure with command and time information
            return false;
         }
@@ -339,6 +340,8 @@ bool executeCommands(issueData *cmdinfo)
                     /* Fix for warning Wformat-overflow : directive argument is null */
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Invalid Location found for command:\n",__FUNCTION__,__LINE__);
                     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
+                    free(cmdData->command); // free command received from RRDEventThreadFunc
+                    free(cmdData->suffix); // free suffix received from RRDEventThreadFunc
                     free(cmdData); // free structure with command and time information
                     return false;
                 }
@@ -354,7 +357,30 @@ bool executeCommands(issueData *cmdinfo)
 
             strncpy(finalOutFile, dirname, strlen(dirname) + 1);
             strncat(finalOutFile,"/", sizeof(finalOutFile) - strlen(finalOutFile) - 1);
-            strncat(finalOutFile,RRD_OUTPUT_FILE, strlen(RRD_OUTPUT_FILE) + 1);
+            if (cmdData->suffix && cmdData->suffix[0] != '\0')
+            {
+                /* Build RRD_OUTPUT_FILE with suffix inserted before the extension.
+                 * e.g. "debug_outputs.txt" + "_ab12345" -> "debug_outputs_ab12345.txt" */
+                const char *ext = strrchr(RRD_OUTPUT_FILE, '.');
+                if (ext)
+                {
+                    size_t nameLen = (size_t)(ext - RRD_OUTPUT_FILE);
+                    size_t currentLen = strlen(finalOutFile);
+                    snprintf(finalOutFile + currentLen,
+                             sizeof(finalOutFile) - currentLen,
+                             "%.*s%s%s", (int)nameLen, RRD_OUTPUT_FILE,
+                             cmdData->suffix, ext);
+                }
+                else
+                {
+                    strncat(finalOutFile, RRD_OUTPUT_FILE, sizeof(finalOutFile) - strlen(finalOutFile) - 1);
+                    strncat(finalOutFile, cmdData->suffix, sizeof(finalOutFile) - strlen(finalOutFile) - 1);
+                }
+            }
+            else
+            {
+                strncat(finalOutFile, RRD_OUTPUT_FILE, sizeof(finalOutFile) - strlen(finalOutFile) - 1);
+            }
 
             /* Open debug_output.txt file*/
             filePointer = fopen(finalOutFile, "a+");
@@ -363,12 +389,13 @@ bool executeCommands(issueData *cmdinfo)
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Unable to Open File:%s\n",__FUNCTION__,__LINE__,finalOutFile);
                 free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
                 free(cmdData->command); // free command received from RRDEventThreadFunc
+                free(cmdData->suffix); // free suffix received from RRDEventThreadFunc
                 free(cmdData); // free structure with command and time information
                 return false;
             }
 
             /*Printing Command Details into Output file*/
-            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Adding Details of Debug commands to Output File: %s...\n",__FUNCTION__,__LINE__,RRD_OUTPUT_FILE);
+            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Adding Details of Debug commands to Output File: %s...\n",__FUNCTION__,__LINE__,finalOutFile);
             asprintf(&printbuffer, "Executing Debug Commands: \"%s\"",cmdData->command);
             fprintf(filePointer, "%s\n", printbuffer);
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: PrintBuffer: %s\n",__FUNCTION__,__LINE__,printbuffer);
@@ -422,12 +449,14 @@ bool executeCommands(issueData *cmdinfo)
 	    v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
             free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
             free(cmdData->command); // free updated command info received from RRDEventThreadFunc
+            free(cmdData->suffix); // free suffix received from RRDEventThreadFunc
             free(cmdData);
 #endif
             return true;
         }
     }
     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
+    free(cmdData->suffix); // free suffix received from RRDEventThreadFunc
     free(cmdData);
     return false;
 }
