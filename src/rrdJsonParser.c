@@ -424,12 +424,10 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             tmpCommand = cJSON_Print(elem);
             if(tmpCommand)
             {
-                /*
 				if(issuestdata->command != NULL)
                 {
                     free(issuestdata->command); // Free previous command before overwriting
                 }
-				*/
                 issuestdata->command = strdup(tmpCommand);   // print command info from json file
                 cJSON_free(tmpCommand);
             }
