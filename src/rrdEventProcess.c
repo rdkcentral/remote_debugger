@@ -416,61 +416,6 @@ static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIss
     return;
 }
 
-/*
- * @function processIssueTypeInStaticProfile
- * @brief Processes the given issue type by checking if the issue exists in the static profile JSON.
- *              If the issue is found, it handles the issue appropriately. If not found, it will further
- *              check in the installed package.
- * @param data_buf *rbuf - Buffer containing event data and metadata.
- * @param issueNodeData *pIssueNode - Pointer to structure containing issue node data.
- * @return void
- */
-static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode)
-{
-    cJSON *jsonParsed = NULL;
-    bool isStaticIssue = false;
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Static Profile... \n", __FUNCTION__, __LINE__);
-#if !defined(GTEST_ENABLE)
-    jsonParsed = readAndParseJSON(RRD_JSON_FILE);
-#else
-    if (rbuf->jsonPath != NULL)
-    {
-        jsonParsed = readAndParseJSON(rbuf->jsonPath);
-    }
-#endif
-    if (jsonParsed == NULL)
-    { // Static Profile JSON Parsing or Read Fail
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
-        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-        return;
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Static JSON... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
-    isStaticIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
-    if (isStaticIssue)
-    {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
-	// CID 336988: Double free (USE_AFTER_FREE)
-	if(rbuf)
-	{
-	    checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
-	}
-    }
-    else
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
-        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
-    }
-
-    freeParsedJson(jsonParsed);
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-    return;
-}
-
 issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode)
 {
     issueData *dynamicdata = NULL;
@@ -522,7 +467,14 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
             free(dynJSONPath);
             // Get the command for received Issue Type of the Issue Category
             dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+            if (dynamicdata != NULL)
+            {
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile command info is empty/invalid for issue %s, skip append path... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+            }
         }
         else
         {
@@ -560,7 +512,14 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
         // Get the command for received Issue Type of the Issue Category
         staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+        if (staticdata != NULL)
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile command info is empty/invalid for issue %s... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+        }
     }
     else
     {
