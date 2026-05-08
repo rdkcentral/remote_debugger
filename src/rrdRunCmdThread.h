@@ -51,8 +51,8 @@ extern "C"
 
 /*Public Function*/
 void initCache(void);
-cacheData* createCache( char *pkgData, char *issueTypeData);
-void print_items(cacheData *node);
+cacheData* createCache(char *pkgData, char *issueTypeData, char *suffix);
+void append_item(char *pkgData, char *issueTypeData, char *suffix);
 void append_item(char *pkgData, char *issueTypeData);
 void remove_item(cacheData *cache);
 void freecacheDataCacheNode(cacheData **node);
