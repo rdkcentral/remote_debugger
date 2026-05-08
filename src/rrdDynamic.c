@@ -273,7 +273,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                                 }
                                 else
                                 {
-                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, strlen(cacheIssueString));
+                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, snprintfResult);
                                     cachePkgString = strdup(msgDataString);
                                     if (cachePkgString == NULL)
                                     {
@@ -284,7 +284,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                                     else
                                     {
                                         append_item(cachePkgString, cacheIssueString);
-                                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, strlen(cacheIssueString));
+                                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, snprintfResult);
                                         cachePkgString = NULL;
                                         cacheIssueString = NULL;
                                     }
