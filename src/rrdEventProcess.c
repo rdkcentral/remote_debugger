@@ -603,7 +603,7 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
 #else
     if ((rbuf == NULL) || (rbuf->jsonPath == NULL))
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL in GTEST mode, skipping installed package check... \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL, skipping installed package check... \n", __FUNCTION__, __LINE__);
         if (rbuf != NULL)
         {
             if (rbuf->mdata != NULL)
