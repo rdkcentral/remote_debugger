@@ -81,6 +81,7 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Log directory validated and prepared\n", __FUNCTION__);
 
+    // 6. Convert/sanitize issue type
     char issue_type_sanitized[64] = {0};
     if (rrd_logproc_convert_issue_type(issue_type, issue_type_sanitized, sizeof(issue_type_sanitized)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to sanitize issue type\n", __FUNCTION__);
