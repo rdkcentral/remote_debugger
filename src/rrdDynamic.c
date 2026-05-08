@@ -244,7 +244,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                             size_t suffixLen = 0;
                             size_t appendLen = 0;
                             size_t cacheIssueStringLen = 0;
-                            int issueStringLength = 0;
+                            int snprintfResult = 0;
                             const char *suffixPart = "";
                             const char *appendPart = "";
 
@@ -263,8 +263,8 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                             cacheIssueString = (char *)malloc(cacheIssueStringLen);
                             if (cacheIssueString)
                             {
-                                issueStringLength = snprintf(cacheIssueString, cacheIssueStringLen, "%s%s%s", (char *)rbuf->mdata, suffixPart, appendPart);
-                                if ((issueStringLength < 0) || ((size_t)issueStringLength >= cacheIssueStringLen))
+                                snprintfResult = snprintf(cacheIssueString, cacheIssueStringLen, "%s%s%s", (char *)rbuf->mdata, suffixPart, appendPart);
+                                if ((snprintfResult < 0) || ((size_t)snprintfResult >= cacheIssueStringLen))
                                 {
                                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to build cache issue string.\n", __FUNCTION__, __LINE__);
                                     free(cacheIssueString);
@@ -275,6 +275,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, strlen(cacheIssueString));
                                     append_item(strdup(msgDataString), cacheIssueString);
                                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, strlen(cacheIssueString));
+                                    cacheIssueString = NULL;
                                 }
                             }
                             else
