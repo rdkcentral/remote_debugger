@@ -1073,7 +1073,7 @@ protected:
 TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
 {
     issueNodeData *issuestructNode = NULL;
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = NULL;
     buff.jsonPath = NULL;
     buff.inDynamic = false;
@@ -1087,7 +1087,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     issueNodeData issuestructNode;
     issuestructNode.Node = strdup("MainNode");
     issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
@@ -1112,7 +1112,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     issueNodeData issuestructNode;
     issuestructNode.Node = strdup("MainNode");
     issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
@@ -1132,8 +1132,9 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     issueNodeData issuestructNode;
     issuestructNode.Node = strdup("MainNode");
     issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = strdup("ValidIssueTypeData");
+    buff.suffix = strdup("_Search");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
@@ -1146,8 +1147,14 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
+    cacheData *cache = findPresentInCache("RDK-RRD-MainNode");
+    ASSERT_NE(cache, nullptr);
+    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData_Search");
+    remove_item(cache);
+
     free(buff.jsonPath);
     free(buff.mdata);
+    free(buff.suffix);
 }
 
 /* --------------- Test RRDProcessDeepSleepAwakeEvents() from rrdDeepSleep --------------- */
@@ -1177,7 +1184,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDataNull)
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsInvalidDefault)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = "Sample data";
     rbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
 
@@ -1186,7 +1193,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsInvalidDefault)
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamSuccess)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
     RRDProcessDeepSleepAwakeEvents(&rbuf);
@@ -1194,7 +1201,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamFail)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
     RRDProcessDeepSleepAwakeEvents(&rbuf);
@@ -1202,7 +1209,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicFalse)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
     rbuf.inDynamic = false;
@@ -1211,7 +1218,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInD
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicTrue)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
     rbuf.inDynamic = true;
@@ -6178,10 +6185,6 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
-
-
-
-
 
 
 
