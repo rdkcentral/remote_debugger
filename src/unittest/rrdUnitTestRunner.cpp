@@ -2112,6 +2112,38 @@ TEST(SplitIssueTypeTest, SuffixTwentyCharsDiscarded)
     EXPECT_STREQ(suffix, "");
 }
 
+TEST(SplitIssueTypeTest, SuffixWithUnsafeCharsIsSanitized)
+{
+    /* "_ab;rm" is 6 chars (≤ 9, accepted) but ';' is unsafe and must be stripped.
+     * Expected sanitized suffix: "_abrm" */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_ab;rm", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_abrm");
+}
+
+TEST(SplitIssueTypeTest, SuffixWithOnlyUnsafeCharsBecomesUnderscore)
+{
+    /* "_!@#" is 4 chars (≤ 9, accepted length-wise) but all payload chars are unsafe.
+     * After sanitization only the leading '_' remains → suffix="_" */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_!@#", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_");
+}
+
+TEST(SplitIssueTypeTest, SuffixHyphensPreserved)
+{
+    /* "_ab-cd" is 6 chars (≤ 9, accepted) and '-' is in the safe set → preserved */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_ab-cd", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_ab-cd");
+}
+
 /* --------------- Test processIssueTypeInDynamicProfile() from rrdEventProcess --------------- */
 class ProcessIssueTypeInDynamicProfileTest : public ::testing::Test
 {

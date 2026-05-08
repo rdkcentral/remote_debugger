@@ -55,6 +55,9 @@ void removeSpecialChar(char *str)
  *        before the underscore (never contains '_'). The suffix is only
  *        kept when its total length (including the leading '_') is at most
  *        RRD_MAX_SUFFIX_LEN (9) characters; longer suffixes are discarded.
+ *        After length validation the suffix is sanitized: only the characters
+ *        [A-Za-z0-9_-] are retained so that the value is safe to use in file
+ *        names and shell command arguments without risk of injection.
  *        If no underscore is present the full input is the base.
  *        Examples:
  *          "Device.DeviceTime_ab12345" → base="Device.DeviceTime",
@@ -64,6 +67,8 @@ void removeSpecialChar(char *str)
  *                                        suffix=""          (>9 chars, discarded)
  *          "Device.DeviceTime"         → base="Device.DeviceTime",
  *                                        suffix=""
+ *          "Device.DeviceTime_ab;rm"   → base="Device.DeviceTime",
+ *                                        suffix="_abrm"     (unsafe ';' stripped)
  * @param const char *input - The input string to split.
  * @param char *base - Buffer to store the base part (never contains '_').
  * @param size_t base_len - Size of the base buffer.
@@ -106,8 +111,20 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
          * within the allowed limit; longer tokens are discarded. */
         if (strlen(underscore) <= RRD_MAX_SUFFIX_LEN)
         {
-            strncpy(suffix, underscore, suffix_len - 1);
-            suffix[suffix_len - 1] = '\0';
+            /* Sanitize: retain only [A-Za-z0-9_-] to prevent injection when
+             * the suffix is later embedded in file names or command arguments. */
+            size_t si = 0, di = 0;
+            size_t max_copy = suffix_len - 1;
+            while (underscore[si] != '\0' && di < max_copy)
+            {
+                char ch = underscore[si];
+                if (isalnum((unsigned char)ch) || ch == '_' || ch == '-')
+                {
+                    suffix[di++] = ch;
+                }
+                si++;
+            }
+            suffix[di] = '\0';
         }
         else
         {
