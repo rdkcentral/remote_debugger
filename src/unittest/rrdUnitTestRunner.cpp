@@ -1157,6 +1157,37 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     free(buff.suffix);
 }
 
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccessInAppendModeWithSuffix)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff = {};
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.suffix = strdup("_Search");
+    buff.appendMode = true;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+
+    cacheData *cache = findPresentInCache("RDK-RRD-MainNode");
+    ASSERT_NE(cache, nullptr);
+    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData_Search_apnd");
+    remove_item(cache);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+    free(buff.suffix);
+}
+
 /* --------------- Test RRDProcessDeepSleepAwakeEvents() from rrdDeepSleep --------------- */
 class RRDProcessDeepSleepAwakeEventsTest : public ::testing::Test
 {
@@ -6185,7 +6216,6 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
-
 
 
 

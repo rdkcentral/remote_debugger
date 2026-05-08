@@ -243,32 +243,39 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                             size_t issueLen = strlen((char *)rbuf->mdata);
                             size_t suffixLen = 0;
                             size_t appendLen = 0;
+                            size_t cacheIssueStringLen = 0;
+                            int issueStringLength = 0;
+                            const char *suffixPart = "";
+                            const char *appendPart = "";
 
                             if (rbuf->suffix && rbuf->suffix[0] != '\0')
                             {
                                 suffixLen = strlen(rbuf->suffix);
+                                suffixPart = rbuf->suffix;
                             }
                             if (rbuf->appendMode)
                             {
                                 appendLen = strlen(APPEND_SUFFIX);
+                                appendPart = APPEND_SUFFIX;
                             }
 
-                            cacheIssueString = (char *)malloc(issueLen + suffixLen + appendLen + 1);
+                            cacheIssueStringLen = issueLen + suffixLen + appendLen + 1;
+                            cacheIssueString = (char *)malloc(cacheIssueStringLen);
                             if (cacheIssueString)
                             {
-                                cacheIssueString[0] = '\0';
-                                strcat(cacheIssueString, (char *)rbuf->mdata);
-                                if (suffixLen > 0)
+                                issueStringLength = snprintf(cacheIssueString, cacheIssueStringLen, "%s%s%s", (char *)rbuf->mdata, suffixPart, appendPart);
+                                if ((issueStringLength < 0) || ((size_t)issueStringLength >= cacheIssueStringLen))
                                 {
-                                    strcat(cacheIssueString, rbuf->suffix);
+                                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to build cache issue string.\n", __FUNCTION__, __LINE__);
+                                    free(cacheIssueString);
+                                    cacheIssueString = NULL;
                                 }
-                                if (appendLen > 0)
+                                else
                                 {
-                                    strcat(cacheIssueString, APPEND_SUFFIX);
+                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, strlen(cacheIssueString));
+                                    append_item(strdup(msgDataString), cacheIssueString);
+                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, strlen(cacheIssueString));
                                 }
-                                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, strlen(cacheIssueString));
-                                append_item(strdup(msgDataString), cacheIssueString);
-                                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, strlen(cacheIssueString));
                             }
                             else
                             {
@@ -285,7 +292,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters failed...\n", __FUNCTION__, __LINE__);
                     }
                     free(msgDataString);
-                    cacheIssueString = NULL;
                 }
                 else
                 {
