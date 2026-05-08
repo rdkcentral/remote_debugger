@@ -1051,6 +1051,8 @@ protected:
     void SetUp() override
     {
         originalDevPropData = devPropData;
+        pthread_mutex_init(&rrdCacheMut, NULL);
+        cacheDataNode = NULL;
         string test_name = getCurrentTestName();
         if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure" || test_name == "DeepSleepAwakeEventIsTrue_SetParamReturnsFailure")
         {
@@ -1062,6 +1064,13 @@ protected:
     {
         devPropData = originalDevPropData;
         SetParamWrapper::clearImpl();
+        while (cacheDataNode != NULL)
+        {
+            cacheData *next = cacheDataNode->next;
+            freecacheDataCacheNode(&cacheDataNode);
+            cacheDataNode = next;
+        }
+        pthread_mutex_destroy(&rrdCacheMut);
         string test_name = getCurrentTestName();
         if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
         {
@@ -1149,7 +1158,8 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     cacheData *cache = findPresentInCache("RDK-RRD-MainNode");
     ASSERT_NE(cache, nullptr);
-    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData_Search");
+    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData");
+    EXPECT_STREQ(cache->suffix, "_Search");
     remove_item(cache);
 
     free(buff.jsonPath);
@@ -1180,7 +1190,8 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
 
     cacheData *cache = findPresentInCache("RDK-RRD-MainNode");
     ASSERT_NE(cache, nullptr);
-    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData_Search_apnd");
+    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData_apnd");
+    EXPECT_STREQ(cache->suffix, "_Search");
     remove_item(cache);
 
     free(buff.jsonPath);
@@ -1385,7 +1396,7 @@ TEST(CreateCacheTest, HandlesNullPkgDataAndValidIssueTypeData)
 {
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->mdata, nullptr);
@@ -1401,7 +1412,7 @@ TEST(CreateCacheTest, HandlesValidPkgDataAndIssueTypeData)
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result->mdata, "ValidPkgData");
@@ -1418,7 +1429,7 @@ TEST(CreateCacheTest, HandlesValidPkgDataAndNullIssueTypeData)
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result->mdata, "ValidPkgData");
@@ -1434,7 +1445,7 @@ TEST(CreateCacheTest, HandlesNullPkgDataAndIssueTypeData)
 {
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->mdata, nullptr);
@@ -1481,7 +1492,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNullAndIssueTypeDataNul
 {
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1492,7 +1503,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNullAndIssueTypeDataNot
 {
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1503,7 +1514,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNotNullAndIssueTypeData
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1514,7 +1525,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataAndIssueTypeDataNotNull
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1523,14 +1534,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataAndIssueTypeDataNotNull
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeDataNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1539,14 +1550,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeData
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeDataNotNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1555,14 +1566,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeData
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNotNullAndIssueTypeDataNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1571,14 +1582,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNotNullAndIssueTypeD
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataAndIssueTypeDataNotNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1588,7 +1599,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataAndIssueTypeDataNotN
 /* --------------- Test freecacheDataCacheNode() from rrdRunCmdThread --------------- */
 TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNotNullAndIssueStringNotNull)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("ValidMdata");
     node->issueString = strdup("ValidIssueString");
     freecacheDataCacheNode(&node);
@@ -1606,7 +1617,7 @@ TEST(FreecacheDataCacheNodeTest, HandlesNodeNull)
 
 TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNullAndIssueStringNotNull)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = NULL;
     node->issueString = strdup("ValidIssueString");
     freecacheDataCacheNode(&node);
@@ -1736,11 +1747,11 @@ protected:
 
 TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInSecondElement)
 {
-    cacheData *firstNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *firstNode = (cacheData *)calloc(1, sizeof(cacheData));
     firstNode->mdata = strdup("FirstPkgData");
     firstNode->issueString = strdup("FirstIssueString");
     firstNode->next = NULL;
-    cacheData *secondNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *secondNode = (cacheData *)calloc(1, sizeof(cacheData));
     secondNode->mdata = strdup("SecondPkgData");
     secondNode->issueString = strdup("SecondIssueString");
     secondNode->next = NULL;
@@ -1753,7 +1764,7 @@ TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInSecondElement)
 
 TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInFirstElement)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -1771,7 +1782,7 @@ TEST_F(FindPresentInCacheTest, HandlesRrdCachecnodeNull)
 
 TEST_F(FindPresentInCacheTest, HandlesPkgDataNotFoundInRrdCachecnode)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -1821,7 +1832,7 @@ TEST_F(RemoveItemTest, HandlesCacheNull)
 
 TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheEqualsRrdCachecnode)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -1833,13 +1844,13 @@ TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheEqualsRrdCachecnode)
 
 TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheNotEqualsRrdCachecnode)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
     node->prev = NULL;
     cacheDataNode = node;
-    cacheData *node_dummy = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node_dummy = (cacheData *)calloc(1, sizeof(cacheData));
     node_dummy->mdata = strdup("PkgData");
     node_dummy->issueString = strdup("IssueString");
     node_dummy->next = NULL;
@@ -2915,7 +2926,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadNotComplete)
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -2932,7 +2943,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndDEEPSLEEPIss
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("DEEPSLEEP");
     node->next = NULL;
@@ -2949,7 +2960,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEP
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("NotDeepSleepIssue");
     node->next = NULL;
@@ -6216,7 +6227,6 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
-
 
 
 
