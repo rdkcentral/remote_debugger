@@ -125,6 +125,7 @@ typedef struct cache {
      char *issueString;
      struct cache *next;
      struct cache *prev;
+     char *suffix; // Persist the suffix for later use
 } cacheData;
 
 /*Structure for Device Propertiesr*/
