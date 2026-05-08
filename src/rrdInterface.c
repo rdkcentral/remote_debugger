@@ -391,8 +391,8 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 		{
             size_t issueLen = strlen(sendbuf->mdata);
             size_t suffixLen = strlen(cache->suffix);
-            size_t appendLen = strlen(APPEND_SUFFIX);
-            char *updatedIssue = (char *)malloc(issueLen + suffixLen + 1);
+            size_t appendLen = sizeof(APPEND_SUFFIX) - 1;
+            char *updatedIssue = (char *)malloc(issueLen + suffixLen + appendLen + 1);
             if (updatedIssue)
             {
                 if ((issueLen >= appendLen) && (strcmp(sendbuf->mdata + issueLen - appendLen, APPEND_SUFFIX) == 0))

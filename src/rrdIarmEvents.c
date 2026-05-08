@@ -341,8 +341,8 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     if (cache->suffix && cache->suffix[0] != '\0') {
                         size_t issueLen = strlen(sendbuf->mdata);
                         size_t suffixLen = strlen(cache->suffix);
-                        size_t appendLen = strlen(APPEND_SUFFIX);
-                        char *updatedIssue = (char *)malloc(issueLen + suffixLen + 1);
+                        size_t appendLen = sizeof(APPEND_SUFFIX) - 1;
+                        char *updatedIssue = (char *)malloc(issueLen + suffixLen + appendLen + 1);
                         if (updatedIssue)
                         {
                             if ((issueLen >= appendLen) && (strcmp(sendbuf->mdata + issueLen - appendLen, APPEND_SUFFIX) == 0))
