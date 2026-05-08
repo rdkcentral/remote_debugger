@@ -391,6 +391,20 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
 		{
             sendbuf->suffix = strdup(cache->suffix);
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Restored suffix from cache struct: %s\n", __FUNCTION__, __LINE__, cache->suffix);
+			// Append suffix to mdata
+            size_t mdata_len = strlen(sendbuf->mdata);
+            size_t suffix_len = strlen(sendbuf->suffix);
+            size_t total_len = mdata_len + suffix_len + 1;
+            char *new_mdata = realloc(sendbuf->mdata, total_len);
+            if (new_mdata) 
+			{
+                sendbuf->mdata = new_mdata;
+                strncat(sendbuf->mdata, sendbuf->suffix, suffix_len);
+            } 
+			else 
+			{
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to realloc mdata for suffix append\n", __FUNCTION__, __LINE__);
+            }
         }
 	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
         snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
