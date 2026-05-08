@@ -387,6 +387,11 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
         }
 	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
     	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
+		if (cache->suffix && cache->suffix[0] != '\0') 
+		{
+        sendbuf->suffix = strdup(cache->suffix);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Restored suffix from cache struct: %s\n", __FUNCTION__, __LINE__, cache->suffix);
+        }
 	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
         snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
     	sendbuf->inDynamic = true;
