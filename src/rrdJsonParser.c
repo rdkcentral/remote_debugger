@@ -24,7 +24,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
-#define RRD_MAX_SUFFIX_LEN  9
+#define RRD_MAX_SUFFIX_LEN  10
 
 /*
  * @function removeSpecialChar
