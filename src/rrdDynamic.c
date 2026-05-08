@@ -164,8 +164,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 {
     char *paramString = NULL;
     char *msgDataString = NULL;
-    char *cacheIssueString = NULL;
-    char *cachePkgString = NULL;
+    char *appendData = NULL;
     unsigned char objSize = sizeof(unsigned char);
     int mSGLength = -1;
     int msgDataStringSize = -1;
@@ -238,73 +237,28 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                     if (rc == RBUS_ERROR_SUCCESS)
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters using rbus success...\n", __FUNCTION__, __LINE__);
-                        /* Append Package string in Cache */
-                        if (rbuf && rbuf->mdata)
+			/* Append Package string in Cache */
+                        if (rbuf->appendMode)
                         {
-                            size_t issueLen = strlen((char *)rbuf->mdata);
-                            size_t suffixLen = 0;
-                            size_t appendLen = 0;
-                            size_t cacheIssueStringLen = 0;
-                            int snprintfResult = 0;
-                            const char *suffixPart = "";
-                            const char *appendPart = "";
-
-                            if (rbuf->suffix && rbuf->suffix[0] != '\0')
-                            {
-                                suffixLen = strlen(rbuf->suffix);
-                                suffixPart = rbuf->suffix;
-                            }
-                            if (rbuf->appendMode)
-                            {
-                                appendLen = strlen(APPEND_SUFFIX);
-                                appendPart = APPEND_SUFFIX;
-                            }
-
-                            cacheIssueStringLen = issueLen + suffixLen + appendLen + 1;
-                            cacheIssueString = (char *)malloc(cacheIssueStringLen);
-                            if (cacheIssueString)
-                            {
-                                snprintfResult = snprintf(cacheIssueString, cacheIssueStringLen, "%s%s%s", (char *)rbuf->mdata, suffixPart, appendPart);
-                                if ((snprintfResult < 0) || ((size_t)snprintfResult >= cacheIssueStringLen))
-                                {
-                                    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to build cache issue string.\n", __FUNCTION__, __LINE__);
-                                    free(cacheIssueString);
-                                    cacheIssueString = NULL;
-                                }
-                                else
-                                {
-                                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, cacheIssueString, snprintfResult);
-                                    cachePkgString = strdup(msgDataString);
-                                    if (cachePkgString == NULL)
-                                    {
-                                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for cache package string.\n", __FUNCTION__, __LINE__);
-                                        free(cacheIssueString);
-                                        cacheIssueString = NULL;
-                                    }
-                                    else
-                                    {
-                                        append_item(cachePkgString, cacheIssueString);
-                                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, cacheIssueString, snprintfResult);
-                                        cachePkgString = NULL;
-                                        cacheIssueString = NULL;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for cache issue string.\n", __FUNCTION__, __LINE__);
-                            }
+                            appendData = (char *)malloc(strlen(APPEND_SUFFIX) + strlen(rbuf->mdata) + 1);
+                            strcpy(appendData,rbuf->mdata);
+                            strcat(appendData,APPEND_SUFFIX);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated in appendmode IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, appendData, strlen(appendData));
+                            append_item(strdup(msgDataString), strdup(appendData), rbuf->suffix);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, appendData, strlen(appendData));
                         }
                         else
                         {
-                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid issue data for cache update.\n", __FUNCTION__, __LINE__);
-                        }
+                            append_item(strdup(msgDataString), strdup((char *)rbuf->mdata), rbuf->suffix);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, (char *)rbuf->mdata, strlen((char *)rbuf->mdata));
+                        }			    
                     }
                     else
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters failed...\n", __FUNCTION__, __LINE__);
                     }
                     free(msgDataString);
+		    free(appendData);
                 }
                 else
                 {
