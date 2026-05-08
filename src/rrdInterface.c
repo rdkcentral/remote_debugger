@@ -389,6 +389,33 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
 		if (cache->suffix && cache->suffix[0] != '\0') 
 		{
+            size_t issueLen = strlen(sendbuf->mdata);
+            size_t suffixLen = strlen(cache->suffix);
+            size_t appendLen = strlen(APPEND_SUFFIX);
+            char *updatedIssue = (char *)malloc(issueLen + suffixLen + 1);
+            if (updatedIssue)
+            {
+                if ((issueLen >= appendLen) && (strcmp(sendbuf->mdata + issueLen - appendLen, APPEND_SUFFIX) == 0))
+                {
+                    size_t baseLen = issueLen - appendLen;
+                    memcpy(updatedIssue, sendbuf->mdata, baseLen);
+                    memcpy(updatedIssue + baseLen, cache->suffix, suffixLen);
+                    memcpy(updatedIssue + baseLen + suffixLen, APPEND_SUFFIX, appendLen);
+                    updatedIssue[baseLen + suffixLen + appendLen] = '\0';
+                }
+                else
+                {
+                    memcpy(updatedIssue, sendbuf->mdata, issueLen);
+                    memcpy(updatedIssue + issueLen, cache->suffix, suffixLen);
+                    updatedIssue[issueLen + suffixLen] = '\0';
+                }
+                free(sendbuf->mdata);
+                sendbuf->mdata = updatedIssue;
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed while appending suffix to issue type.\n", __FUNCTION__, __LINE__);
+            }
             sendbuf->suffix = strdup(cache->suffix);
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Restored suffix from cache struct: %s\n", __FUNCTION__, __LINE__, cache->suffix);
         }
