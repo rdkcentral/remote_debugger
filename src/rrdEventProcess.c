@@ -601,9 +601,22 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 #else
-    if (rbuf->jsonPath == NULL)
+    if ((rbuf == NULL) || (rbuf->jsonPath == NULL))
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL in GTEST mode, skipping installed package check... \n", __FUNCTION__, __LINE__);
+        if (rbuf != NULL)
+        {
+            if (rbuf->mdata != NULL)
+            {
+                free(rbuf->mdata);
+                rbuf->mdata = NULL;
+            }
+            if (rbuf->jsonPath != NULL)
+            {
+                free(rbuf->jsonPath);
+                rbuf->jsonPath = NULL;
+            }
+        }
         return;
     }
     int utjsonlen = strlen(rbuf->jsonPath);
