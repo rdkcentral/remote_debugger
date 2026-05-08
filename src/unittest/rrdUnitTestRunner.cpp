@@ -1064,12 +1064,14 @@ protected:
     {
         devPropData = originalDevPropData;
         SetParamWrapper::clearImpl();
+        pthread_mutex_lock(&rrdCacheMut);
         while (cacheDataNode != NULL)
         {
             cacheData *next = cacheDataNode->next;
             freecacheDataCacheNode(&cacheDataNode);
             cacheDataNode = next;
         }
+        pthread_mutex_unlock(&rrdCacheMut);
         pthread_mutex_destroy(&rrdCacheMut);
         string test_name = getCurrentTestName();
         if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
@@ -6227,7 +6229,6 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
-
 
 
 
