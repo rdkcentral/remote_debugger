@@ -97,6 +97,7 @@ typedef struct mbuffer {
      bool                inDynamic;
      bool                appendMode;
      deepsleep_event_et  dsEvent;
+     char *suffix; // Holds the suffix split from issue type string, if any
 } data_buf;
 
 /*Structure for Message Header*/
@@ -124,6 +125,7 @@ typedef struct cache {
      char *issueString;
      struct cache *next;
      struct cache *prev;
+     char *suffix; // Persist the suffix for later use
 } cacheData;
 
 /*Structure for Device Propertiesr*/

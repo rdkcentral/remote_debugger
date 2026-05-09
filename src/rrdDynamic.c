@@ -244,12 +244,12 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                             strcpy(appendData,rbuf->mdata);
                             strcat(appendData,APPEND_SUFFIX);
                             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache String updated in appendmode IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, appendData, strlen(appendData));
-                            append_item(strdup(msgDataString), strdup(appendData));
+                            append_item(strdup(msgDataString), strdup(appendData), rbuf->suffix);
                             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, appendData, strlen(appendData));
                         }
                         else
                         {
-                            append_item(strdup(msgDataString), strdup((char *)rbuf->mdata));
+                            append_item(strdup(msgDataString), strdup((char *)rbuf->mdata), rbuf->suffix);
                             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters Success and Cache Updated ...%s IssueStr:%s Length:%d\n", __FUNCTION__, __LINE__, msgDataString, (char *)rbuf->mdata, strlen((char *)rbuf->mdata));
                         }			    
                     }

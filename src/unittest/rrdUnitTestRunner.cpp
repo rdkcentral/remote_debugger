@@ -1051,6 +1051,8 @@ protected:
     void SetUp() override
     {
         originalDevPropData = devPropData;
+        pthread_mutex_init(&rrdCacheMut, NULL);
+        cacheDataNode = NULL;
         string test_name = getCurrentTestName();
         if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure" || test_name == "DeepSleepAwakeEventIsTrue_SetParamReturnsFailure")
         {
@@ -1062,6 +1064,15 @@ protected:
     {
         devPropData = originalDevPropData;
         SetParamWrapper::clearImpl();
+        pthread_mutex_lock(&rrdCacheMut);
+        while (cacheDataNode != NULL)
+        {
+            cacheData *next = cacheDataNode->next;
+            freecacheDataCacheNode(&cacheDataNode);
+            cacheDataNode = next;
+        }
+        pthread_mutex_unlock(&rrdCacheMut);
+        pthread_mutex_destroy(&rrdCacheMut);
         string test_name = getCurrentTestName();
         if (test_name == "DeepSleepAwakeEventIsFalse_SetParamReturnsFailure")
         {
@@ -1073,7 +1084,7 @@ protected:
 TEST_F(RRDRdmManagerDownloadRequestTest, IssueStructNodeIsNull)
 {
     issueNodeData *issuestructNode = NULL;
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = NULL;
     buff.jsonPath = NULL;
     buff.inDynamic = false;
@@ -1087,7 +1098,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     issueNodeData issuestructNode;
     issuestructNode.Node = strdup("MainNode");
     issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
@@ -1112,7 +1123,7 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsTrue_SetParamRetur
     issueNodeData issuestructNode;
     issuestructNode.Node = strdup("MainNode");
     issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = NULL;
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
@@ -1132,8 +1143,9 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     issueNodeData issuestructNode;
     issuestructNode.Node = strdup("MainNode");
     issuestructNode.subNode = strdup("SubNode");
-    data_buf buff;
+    data_buf buff = {};
     buff.mdata = strdup("ValidIssueTypeData");
+    buff.suffix = strdup("_Search");
     buff.jsonPath = strdup("UTJson/validJson.json");
     buff.inDynamic = false;
     EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
@@ -1146,8 +1158,47 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
+    cacheData *cache = findPresentInCache("RDK-RRD-MainNode");
+    ASSERT_NE(cache, nullptr);
+    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData");
+    EXPECT_STREQ(cache->suffix, "_Search");
+    remove_item(cache);
+
     free(buff.jsonPath);
     free(buff.mdata);
+    free(buff.suffix);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamReturnsSuccessInAppendModeWithSuffix)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff = {};
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.suffix = strdup("_Search");
+    buff.appendMode = true;
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_))
+           .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _))
+            .WillOnce(Return(RBUS_ERROR_SUCCESS));
+    
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+
+    cacheData *cache = findPresentInCache("RDK-RRD-MainNode");
+    ASSERT_NE(cache, nullptr);
+    EXPECT_STREQ(cache->issueString, "ValidIssueTypeData_apnd");
+    EXPECT_STREQ(cache->suffix, "_Search");
+    remove_item(cache);
+
+    free(buff.jsonPath);
+    free(buff.mdata);
+    free(buff.suffix);
 }
 
 /* --------------- Test RRDProcessDeepSleepAwakeEvents() from rrdDeepSleep --------------- */
@@ -1177,7 +1228,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDataNull)
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsInvalidDefault)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = "Sample data";
     rbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
 
@@ -1186,7 +1237,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsInvalidDefault)
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamSuccess)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
     RRDProcessDeepSleepAwakeEvents(&rbuf);
@@ -1194,7 +1245,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSetParamFail)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_DOWNLOAD_PKG_INITIATE;
     RRDProcessDeepSleepAwakeEvents(&rbuf);
@@ -1202,7 +1253,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmDownloadPkgInitiateSe
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicFalse)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
     rbuf.inDynamic = false;
@@ -1211,7 +1262,7 @@ TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInD
 
 TEST_F(RRDProcessDeepSleepAwakeEventsTest, RbufDsEventIsRdmPkgInstallCompleteInDynamicTrue)
 {
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("IssueNode");
     rbuf.dsEvent = RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE;
     rbuf.inDynamic = true;
@@ -1347,7 +1398,7 @@ TEST(CreateCacheTest, HandlesNullPkgDataAndValidIssueTypeData)
 {
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->mdata, nullptr);
@@ -1363,7 +1414,7 @@ TEST(CreateCacheTest, HandlesValidPkgDataAndIssueTypeData)
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result->mdata, "ValidPkgData");
@@ -1380,7 +1431,7 @@ TEST(CreateCacheTest, HandlesValidPkgDataAndNullIssueTypeData)
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_STREQ(result->mdata, "ValidPkgData");
@@ -1396,7 +1447,7 @@ TEST(CreateCacheTest, HandlesNullPkgDataAndIssueTypeData)
 {
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    cacheData *result = createCache(pkgData, issueTypeData);
+    cacheData *result = createCache(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(result, nullptr);
     ASSERT_EQ(result->mdata, nullptr);
@@ -1443,7 +1494,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNullAndIssueTypeDataNul
 {
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1454,7 +1505,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNullAndIssueTypeDataNot
 {
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1465,7 +1516,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataNotNullAndIssueTypeData
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1476,7 +1527,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataAndIssueTypeDataNotNull
 {
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1485,14 +1536,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNullAndPkgDataAndIssueTypeDataNotNull
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeDataNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = NULL;
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1501,14 +1552,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeData
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeDataNotNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = NULL;
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_EQ(cacheDataNode->mdata, nullptr);
@@ -1517,14 +1568,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNullAndIssueTypeData
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNotNullAndIssueTypeDataNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = NULL;
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1533,14 +1584,14 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataNotNullAndIssueTypeD
 
 TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataAndIssueTypeDataNotNull)
 {
-    cacheDataNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheDataNode = (cacheData *)calloc(1, sizeof(cacheData));
     cacheDataNode->mdata = strdup("ExistingPkgData");
     cacheDataNode->issueString = strdup("ExistingIssueTypeData");
     cacheDataNode->next = NULL;
     cacheDataNode->prev = NULL;
     char *pkgData = strdup("ValidPkgData");
     char *issueTypeData = strdup("ValidIssueTypeData");
-    append_item(pkgData, issueTypeData);
+    append_item(pkgData, issueTypeData, NULL);
 
     ASSERT_NE(cacheDataNode, nullptr);
     ASSERT_STREQ(cacheDataNode->mdata, pkgData);
@@ -1550,7 +1601,7 @@ TEST_F(AppendItemTest, HandlesRrdCachecnodeNotNullAndPkgDataAndIssueTypeDataNotN
 /* --------------- Test freecacheDataCacheNode() from rrdRunCmdThread --------------- */
 TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNotNullAndIssueStringNotNull)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("ValidMdata");
     node->issueString = strdup("ValidIssueString");
     freecacheDataCacheNode(&node);
@@ -1568,7 +1619,7 @@ TEST(FreecacheDataCacheNodeTest, HandlesNodeNull)
 
 TEST(FreecacheDataCacheNodeTest, HandlesNodeNotNullAndMdataNullAndIssueStringNotNull)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = NULL;
     node->issueString = strdup("ValidIssueString");
     freecacheDataCacheNode(&node);
@@ -1698,11 +1749,11 @@ protected:
 
 TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInSecondElement)
 {
-    cacheData *firstNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *firstNode = (cacheData *)calloc(1, sizeof(cacheData));
     firstNode->mdata = strdup("FirstPkgData");
     firstNode->issueString = strdup("FirstIssueString");
     firstNode->next = NULL;
-    cacheData *secondNode = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *secondNode = (cacheData *)calloc(1, sizeof(cacheData));
     secondNode->mdata = strdup("SecondPkgData");
     secondNode->issueString = strdup("SecondIssueString");
     secondNode->next = NULL;
@@ -1715,7 +1766,7 @@ TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInSecondElement)
 
 TEST_F(FindPresentInCacheTest, HandlesPkgDataFoundInFirstElement)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -1733,7 +1784,7 @@ TEST_F(FindPresentInCacheTest, HandlesRrdCachecnodeNull)
 
 TEST_F(FindPresentInCacheTest, HandlesPkgDataNotFoundInRrdCachecnode)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -1783,7 +1834,7 @@ TEST_F(RemoveItemTest, HandlesCacheNull)
 
 TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheEqualsRrdCachecnode)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -1795,15 +1846,17 @@ TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheEqualsRrdCachecnode)
 
 TEST_F(RemoveItemTest, HandlesCacheNotNullAndCacheNotEqualsRrdCachecnode)
 {
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
+    node->prev = NULL;
     cacheDataNode = node;
-    cacheData *node_dummy = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node_dummy = (cacheData *)calloc(1, sizeof(cacheData));
     node_dummy->mdata = strdup("PkgData");
     node_dummy->issueString = strdup("IssueString");
     node_dummy->next = NULL;
+    node_dummy->prev = NULL;
     remove_item(node_dummy);
 
     EXPECT_NE(cacheDataNode, nullptr);
@@ -1863,15 +1916,19 @@ TEST(RemoveSpecialCharacterfromIssueTypeListTest, HandlesStringWithConsecutiveSp
 /* --------------- Test issueTypeSplitter() from rrdEventProcess --------------- */
 TEST(IssueTypeSplitterTest, HandlesStringWithSpecialCharacters)
 {
+    /* issueTypeSplitter now performs pure token splitting only; special-character
+     * removal is done separately by the caller (processIssueTypeEvent) on the
+     * extracted base, so raw tokens including special chars are returned here. */
     char str[] = "a@,b,&,cd,ef";
     char **args = NULL;
     int count = issueTypeSplitter(str, ',', &args);
 
-    ASSERT_EQ(count, 4);
-    ASSERT_STREQ(args[0], "a");
+    ASSERT_EQ(count, 5);
+    ASSERT_STREQ(args[0], "a@");
     ASSERT_STREQ(args[1], "b");
-    ASSERT_STREQ(args[2], "cd");
-    ASSERT_STREQ(args[3], "ef");
+    ASSERT_STREQ(args[2], "&");
+    ASSERT_STREQ(args[3], "cd");
+    ASSERT_STREQ(args[4], "ef");
 
     for (int i = 0; i < count; i++)
     {
@@ -1905,6 +1962,237 @@ TEST(IssueTypeSplitterTest, HandlesEmptyString)
     ASSERT_EQ(count, 1);
 
     free(args);
+}
+
+/* --------------- Test split_issue_type() from rrdJsonParser --------------- */
+TEST(SplitIssueTypeTest, NoUnderscoreReturnsFull)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, UnderscoreSplitsBaseAndSuffix)
+{
+    /* Short suffix (total length including '_' is ≤ 9) is accepted and preserved */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_ab12345",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_ab12345");
+}
+
+TEST(SplitIssueTypeTest, MultipleUnderscoresSplitsAtFirst)
+{
+    /* "abc_def_ghi": suffix "_def_ghi" is 8 chars (≤ 9) → accepted and preserved.
+     * Only the first '_' is used as the split point; base never contains '_'. */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_def_ghi", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_def_ghi");
+}
+
+TEST(SplitIssueTypeTest, EmptyInputProducesEmptyOutputs)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, NullInputDoesNotCrash)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    /* Should return without crashing and clear provided outputs to empty strings */
+    split_issue_type(NULL, base, sizeof(base), suffix, sizeof(suffix));
+    /* NULL input clears the output buffers when buffer pointers are provided */
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, BaseTruncatedWhenTooSmall)
+{
+    /* "abc_suffix": suffix "_suffix" is 7 chars (≤ 9) → accepted.
+     * Base = "abc" (before '_'); with a 4-byte buffer this fits exactly. */
+    char base[4] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_suffix");
+}
+
+TEST(SplitIssueTypeTest, SuffixTruncatedWhenTooSmall)
+{
+    /* "abc_12345678": suffix "_12345678" is 9 chars (≤ 9, accepted). Suffix buffer
+     * is only 5 bytes so suffix is truncated to "_123" + NUL. */
+    char base[64] = {0};
+    char suffix[5] = {0};
+    split_issue_type("abc_12345678", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_123");
+    EXPECT_EQ(suffix[sizeof(suffix) - 1], '\0');
+    EXPECT_EQ(strlen(suffix), (size_t)(sizeof(suffix) - 1));
+}
+
+TEST(SplitIssueTypeTest, LeadingUnderscoreGivesEmptyBase)
+{
+    /* "_suffixonly": split at '_' gives empty base; suffix "_suffixonly" is 11 chars
+     * (> 9) so it is discarded */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("_suffixonly", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, NullBaseDoesNotCrash)
+{
+    char suffix[64] = {0};
+    /* NULL base pointer: should return without crashing */
+    split_issue_type("Device.DeviceTime_Search", NULL, 64, suffix, sizeof(suffix));
+    /* suffix remains unchanged when base is NULL */
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, NullSuffixDoesNotCrash)
+{
+    char base[64] = {0};
+    /* NULL suffix pointer: should return without crashing */
+    split_issue_type("Device.DeviceTime_Search", base, sizeof(base), NULL, 64);
+    /* base remains unchanged when suffix is NULL */
+    EXPECT_STREQ(base, "");
+}
+
+TEST(SplitIssueTypeTest, ZeroBaseLenDoesNotCrash)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    /* base_len == 0: should return without writing anything */
+    split_issue_type("abc_def", base, 0, suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, ZeroSuffixLenDoesNotCrash)
+{
+    char base[64] = {0};
+    char suffix[64] = {0};
+    /* suffix_len == 0: should return without writing anything */
+    split_issue_type("abc_def", base, sizeof(base), suffix, 0);
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, ExactFitBase)
+{
+    /* "abc_suffix": suffix "_suffix" is 7 chars (≤ 9, accepted).
+     * Base = "abc" (before '_'); 4-byte buffer fits exactly. */
+    char base[4] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_suffix", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_EQ(base[3], '\0');
+    EXPECT_STREQ(suffix, "_suffix");
+}
+
+TEST(SplitIssueTypeTest, OnlyUnderscoreInput)
+{
+    /* "_": split at '_' gives empty base; suffix is "_" (1 char, ≤ 9 → accepted) */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("_", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "");
+    EXPECT_STREQ(suffix, "_");
+}
+
+TEST(SplitIssueTypeTest, NineCharSuffixIsAccepted)
+{
+    /* Suffix of exactly 9 chars (the upper boundary, inclusive) must be accepted */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_12345678",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_12345678");
+}
+
+TEST(SplitIssueTypeTest, LongSuffixIsDiscarded)
+{
+    /* Suffix longer than 9 chars is discarded regardless of its content */
+    char base[64] = {0};
+    char suffix[128] = {0};
+    split_issue_type("Device.DeviceInfo_1234567890",
+                     base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceInfo");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, SuffixExceedingMaxLengthDiscarded)
+{
+    /* "_Random-token" is 13 chars (> 9) → suffix discarded */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_Random-token", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, SuffixSeventeenCharsDiscarded)
+{
+    /* "_Search_something" is 17 chars (> 9) → suffix discarded */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_Search_something", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, SuffixTwentyCharsDiscarded)
+{
+    /* "_LogSearch_something" is 20 chars (> 9) → suffix discarded */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_LogSearch_something", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "");
+}
+
+TEST(SplitIssueTypeTest, SuffixWithUnsafeCharsIsSanitized)
+{
+    /* "_ab;rm" is 6 chars (≤ 9, accepted) but ';' is unsafe and must be stripped.
+     * Expected sanitized suffix: "_abrm" */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_ab;rm", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_abrm");
+}
+
+TEST(SplitIssueTypeTest, SuffixWithOnlyUnsafeCharsBecomesUnderscore)
+{
+    /* "_!@#" is 4 chars (≤ 9, accepted length-wise) but all payload chars are unsafe.
+     * After sanitization only the leading '_' remains → suffix="_" */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("abc_!@#", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "abc");
+    EXPECT_STREQ(suffix, "_");
+}
+
+TEST(SplitIssueTypeTest, SuffixHyphensPreserved)
+{
+    /* "_ab-cd" is 6 chars (≤ 9, accepted) and '-' is in the safe set → preserved */
+    char base[64] = {0};
+    char suffix[64] = {0};
+    split_issue_type("Device.DeviceTime_ab-cd", base, sizeof(base), suffix, sizeof(suffix));
+    EXPECT_STREQ(base, "Device.DeviceTime");
+    EXPECT_STREQ(suffix, "_ab-cd");
 }
 
 /* --------------- Test processIssueTypeInDynamicProfile() from rrdEventProcess --------------- */
@@ -1989,11 +2277,93 @@ TEST(ProcessIssueTypeEvntTest, RBufIsNull){
 }
 
 TEST(ProcessIssueTypeEvntTest, inDynamic_NoJson){
-    data_buf rbuf;
+    data_buf rbuf = {};
     rbuf.mdata = strdup("a");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
     processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithSearchSuffix_inDynamic_NoJson){
+    /* Issue type with a long suffix (> 9 chars): suffix is discarded; base "Device.DeviceTime" is used */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("Device.DeviceTime_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = nullptr;
+    /* Should not crash; long suffix is discarded, base is processed normally */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithLogSearchSuffix_inDynamic_NoJson){
+    /* Issue type with a long suffix (> 9 chars): suffix is discarded; base "Device.DeviceInfo" is used */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("Device.DeviceInfo_LogSearch-9abc1def-0000-1111-2222-3333aaaabbbb");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = nullptr;
+    /* Should not crash; long suffix is discarded, base is processed normally */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, IssueTypeWithInvalidSuffixTreatedAsBase)
+{    
+    /* "_Random-token" is 13 chars (> 9): suffix discarded; base = "Device.DeviceTime" */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("Device.DeviceTime_Random-token");
+    rbuf.inDynamic = false;
+    rbuf.jsonPath = nullptr;
+    /* Should not crash; long suffix is discarded, base is processed normally */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, MultipleIssueTypesWithAndWithoutSuffix){
+    /* Comma-separated list: one plain type, one with long suffix (> 9, discarded),
+     * one with another long suffix (> 9, discarded) */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("Device.DeviceTime,Device.DeviceInfo_Search-1234,Device.Net_BadSuffix");
+    rbuf.inDynamic = true;
+    rbuf.jsonPath = nullptr;
+    /* Should not crash; all entries are processed without leaks */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, WhitespaceOnlyIssueTypeIsSkipped)
+{
+    /* When the IssueType value from RBUS is whitespace (e.g. a space),
+     * removeSpecialCharacterfromIssueTypeList() strips it to an empty string.
+     * processIssueTypeEvent() must detect the post-sanitization empty base
+     * and skip processing without crashing or invoking processIssueType. */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup(" ");  /* single space — all-special after split */
+    rbuf.inDynamic = false;
+    rbuf.jsonPath = nullptr;
+    /* Must not crash and must not reach getIssueInfo with an empty mdata */
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
+}
+
+TEST(ProcessIssueTypeEvntTest, EmptyStringIssueTypeIsSkipped)
+{
+    /* An empty-string mdata must be handled gracefully — issueTypeSplitter
+     * returns 1 token that is an empty string, which split_issue_type then
+     * maps to an empty base, causing the entry to be skipped. */
+    data_buf rbuf = {};
+    rbuf.mdata = strdup("");
+    rbuf.inDynamic = false;
+    rbuf.jsonPath = nullptr;
+    processIssueTypeEvent(&rbuf);
+    free(rbuf.mdata);
+    rbuf.mdata = NULL;
 }
 
 /* ======================== rrdExecuteScript ==============*/
@@ -2117,12 +2487,22 @@ TEST(RRDDataBuffInitTest, InitializeDataBuff)
     EXPECT_EQ(sbuf.dsEvent, deepSleepEvent);
 }
 
+TEST(RRDDataBuffInitTest, SuffixInitializedToNull)
+{
+    /* Verify that the newly added suffix field is initialised to NULL */
+    data_buf sbuf;
+    sbuf.suffix = reinterpret_cast<char *>(0xDEADBEEF); /* pre-fill with garbage */
+    RRD_data_buff_init(&sbuf, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
+    EXPECT_EQ(sbuf.suffix, nullptr);
+}
+
 /* --------------- Test RRD_data_buff_deAlloc() from rrdIarm --------------- */
 TEST(RRDDataBuffDeAllocTest, DeallocateDataBuff)
 {
     data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
     sbuf->mdata = (char *)malloc(10 * sizeof(char));
     sbuf->jsonPath = (char *)malloc(10 * sizeof(char));
+    sbuf->suffix = nullptr;
 
     ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
 }
@@ -2130,6 +2510,28 @@ TEST(RRDDataBuffDeAllocTest, DeallocateDataBuff)
 TEST(RRDDataBuffDeAllocTest, NullPointer)
 {
     data_buf *sbuf = nullptr;
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+TEST(RRDDataBuffDeAllocTest, DeallocateWithSuffixSet)
+{
+    /* Verify that suffix is freed without crash when it is non-NULL */
+    data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
+    sbuf->mdata = strdup("IssueType");
+    sbuf->jsonPath = nullptr;
+    sbuf->suffix = strdup("_Search-b6877385-9463-45fc-b19d-a24d77fd0790");
+
+    ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
+}
+
+TEST(RRDDataBuffDeAllocTest, DeallocateWithAllFieldsNull)
+{
+    /* All pointer fields NULL: should not crash */
+    data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
+    sbuf->mdata = nullptr;
+    sbuf->jsonPath = nullptr;
+    sbuf->suffix = nullptr;
 
     ASSERT_NO_FATAL_FAILURE(RRD_data_buff_deAlloc(sbuf));
 }
@@ -2526,7 +2928,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadNotComplete)
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("IssueString");
     node->next = NULL;
@@ -2543,7 +2945,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndDEEPSLEEPIss
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("DEEPSLEEP");
     node->next = NULL;
@@ -2560,7 +2962,7 @@ TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadIsCompleteAndNotDEEPSLEEP
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
     IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
-    cacheData *node = (cacheData *)malloc(sizeof(cacheData));
+    cacheData *node = (cacheData *)calloc(1, sizeof(cacheData));
     node->mdata = strdup("PkgData");
     node->issueString = strdup("NotDeepSleepIssue");
     node->next = NULL;
@@ -3684,6 +4086,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
     rbuf.mdata = strdup("Test");
     rbuf.inDynamic = true;
     rbuf.jsonPath = nullptr;
+    rbuf.suffix = strdup("_ab12345");
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);
@@ -4444,10 +4847,20 @@ TEST_F(RRDUploadOrchestrationTest, SpecialCharactersInIssueType) {
     char sanitized[64];
     int result = rrd_logproc_convert_issue_type("test-issue.sub@special!", sanitized, sizeof(sanitized));
     EXPECT_EQ(result, 0);
-    // Should only contain alphanumeric and underscore
+    // Should only contain alphanumeric, underscore, and hyphen
     for (const char *p = sanitized; *p; ++p) {
-        EXPECT_TRUE(isalnum(*p) || *p == '_');
+        EXPECT_TRUE(isalnum(*p) || *p == '_' || *p == '-');
     }
+}
+
+// Suffix with hyphens: hyphens must be preserved so portal can parse filename
+TEST_F(RRDUploadOrchestrationTest, IssueTypeWithSuffixHyphensPreserved) {
+    char sanitized[128];
+    // Simulates issue type after normalizeIssueName: dots→underscore, hyphens kept
+    int result = rrd_logproc_convert_issue_type("Device_DeviceIP_Search-67768-67", sanitized, sizeof(sanitized));
+    EXPECT_EQ(result, 0);
+    // Hyphens in suffix must survive so the archive filename delimiter structure is intact
+    EXPECT_STREQ(sanitized, "DEVICE_DEVICEIP_SEARCH-67768-67");
 }
 
 // Performance test: Large directory
@@ -5816,13 +6229,6 @@ TEST_F(RRDProfileHandlerTest, SetHandler_MaxLengthString)
     EXPECT_EQ(result, RBUS_ERROR_SUCCESS);
     EXPECT_STREQ(RRDProfileCategory, maxString.c_str());
 }
-
-
-
-
-
-
-
 
 
 
