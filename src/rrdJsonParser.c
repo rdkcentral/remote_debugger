@@ -101,11 +101,10 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
     const char *p = input;
     const char *split = NULL;
     size_t appnd_len = strlen(APPEND_SUFFIX);
-    int found_appnd = 0;
+    /* removed unused found_appnd variable */
 
     while ((p = strchr(p, '_')) != NULL) {
         if (strncmp(p, APPEND_SUFFIX, appnd_len) == 0) {
-            found_appnd = 1;
             p += appnd_len;
             continue;
         } else {
@@ -125,51 +124,53 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
             size_t si = 0, di = 0;
             size_t max_copy = suffix_len - 1;
             while (split[si] != '\0' && di < max_copy) {
-                char ch = split[si];
-                if (isalnum((unsigned char)ch) || ch == '_' || ch == '-') {
-                    suffix[di++] = ch;
+                const char *p = input;
+                const char *split = NULL;
+                size_t appnd_len = strlen(APPEND_SUFFIX);
+                int found_appnd = 0;
+
+                while ((p = strchr(p, '_')) != NULL) {
+                    if (strncmp(p, APPEND_SUFFIX, appnd_len) == 0) {
+                        found_appnd = 1;
+                        // Don't skip the underscore, just mark that APPEND_SUFFIX is present
+                        p += appnd_len;
+                        continue;
+                    } else {
+                        split = p;
+                        break;
+                    }
                 }
-                si++;
-            }
-            suffix[di] = '\0';
-        } else {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
-                    __FUNCTION__, __LINE__, base, strlen(split), RRD_MAX_SUFFIX_LEN);
-            suffix[0] = '\0';
-        }
-    } else {
-        // No split point found
-        // If APPEND_SUFFIX was found, base is the whole input (including APPEND_SUFFIX)
-        // Otherwise, base is the whole input
-        strncpy(base, input, base_len - 1);
-        base[base_len - 1] = '\0';
-        suffix[0] = '\0';
-    }
-}
 
+                if (split) {
+                    size_t b_len = (size_t)(split - input);
+                    if (b_len >= base_len) b_len = base_len - 1;
+                    strncpy(base, input, b_len);
+                    base[b_len] = '\0';
 
-/*
- * @function getParamcount
- * @brief Calculates the total number of nodes (elements) in the input string, excluding delimiters.
- * @param char *str - The string from TR181 whose nodes are to be counted.
- * @return int - The number of nodes.
- */
-int getParamcount(char *str)
-{
-    int total_node = 0;
-
-    while ( (str=strstr(str,".")) != NULL )
-    {
-        total_node++;
-        str++;
-    }
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Total Nodes found in TR69 Parameter = %d \n",__FUNCTION__,__LINE__,total_node);
-
-    return total_node;
-}
-
-/*
- * @function readJsonFile
+                    // Suffix logic as before
+                    if (strlen(split) <= RRD_MAX_SUFFIX_LEN) {
+                        size_t si = 0, di = 0;
+                        size_t max_copy = suffix_len - 1;
+                        while (split[si] != '\0' && di < max_copy) {
+                            char ch = split[si];
+                            if (isalnum((unsigned char)ch) || ch == '_' || ch == '-') {
+                                suffix[di++] = ch;
+                            }
+                            si++;
+                        }
+                        suffix[di] = '\0';
+                    } else {
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
+                                __FUNCTION__, __LINE__, base, strlen(split), RRD_MAX_SUFFIX_LEN);
+                        suffix[0] = '\0';
+                    }
+                } else {
+                    // No split point found
+                    // If APPEND_SUFFIX was found, base is the whole input (including _ and APPEND_SUFFIX)
+                    strncpy(base, input, base_len - 1);
+                    base[base_len - 1] = '\0';
+                    suffix[0] = '\0';
+                }
  * @brief Reads the JSON file and stores the content in a character array.
  * @param char *jsonfile - The name of the JSON file whose content is to be read.
  * @return char* - A string containing the JSON content, or NULL on failure.
