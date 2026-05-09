@@ -49,6 +49,26 @@ void removeSpecialChar(char *str)
 
 
 /*
+ * @function getParamcount
+ * @brief Calculates the total number of nodes (elements) in the input string, excluding delimiters.
+ * @param char *str - The string from TR181 whose nodes are to be counted.
+ * @return int - The number of nodes.
+ */
+int getParamcount(char *str)
+{
+    int total_node = 0;
+
+    while ( (str=strstr(str,".")) != NULL )
+    {
+        total_node++;
+        str++;
+    }
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Total Nodes found in TR69 Parameter = %d \n",__FUNCTION__,__LINE__,total_node);
+
+    return total_node;
+}
+
+/*
  * @function split_issue_type
  * @brief Utility to split base and suffix from issue type string.
  *        The input is always split at the first '_'. The base is the part
