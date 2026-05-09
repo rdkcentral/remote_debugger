@@ -102,41 +102,52 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
     const char *split = NULL;
     size_t appnd_len = strlen(APPEND_SUFFIX);
 
-    while ((p = strchr(p, '_')) != NULL) {
+    while ((p = strchr(p, '_')) != NULL) 
+	{
         // Check if this underscore starts APPEND_SUFFIX
-        if (strncmp(p, APPEND_SUFFIX, appnd_len) == 0) {
+        if (strncmp(p, APPEND_SUFFIX, appnd_len) == 0) 
+		{
             p += appnd_len; // skip over APPEND_SUFFIX and keep searching
             continue;
-        } else {
+        } 
+		else 
+		{
             split = p;
             break;
         }
     }
 
-    if (split) {
+    if (split) 
+	{
         size_t b_len = (size_t)(split - input);
         if (b_len >= base_len) b_len = base_len - 1;
         strncpy(base, input, b_len);
         base[b_len] = '\0';
 
         // Suffix logic as before
-        if (strlen(split) <= RRD_MAX_SUFFIX_LEN) {
+        if (strlen(split) <= RRD_MAX_SUFFIX_LEN) 
+		{
             size_t si = 0, di = 0;
             size_t max_copy = suffix_len - 1;
-            while (split[si] != '\0' && di < max_copy) {
+            while (split[si] != '\0' && di < max_copy) 
+			{
                 char ch = split[si];
-                if (isalnum((unsigned char)ch) || ch == '_' || ch == '-') {
+                if (isalnum((unsigned char)ch) || ch == '_' || ch == '-') 
+				{
                     suffix[di++] = ch;
                 }
                 si++;
             }
             suffix[di] = '\0';
-        } else {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
-                    __FUNCTION__, __LINE__, base, strlen(split), RRD_MAX_SUFFIX_LEN);
+        }
+		else 
+		{
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n", __FUNCTION__, __LINE__, base, strlen(split), RRD_MAX_SUFFIX_LEN);
             suffix[0] = '\0';
         }
-    } else {
+    } 
+	else 
+	{
         // No split point found, full input is base
         strncpy(base, input, base_len - 1);
         base[base_len - 1] = '\0';
