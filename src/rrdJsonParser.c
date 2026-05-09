@@ -69,6 +69,59 @@ int getParamcount(char *str)
 }
 
 /*
+ * @function readJsonFile
+ * @brief Reads the JSON file and stores the content in a character array.
+ * @param char *jsonfile - The name of the JSON file whose content is to be read.
+ * @return char* - A string containing the JSON content, or NULL on failure.
+ */
+char * readJsonFile(char *jsonfile)
+{
+    FILE *fp = NULL;
+    int ch_count = 0;
+    char *jsonfile_content = NULL;
+
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading json config file %s \n",__FUNCTION__,__LINE__,jsonfile);
+    fp = fopen(jsonfile, "r");
+    if (fp == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s Read Failed!!! \n",__FUNCTION__,__LINE__,jsonfile);
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_END);
+    ch_count = ftell(fp);
+    if(ch_count < 1)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s is Empty!!! \n",__FUNCTION__,__LINE__,jsonfile);
+	// CID 278332: Resource leak (RESOURCE_LEAK)
+	fclose(fp);
+        return NULL;
+    }
+    fseek(fp, 0, SEEK_SET);
+    jsonfile_content = (char *) malloc(sizeof(char) * (ch_count + 1));
+    if (jsonfile_content == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for json file %s \n",__FUNCTION__,__LINE__,jsonfile);
+        fclose(fp);
+        return NULL;
+    }
+    
+    size_t bytes_read = fread(jsonfile_content, 1, ch_count, fp);
+    if (bytes_read != (size_t)ch_count)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to read json file %s. Expected %d bytes, read %zu bytes \n",__FUNCTION__,__LINE__,jsonfile,ch_count,bytes_read);
+        free(jsonfile_content);
+        fclose(fp);
+        return NULL;
+    }
+    
+    jsonfile_content[ch_count] ='\0';
+    fclose(fp);
+
+    return jsonfile_content;
+}
+
+
+/*
  * @function split_issue_type
  * @brief Utility to split base and suffix from issue type string.
  *        The input is always split at the first '_'. The base is the part
