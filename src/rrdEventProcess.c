@@ -94,7 +94,10 @@ void processIssueTypeEvent(data_buf *rbuf)
                         }
                         continue;
                     }
-                    removeSpecialCharacterfromIssueTypeList(base);
+					if (strstr(base, APPEND_SUFFIX) == NULL) 
+					{
+						removeSpecialCharacterfromIssueTypeList(base);
+					}
                     if (base[0] == '\0')
                     {
                         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty base after sanitization for token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
