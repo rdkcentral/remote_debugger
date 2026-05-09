@@ -153,30 +153,30 @@ char * readJsonFile(char *jsonfile)
 void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len) 
 {
     if (base && base_len > 0) 
-	{
+    {
         base[0] = '\0';
     }
     if (suffix && suffix_len > 0) 
-	{
+    {
         suffix[0] = '\0';
     }
 
     if (!input || !base || !suffix) 
-	{
+    {
         return;
     }
 
     if (base_len == 0 || suffix_len == 0) 
-	{
+    {
         return;
     }
 
     const char *p = input;
     const char *split = NULL;
     size_t appnd_len = strlen(APPEND_SUFFIX);
-    /* removed unused found_appnd variable */
 
     while ((p = strchr(p, '_')) != NULL) {
+        // If this underscore starts APPEND_SUFFIX, skip over the whole APPEND_SUFFIX and keep searching
         if (strncmp(p, APPEND_SUFFIX, appnd_len) == 0) {
             p += appnd_len;
             continue;
@@ -186,114 +186,44 @@ void split_issue_type(const char *input, char *base, size_t base_len, char *suff
         }
     }
 
-    if (split) {
+    if (split) 
+	{
         size_t b_len = (size_t)(split - input);
         if (b_len >= base_len) b_len = base_len - 1;
         strncpy(base, input, b_len);
         base[b_len] = '\0';
 
         // Suffix logic as before
-        if (strlen(split) <= RRD_MAX_SUFFIX_LEN) {
+        if (strlen(split) <= RRD_MAX_SUFFIX_LEN) 
+		{
             size_t si = 0, di = 0;
             size_t max_copy = suffix_len - 1;
-            while (split[si] != '\0' && di < max_copy) {
-                const char *p = input;
-                const char *split = NULL;
-                size_t appnd_len = strlen(APPEND_SUFFIX);
-                int found_appnd = 0;
-
-                while ((p = strchr(p, '_')) != NULL) {
-                    if (strncmp(p, APPEND_SUFFIX, appnd_len) == 0) {
-                        found_appnd = 1;
-                        // Don't skip the underscore, just mark that APPEND_SUFFIX is present
-                        p += appnd_len;
-                        continue;
-                    } else {
-                        split = p;
-                        break;
-                    }
+            while (split[si] != '\0' && di < max_copy) 
+			{
+                char ch = split[si];
+                if (isalnum((unsigned char)ch) || ch == '_' || ch == '-') 
+				{
+                    suffix[di++] = ch;
                 }
-
-                if (split) {
-                    size_t b_len = (size_t)(split - input);
-                    if (b_len >= base_len) b_len = base_len - 1;
-                    strncpy(base, input, b_len);
-                    base[b_len] = '\0';
-
-                    // Suffix logic as before
-                    if (strlen(split) <= RRD_MAX_SUFFIX_LEN) {
-                        size_t si = 0, di = 0;
-                        size_t max_copy = suffix_len - 1;
-                        while (split[si] != '\0' && di < max_copy) {
-                            char ch = split[si];
-                            if (isalnum((unsigned char)ch) || ch == '_' || ch == '-') {
-                                suffix[di++] = ch;
-                            }
-                            si++;
-                        }
-                        suffix[di] = '\0';
-                    } else {
-                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
-                                __FUNCTION__, __LINE__, base, strlen(split), RRD_MAX_SUFFIX_LEN);
-                        suffix[0] = '\0';
-                    }
-                } else {
-                    // No split point found
-                    // If APPEND_SUFFIX was found, base is the whole input (including _ and APPEND_SUFFIX)
-                    strncpy(base, input, base_len - 1);
-                    base[base_len - 1] = '\0';
-                    suffix[0] = '\0';
-                }
- * @brief Reads the JSON file and stores the content in a character array.
- * @param char *jsonfile - The name of the JSON file whose content is to be read.
- * @return char* - A string containing the JSON content, or NULL on failure.
- */
-char * readJsonFile(char *jsonfile)
-{
-    FILE *fp = NULL;
-    int ch_count = 0;
-    char *jsonfile_content = NULL;
-
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading json config file %s \n",__FUNCTION__,__LINE__,jsonfile);
-    fp = fopen(jsonfile, "r");
-    if (fp == NULL)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s Read Failed!!! \n",__FUNCTION__,__LINE__,jsonfile);
-        return NULL;
+                si++;
+            }
+            suffix[di] = '\0';
+        } 
+		else 
+		{
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Suffix after '%s' exceeds max length (%zu > %d); discarding\n",
+                    __FUNCTION__, __LINE__, base, strlen(split), RRD_MAX_SUFFIX_LEN);
+            suffix[0] = '\0';
+        }
+    } 
+	else 
+	{
+        // No split point found, so base is the whole input (including APPEND_SUFFIX and its underscore if present)
+        strncpy(base, input, base_len - 1);
+        base[base_len - 1] = '\0';
+        suffix[0] = '\0';
     }
-    fseek(fp, 0, SEEK_END);
-    ch_count = ftell(fp);
-    if(ch_count < 1)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s is Empty!!! \n",__FUNCTION__,__LINE__,jsonfile);
-	// CID 278332: Resource leak (RESOURCE_LEAK)
-	fclose(fp);
-        return NULL;
-    }
-    fseek(fp, 0, SEEK_SET);
-    jsonfile_content = (char *) malloc(sizeof(char) * (ch_count + 1));
-    if (jsonfile_content == NULL)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory allocation failed for json file %s \n",__FUNCTION__,__LINE__,jsonfile);
-        fclose(fp);
-        return NULL;
-    }
-    
-    size_t bytes_read = fread(jsonfile_content, 1, ch_count, fp);
-    if (bytes_read != (size_t)ch_count)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to read json file %s. Expected %d bytes, read %zu bytes \n",__FUNCTION__,__LINE__,jsonfile,ch_count,bytes_read);
-        free(jsonfile_content);
-        fclose(fp);
-        return NULL;
-    }
-    
-    jsonfile_content[ch_count] ='\0';
-    fclose(fp);
-
-    return jsonfile_content;
 }
-
 /*
  * @function readAndParseJSON
  * @brief Reads and parses the JSON file.
