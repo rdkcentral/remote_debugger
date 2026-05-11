@@ -31,7 +31,9 @@ mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
 echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
-
+ps -ef
+which tr69hostif
+which remotedebugger
 
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
@@ -85,4 +87,5 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_c_
 
 cp remote_debugger.json /etc/rrd/
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_profile_data.json test/functional-tests/tests/test_rrd_profile_data.py
+
 
