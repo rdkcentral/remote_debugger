@@ -408,7 +408,7 @@ bool executeCommands(issueData *cmdinfo)
             }
             else
             {
-                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: journalctl remote_debugger_%s service success...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
+                RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: journalctl %s service success...\n",__FUNCTION__,__LINE__,remoteDebuggerServiceStr);
 		copyDebugLogDestFile(journalctlfp, filePointer);
                 v_secure_pclose(journalctlfp);
             }
