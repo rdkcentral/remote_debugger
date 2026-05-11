@@ -31,9 +31,10 @@ mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
 echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
+
+/usr/local/bin/tr69hostif -c /etc/mgrlist.conf -p 10999 -s 11999 | tee /opt/logs/tr69hostIf.log.0 &
 ps -ef
 which tr69hostif
- /usr/local/bin/tr69hostif -c /etc/mgrlist.conf -p 10999 -s 11999 | tee /opt/logs/tr69hostIf.log.0 &
 which remotedebugger
 
 apt-get remove systemd
