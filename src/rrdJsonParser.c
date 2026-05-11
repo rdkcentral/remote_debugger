@@ -24,7 +24,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
-#define RRD_MAX_SUFFIX_LEN  10
+/* Maximum suffix length, including the leading '_' character. */
+#define RRD_MAX_SUFFIX_LEN  9
 
 /*
  * @function removeSpecialChar
