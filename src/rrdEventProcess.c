@@ -23,6 +23,7 @@
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
+/* Installed-package fallback is supported only for issue identifiers shorter than 34 chars. */
 #define MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE 34U
 
 static void processIssueType(data_buf *rbuf);
@@ -393,13 +394,14 @@ static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssu
     issueLen = strlen(pIssueNode->Node);
     if (pIssueNode->subNode)
     {
+        /* No delimiter is appended in this validation; guard follows Node or Node+SubNode length rule. */
         issueLen += strlen(pIssueNode->subNode);
     }
 
     if (issueLen >= MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu exceeds supported limit %u for installed package fallback...\n",
-                __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE - 1);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu must be less than %u for installed package fallback...\n",
+                __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE);
         return false;
     }
 
@@ -737,4 +739,3 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
-
