@@ -23,16 +23,11 @@
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
-/* Requirement: issue node or combined node+subNode length must be < 34 (34 or more is invalid). */
-#define ISSUE_NODE_LENGTH_LIMIT 34U
 
 static void processIssueType(data_buf *rbuf);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
-static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssueNode);
-static size_t getIssueNodeLength(const issueNodeData *pIssueNode);
-static void logInstalledPackageFallbackSkip(const issueNodeData *pIssueNode);
 static void removeSpecialCharacterfromIssueTypeList(char *str);
 static int issueTypeSplitter(char *input_str, const char delimeter, char ***args);
 static void freeParsedJson(cJSON *jsonParsed);
@@ -379,58 +374,6 @@ static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIss
 }
 
 /*
- * @function isIssueNodeLengthValidForInstalledPackage
- * @brief Validates issue node length before falling back to installed package profile lookup.
- * @param issueNodeData *pIssueNode - Pointer to structure containing issue node data.
- * @return bool - Returns true when node length is valid for installed package lookup.
- */
-static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssueNode)
-{
-    size_t issueLen = 0;
-
-    if (pIssueNode == NULL || pIssueNode->Node == NULL)
-    {
-        return false;
-    }
-
-    issueLen = getIssueNodeLength(pIssueNode);
-
-    if (issueLen >= ISSUE_NODE_LENGTH_LIMIT)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu must be less than %u for installed package fallback\n",
-                __FUNCTION__, __LINE__, issueLen, ISSUE_NODE_LENGTH_LIMIT);
-        return false;
-    }
-
-    return true;
-}
-
-static size_t getIssueNodeLength(const issueNodeData *pIssueNode)
-{
-    size_t issueLen = 0;
-
-    if (pIssueNode == NULL || pIssueNode->Node == NULL)
-    {
-        return 0;
-    }
-
-    issueLen = strlen(pIssueNode->Node);
-    if (pIssueNode->subNode)
-    {
-        issueLen += strlen(pIssueNode->subNode);
-    }
-
-    return issueLen;
-}
-
-static void logInstalledPackageFallbackSkip(const issueNodeData *pIssueNode)
-{
-    const size_t issueLen = getIssueNodeLength(pIssueNode);
-    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Skipping installed package fallback due to invalid issue node length %zu (limit: < %u)\n",
-            __FUNCTION__, __LINE__, issueLen, ISSUE_NODE_LENGTH_LIMIT);
-}
-
-/*
  * @function processIssueTypeInStaticProfile
  * @brief Processes the given issue type by checking if the issue exists in the static profile JSON.
  *              If the issue is found, it handles the issue appropriately. If not found, it will further
@@ -454,14 +397,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
-        if (isIssueNodeLengthValidForInstalledPackage(pIssueNode))
-        {
-            processIssueTypeInInstalledPackage(rbuf, pIssueNode);
-        }
-        else
-        {
-            logInstalledPackageFallbackSkip(pIssueNode);
-        }
+        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
         return;
     }
@@ -480,14 +416,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
-        if (isIssueNodeLengthValidForInstalledPackage(pIssueNode))
-        {
-            processIssueTypeInInstalledPackage(rbuf, pIssueNode);
-        }
-        else
-        {
-            logInstalledPackageFallbackSkip(pIssueNode);
-        }
+        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
     }
 
     freeParsedJson(jsonParsed);
@@ -769,3 +698,4 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
+
