@@ -121,7 +121,8 @@ int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size)
     for (size_t i = 0; input[i] && j < size-1; ++i) {
         char c = input[i];
         if (isalnum((unsigned char)c)) output[j++] = toupper((unsigned char)c);
-        else if (c == '_' || c == '-' || c == '.') output[j++] = '_';
+        else if (c == '_' || c == '.') output[j++] = '_';
+        else if (c == '-') output[j++] = '-'; // preserve hyphens so suffix UUID tokens remain distinct
         // skip other chars
     }
     output[j] = 0;

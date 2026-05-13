@@ -21,9 +21,6 @@ import json
 import subprocess
 from helper_functions import *
 
-MAX_START_PID_RETRIES = 5
-START_PID_RETRY_INTERVAL_SECONDS = 1
-
 def test_check_remote_debugger_config_file():
     config_file_path = JSON_FILE
     assert check_file_exists(config_file_path), f"Configuration file '{config_file_path}' does not exist."
@@ -35,18 +32,12 @@ def test_check_rrd_directory_exists():
 def test_check_and_start_remotedebugger():
     kill_rrd()
     remove_logfile()
-    remove_upload_lock()
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
     command_to_get_pid = "pidof remotedebugger"
-    pid = None
-    for _ in range(MAX_START_PID_RETRIES):
-        pid = run_shell_command(command_to_get_pid)
-        if pid:
-            break
-        sleep(START_PID_RETRY_INTERVAL_SECONDS)
-    assert pid, "remotedebugger process did not start"
+    pid = run_shell_command(command_to_get_pid)
+    assert pid != "", "remotedebugger process did not start"
 
 def reset_issuetype_rfc():
     command = 'rbuscli set Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType string ""'
@@ -54,13 +45,14 @@ def reset_issuetype_rfc():
     assert result.returncode == 0
 
 def test_remote_debugger_trigger_event():
+    STRING_TEST = "hfkerfjrjfjfjfjfjfjfjfjfjfjfjfjfjfjf"
     reset_issuetype_rfc()
     sleep(10)
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', MISSING_STRING
-    ]
+        'string', STRING_TEST
+        ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
 
@@ -91,7 +83,7 @@ def test_check_issue_in_dynamic_profile():
     DYNAMIC_READ = "Checking Dynamic Profile..."
     assert DYNAMIC_READ in grep_rrdlogs(DYNAMIC_READ)
 
-    DYNAMIC_JSONFILE = "Reading json config file /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json"
+    DYNAMIC_JSONFILE = "Reading json config file /media/apps/RDK-RRD-hfkerfjrjfjfjfjfjfjfjfjfjfjfjfjfjfjf/etc/rrd/remote_debugger.json"
     assert DYNAMIC_JSONFILE in grep_rrdlogs(DYNAMIC_JSONFILE)
 
     PARSE_FAILED = "Dynamic Profile Parse/Read failed"
@@ -100,28 +92,13 @@ def test_check_issue_in_dynamic_profile():
     RDM_MSG = "Request RDM Manager Download for a new Issue Type"
     assert RDM_MSG in grep_rrdlogs(RDM_MSG)
 
-    RDM_PACKAGE = "Request RDM Manager Download for... RDK-RRD-Test:1.0"
-    assert RDM_PACKAGE in grep_rrdlogs(RDM_PACKAGE)
+    INVALID_LENGTH = "Issue node length must be less than 34"
+    assert INVALID_LENGTH in grep_rrdlogs(INVALID_LENGTH)
 
-    script_path="./test/functional-tests/tests/create_json.sh"
-# Run the shell script
-    try:
-        result = subprocess.run(['bash', script_path], check=True, text=True, capture_output=True)
-        print("Script output:")
-        print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print("Error while executing the script:")
-        print(e.stderr)
+    SKIP_DOWNLOAD = "Invalid profile length, skipping download request"
+    assert SKIP_DOWNLOAD in grep_rrdlogs(SKIP_DOWNLOAD)
+
+
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)
     kill_rrd()
-    
-def test_rdm_trigger_event():
-    INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
-    command = [
-        'rbuscli', 'set',
-        'Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage',
-        'string', INSTALL_PACKAGE
-    ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    assert result.returncode == 0
