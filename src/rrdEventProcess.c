@@ -23,7 +23,7 @@
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
-/* Installed-package fallback is supported only for issue identifiers shorter than 34 chars. */
+/* Requirement: issue node or combined node+subNode length must be < 34 (34 or more is invalid). */
 #define MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE 34U
 
 static void processIssueType(data_buf *rbuf);
@@ -400,7 +400,7 @@ static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssu
 
     if (issueLen >= MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu must be less than %u for installed package fallback...\n",
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu must be less than %u for installed package fallback\n",
                 __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE);
         return false;
     }
