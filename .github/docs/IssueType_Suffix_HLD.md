@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-This document describes the high-level design for adding support for an **optional, underscore-delimited suffix** appended to the `IssueType` RFC value (e.g., `Device.DeviceInfo_Search-1234`). The suffix is parsed, validated, sanitized, and carried through the entire event-processing pipeline so that it can be re-appended to the generated upload archive filename. Additionally, systemd unit names are disambiguated using an epoch timestamp, and the debug output file open-mode is corrected to prevent stale data accumulation.
+This document describes the high-level design for adding support for an **optional, underscore-delimited suffix** appended to the `IssueType` RFC value (e.g., `Device.DeviceInfo_ab1234`). The suffix is parsed, validated, sanitized, and carried through the entire event-processing pipeline so that it can be re-appended to the generated upload archive filename. Additionally, systemd unit names are disambiguated using an epoch timestamp, and the debug output file open-mode is corrected to prevent stale data accumulation.
 
 ---
 
@@ -205,7 +205,7 @@ The length check is `strlen(underscore_ptr) <= RRD_MAX_SUFFIX_LEN`, where `under
 | `Device.DeviceInfo_ab1234` | `Device.DeviceInfo` | `_ab1234` | 7 ≤ 9 | accepted |
 | `Device.DeviceInfo_ab12345` | `Device.DeviceInfo` | `_ab12345` | 8 ≤ 9 | accepted |
 | `Device.DeviceInfo_ab;rm` | `Device.DeviceInfo` | `_abrm` | 5 ≤ 9; `;` stripped | accepted (sanitised) |
-| `Device.DeviceInfo_Search-uuid-long` | `Device.DeviceInfo` | `` | 21 > 9 | discarded |
+| `Device.DeviceInfo_uuid-long` | `Device.DeviceInfo` | `` | 21 > 9 | discarded |
 | `Device.DeviceInfo` | `Device.DeviceInfo` | `` | no `_` present | no suffix |
 
 ### 5.3 Systemd Unit Name Disambiguation
@@ -266,193 +266,9 @@ processIssueTypeEvent()
 
 ---
 
-## 7. Flowcharts
-
-### 7.1 `split_issue_type()` Flowchart
-
-```mermaid
-flowchart TD
-    A([Start]) --> B{Pointers valid &\nbuffer sizes > 0?}
-    B -- No --> Z([Return: base='', suffix=''])
-    B -- Yes --> C{First '_'\nfound in input?}
-    C -- No --> D[Copy full input to base]
-    D --> Z2([Return: suffix=''])
-    C -- Yes --> E[Copy chars before '_' to base]
-    E --> F{strlen from '_'\n<= 9?}
-    F -- No --> G[Log debug: suffix discarded]
-    G --> Z2
-    F -- Yes --> H[Iterate suffix chars]
-    H --> I{char isalnum\nor '_' or '-'?}
-    I -- Yes --> J[Copy char to suffix]
-    I -- No --> K[Skip char]
-    J --> L{More chars?}
-    K --> L
-    L -- Yes --> H
-    L -- No --> M[Null-terminate suffix]
-    M --> Z3([Return: base, suffix])
-```
-
-**Text-based alternative:**
-```
-START
-  │
-  ├─[NULL / zero-size checks fail]──→ RETURN (base="", suffix="")
-  │
-  ├─[no '_' in input]──→ base = full input, suffix="" → RETURN
-  │
-  ├─[underscore found]
-  │    │
-  │    ├─ base = input[0..underscore)
-  │    │
-  │    ├─[len(underscore_part) > 9]──→ log + suffix="" → RETURN
-  │    │
-  │    └─[len(underscore_part) <= 9]──→ sanitize → suffix → RETURN
-END
-```
-
-### 7.2 IssueType Event Processing with Suffix
-
-```mermaid
-flowchart TD
-    A([RBUS Event]) --> B[rrdInterface:\nReceive IssueType RFC value]
-    B --> C[RRD_data_buff_init:\nsuffix = NULL]
-    C --> D[pushIssueTypesToMsgQueue]
-    D --> E[processIssueTypeEvent:\nissueTypeSplitter - split by comma]
-    E --> F{For each\nIssueType token}
-    F --> G[split_issue_type:\nbase + suffix]
-    G --> H{base\nempty?}
-    H -- Yes --> I[Skip token, free resources]
-    I --> F
-    H -- No --> J[Allocate data_buf:\nmdata = base\nsuffix = strdup of suffix]
-    J --> K[processIssueType]
-    K --> L[JSON profile lookup\nfor base node]
-    L --> M[checkIssueNodeInfo:\ncreate outdir\nexecute commands]
-    M --> N{exec\nsuccess?}
-    N -- No --> O[Skip upload\nfree suffix]
-    N -- Yes --> P{suffix\nnon-empty?}
-    P -- Yes --> Q[tarName = base + suffix]
-    P -- No --> R[tarName = base]
-    Q --> S[uploadDebugoutput\ntarName]
-    R --> S
-    S --> T[free suffix\nfree mdata\nfree buff]
-    T --> F
-    F -->|all done| U([End])
-```
-
-### 7.3 Systemd Unit Name Disambiguation
-
-```mermaid
-flowchart TD
-    A[executeCommands called] --> B[Get current epoch: time NULL]
-    B --> C[Build unit name:\nremote_debugger_ + rfcvalue + epoch]
-    C --> D[systemd-run --unit=<name>\n--service-type=oneshot]
-    D --> E[journalctl -u <name>]
-    E --> F[fopen debug_outputs.txt w+]
-    F --> G[write command header]
-    G --> H[copy systemd stdout to file]
-    H --> I[copy journalctl output to file]
-    I --> J[fclose]
-    J --> K[sleep timeout]
-    K --> L[systemctl stop <name>]
-    L --> M([Return])
-```
-
----
-
-## 8. Sequence Diagrams
-
-### 8.1 IssueType with Suffix — End-to-End
-
-```mermaid
-sequenceDiagram
-    participant RFC as RFC/RBUS
-    participant Iface as rrdInterface
-    participant EP as rrdEventProcess
-    participant JP as rrdJsonParser
-    participant CT as rrdRunCmdThread
-    participant UL as rrd_upload
-
-    RFC->>Iface: set IssueType = "Device.Info_ab1234"
-    Iface->>Iface: RRD_data_buff_init(suffix=NULL)
-    Iface->>EP: pushIssueTypesToMsgQueue(EVENT_MSG)
-    EP->>JP: split_issue_type("Device.Info_ab1234")
-    JP-->>EP: base="Device.Info", suffix="_ab1234"
-    EP->>EP: cmdBuff->mdata = "Device.Info"
-    EP->>EP: cmdBuff->suffix = strdup("_ab1234")
-    EP->>JP: processIssueType(cmdBuff)
-    JP->>JP: getIssueInfo / findIssueInParsedJSON
-    JP->>CT: executeCommands(issueData)
-    CT->>CT: systemd-run --unit=remote_debugger_Info_<epoch>
-    CT->>CT: journalctl -u remote_debugger_Info_<epoch>
-    CT->>CT: fopen(debug_outputs.txt, "w+")
-    CT-->>JP: true (success)
-    JP->>JP: tarName = "Device.Info" + "_ab1234"
-    JP->>UL: uploadDebugoutput(outdir, "Device.Info_ab1234")
-    UL-->>JP: 0 (success)
-    JP->>JP: free(buff->suffix), free(buff->mdata)
-```
-
-**Text-based alternative:**
-```
-RFC             rrdInterface    rrdEventProcess  rrdJsonParser   rrdRunCmdThread  rrd_upload
- |                   |                 |               |                |               |
- |--set IssueType--->|                 |               |                |               |
- |                   |--init(buf)----->|               |                |               |
- |                   |--pushToMsgQ---->|               |                |               |
- |                                     |--split()----->|                |               |
- |                                     |<--base,suffix-|                |               |
- |                                     |--processIssue(cmdBuff)-------->|               |
- |                                                     |--execCmds()-->|                |
- |                                                     |<----success---|                |
- |                                                     |--tarName=base+suffix           |
- |                                                     |--uploadDebugoutput()---------->|
- |                                                     |<---------------success---------|
-```
-
-### 8.2 Suffix Validation and Rejection
-
-```mermaid
-sequenceDiagram
-    participant EP as rrdEventProcess
-    participant JP as rrdJsonParser (split_issue_type)
-
-    EP->>JP: split_issue_type("Device.Info_Search-uuid-very-long-string", ...)
-    JP->>JP: strlen("_Search-uuid-very-long-string") = 29 > 9
-    JP->>JP: log: "Suffix exceeds max length; discarding"
-    JP-->>EP: base="Device.Info", suffix=""
-    EP->>EP: cmdBuff->suffix = NULL (no suffix stored)
-    Note over EP,JP: Processing continues with base only
-```
-
----
-
-## 9. Error Handling
-
-| Scenario | Handling |
-|----------|----------|
-| Suffix length > 9 chars | Logged at DEBUG level; suffix discarded; processing continues with base only |
-| Suffix contains unsafe characters (`; & | >` etc.) | Characters stripped during sanitisation; only `[A-Za-z0-9_-]` retained |
-| `strdup(suffix)` fails (OOM) | Logged at ERROR; `cmdBuff->suffix` remains `NULL`; processing continues without suffix |
-| Empty base after `split_issue_type` | Token skipped; `cmdBuff` freed; iteration continues |
-| `snprintf` overflow for `tarName` | Logged at ERROR; upload skipped; suffix freed normally |
-| `mkdir` or `chdir` failure | Logged at ERROR; `mdata`, `jsonPath`, `suffix` all freed before return |
-| `fopen(debug_outputs.txt)` failure | Logged at ERROR; function returns `false`; no archive created |
-
----
-
-## 10. Security Considerations
-
-| Concern | Mitigation |
-|---------|-----------|
-| Shell injection via suffix | Suffix sanitised to `[A-Za-z0-9_-]` by `split_issue_type()` before any use in filenames or command strings |
-| Suffix used in systemd unit name | Epoch timestamp is appended to the `rfcvalue` (the base, never the raw suffix), keeping unit name well-controlled |
-| Buffer overflow in `tarName` | `snprintf` result checked; error logged and upload skipped on overflow |
-| Directory traversal | Suffix never used in directory creation; only in the upload archive filename |
-
----
 
 
-## 11. Glossary
+## 7. Glossary
 
 | Term | Definition |
 |------|-----------|
