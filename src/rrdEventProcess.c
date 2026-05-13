@@ -24,13 +24,15 @@
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
 /* Requirement: issue node or combined node+subNode length must be < 34 (34 or more is invalid). */
-#define MAX_ISSUE_NODE_LENGTH 34U
+#define ISSUE_NODE_LENGTH_LIMIT 34U
 
 static void processIssueType(data_buf *rbuf);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
 static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssueNode);
+static size_t getIssueNodeLength(const issueNodeData *pIssueNode);
+static void logInstalledPackageFallbackSkip(const issueNodeData *pIssueNode);
 static void removeSpecialCharacterfromIssueTypeList(char *str);
 static int issueTypeSplitter(char *input_str, const char delimeter, char ***args);
 static void freeParsedJson(cJSON *jsonParsed);
@@ -391,21 +393,41 @@ static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssu
         return false;
     }
 
-    issueLen = strlen(pIssueNode->Node);
-    if (pIssueNode->subNode)
-    {
-        /* This validation measures Node or Node+SubNode combined length without delimiter. */
-        issueLen += strlen(pIssueNode->subNode);
-    }
+    issueLen = getIssueNodeLength(pIssueNode);
 
-    if (issueLen >= MAX_ISSUE_NODE_LENGTH)
+    if (issueLen >= ISSUE_NODE_LENGTH_LIMIT)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu must be less than %u for installed package fallback\n",
-                __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH);
+                __FUNCTION__, __LINE__, issueLen, ISSUE_NODE_LENGTH_LIMIT);
         return false;
     }
 
     return true;
+}
+
+static size_t getIssueNodeLength(const issueNodeData *pIssueNode)
+{
+    size_t issueLen = 0;
+
+    if (pIssueNode == NULL || pIssueNode->Node == NULL)
+    {
+        return 0;
+    }
+
+    issueLen = strlen(pIssueNode->Node);
+    if (pIssueNode->subNode)
+    {
+        issueLen += strlen(pIssueNode->subNode);
+    }
+
+    return issueLen;
+}
+
+static void logInstalledPackageFallbackSkip(const issueNodeData *pIssueNode)
+{
+    const size_t issueLen = getIssueNodeLength(pIssueNode);
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Skipping installed package fallback due to invalid issue node length %zu (limit: < %u)\n",
+            __FUNCTION__, __LINE__, issueLen, ISSUE_NODE_LENGTH_LIMIT);
 }
 
 /*
@@ -438,7 +460,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         }
         else
         {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Skipping installed package fallback due to invalid issue node length\n", __FUNCTION__, __LINE__);
+            logInstalledPackageFallbackSkip(pIssueNode);
         }
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
         return;
@@ -464,7 +486,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         }
         else
         {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Skipping installed package fallback due to invalid issue node length\n", __FUNCTION__, __LINE__);
+            logInstalledPackageFallbackSkip(pIssueNode);
         }
     }
 
