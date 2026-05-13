@@ -23,11 +23,13 @@
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
+#define MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE 34U
 
 static void processIssueType(data_buf *rbuf);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
 static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
+static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssueNode);
 static void removeSpecialCharacterfromIssueTypeList(char *str);
 static int issueTypeSplitter(char *input_str, const char delimeter, char ***args);
 static void freeParsedJson(cJSON *jsonParsed);
@@ -374,6 +376,37 @@ static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIss
 }
 
 /*
+ * @function isIssueNodeLengthValidForInstalledPackage
+ * @brief Validates issue node length before falling back to installed package profile lookup.
+ * @param issueNodeData *pIssueNode - Pointer to structure containing issue node data.
+ * @return bool - Returns true when node length is valid for installed package lookup.
+ */
+static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssueNode)
+{
+    size_t issueLen = 0;
+
+    if (pIssueNode == NULL || pIssueNode->Node == NULL)
+    {
+        return false;
+    }
+
+    issueLen = strlen(pIssueNode->Node);
+    if (pIssueNode->subNode)
+    {
+        issueLen += strlen(pIssueNode->subNode);
+    }
+
+    if (issueLen >= MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu exceeds supported limit %u for installed package fallback...\n",
+                __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE - 1);
+        return false;
+    }
+
+    return true;
+}
+
+/*
  * @function processIssueTypeInStaticProfile
  * @brief Processes the given issue type by checking if the issue exists in the static profile JSON.
  *              If the issue is found, it handles the issue appropriately. If not found, it will further
@@ -397,7 +430,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
-        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        if (isIssueNodeLengthValidForInstalledPackage(pIssueNode))
+        {
+            processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        }
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
         return;
     }
@@ -416,7 +452,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
-        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        if (isIssueNodeLengthValidForInstalledPackage(pIssueNode))
+        {
+            processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        }
     }
 
     freeParsedJson(jsonParsed);
