@@ -24,7 +24,7 @@
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
 /* Requirement: issue node or combined node+subNode length must be < 34 (34 or more is invalid). */
-#define MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE 34U
+#define MAX_ISSUE_NODE_LENGTH 34U
 
 static void processIssueType(data_buf *rbuf);
 static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
@@ -394,14 +394,14 @@ static bool isIssueNodeLengthValidForInstalledPackage(const issueNodeData *pIssu
     issueLen = strlen(pIssueNode->Node);
     if (pIssueNode->subNode)
     {
-        /* No delimiter is appended in this validation; guard follows Node or Node+SubNode length rule. */
+        /* This validation measures Node or Node+SubNode combined length without delimiter. */
         issueLen += strlen(pIssueNode->subNode);
     }
 
-    if (issueLen >= MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE)
+    if (issueLen >= MAX_ISSUE_NODE_LENGTH)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length %zu must be less than %u for installed package fallback\n",
-                __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH_FOR_INSTALLED_PACKAGE);
+                __FUNCTION__, __LINE__, issueLen, MAX_ISSUE_NODE_LENGTH);
         return false;
     }
 
@@ -436,6 +436,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         {
             processIssueTypeInInstalledPackage(rbuf, pIssueNode);
         }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Skipping installed package fallback due to invalid issue node length\n", __FUNCTION__, __LINE__);
+        }
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
         return;
     }
@@ -457,6 +461,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         if (isIssueNodeLengthValidForInstalledPackage(pIssueNode))
         {
             processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Skipping installed package fallback due to invalid issue node length\n", __FUNCTION__, __LINE__);
         }
     }
 
