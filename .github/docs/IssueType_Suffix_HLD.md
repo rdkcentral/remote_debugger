@@ -1,4 +1,4 @@
-# IssueType Suffix Support — High-Level Design Document
+# RRD UUID Support — High-Level Design Document
 
 ## Document Information
 
