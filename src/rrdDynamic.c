@@ -135,6 +135,9 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
         const char *profileName = getRrdProfileName(&devPropData);
 
         if(profileName && strlen(profileName) > 0){
+			if (strlen(profileName) > 34 ){
+			    length =0;	
+			}
             length = prefixlen + strlen(profileName) + suffixlen + 1;
         }
         else{
