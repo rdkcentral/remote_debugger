@@ -4,7 +4,7 @@
 
 | Field             | Value                                   |
 |-------------------|-----------------------------------------|
-| **Feature**       | Optional Underscore-Delimited Suffix on IssueType |
+| **Feature**       | Supports UUID Information in Debug Report File |
 | **Component**     | Remote Debugger (RRD)                   |
 | **Version**       | 1.0                                     |
 | **Date**          | May 2026                                |
