@@ -6,7 +6,6 @@
 |-------------------|-----------------------------------------|
 | **Feature**       | Optional Underscore-Delimited Suffix on IssueType |
 | **Component**     | Remote Debugger (RRD)                   |
-| **Branch**        | feature/final_backup                    |
 | **Version**       | 1.0                                     |
 | **Date**          | May 2026                                |
 | **Target Platform** | Embedded Linux Systems               |
@@ -452,45 +451,8 @@ sequenceDiagram
 
 ---
 
-## 11. Testing
 
-### 11.1 Unit Tests
-
-| Test Suite | Location | Coverage |
-|------------|----------|----------|
-| `split_issue_type` positive cases | `src/unittest/` | Valid suffix accepted, sanitized correctly |
-| `split_issue_type` negative cases | `src/unittest/` | Oversized suffix discarded; unsafe chars stripped; NULL inputs handled |
-| `processIssueTypeEvent` with suffix | `src/unittest/` | `cmdBuff->suffix` populated correctly |
-
-### 11.2 L2 Functional Tests
-
-| Test | File | Scenario |
-|------|------|----------|
-| `test_remote_debugger_trigger_event` (positive) | `test_rrd_static_profile_report_with_suffix.py` | IssueType `Device.Info_ab1bghjh` (the exact value used in the L2 test) — archive filename includes the suffix |
-| Negative case | `test_rrd_static_profile_report_with_suffix_negative_case.py` | Oversized/invalid suffix — upload uses base-only filename |
-
-### 11.3 Workflow Trigger
-
-The L2 test workflow (`.github/workflows/L2-tests.yml`) is triggered on PRs targeting `develop` and `feature/final_backup`.
-
----
-
-## 12. Impact Analysis
-
-| Component | Impact | Notes |
-|-----------|--------|-------|
-| `rrdCommon.h` | Medium | New `suffix` field in `data_buf`; all callers that access `data_buf` must initialise and free it |
-| `rrdInterface.c` | Low | `init` sets `suffix=NULL`; `deAlloc` frees it |
-| `rrdEventProcess.c` | Medium | New `split_issue_type` call and suffix memory management |
-| `rrdJsonParser.c` | Medium | New function + tarName construction |
-| `rrdRunCmdThread.c` | Low | Unit name + file open mode change only |
-| `rrd_logproc.c` | Low | Hyphen preservation only |
-| Existing IssueTypes (no `_`) | None | `split_issue_type` returns empty suffix; behaviour identical to previous |
-| Upload archive naming | Low–Medium | Archives for suffixed events now carry the suffix; consumers must handle longer filenames |
-
----
-
-## 13. Glossary
+## 11. Glossary
 
 | Term | Definition |
 |------|-----------|
