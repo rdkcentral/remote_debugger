@@ -136,7 +136,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
 
         if(profileName && strlen(profileName) > 0){
 			if (strlen(profileName) > 34 ){
-			    length =0;	
+			    return 0;
 			}
             length = prefixlen + strlen(profileName) + suffixlen + 1;
         }
