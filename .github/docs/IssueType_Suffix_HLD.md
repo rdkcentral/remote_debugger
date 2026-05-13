@@ -193,22 +193,29 @@ ALGORITHM:
 
 **Constant:**
 ```c
-#define RRD_MAX_SUFFIX_LEN  9   /* includes the leading '_' */
+#define RRD_MAX_SUFFIX_LEN  9   /* maximum strlen() of the suffix, measured from the
+                                   leading '_' inclusive — e.g. "_ab12345" has strlen 8 */
 ```
+
+The length check is `strlen(underscore_ptr) <= RRD_MAX_SUFFIX_LEN`, where `underscore_ptr` points at the `_` character. Therefore the `_` itself is part of the measured length and the token portion may be at most 8 characters long (e.g. `_ab12345` → strlen 8 ≤ 9 → accepted).
 
 **Examples:**
 
-| Input | Base | Suffix | Reason |
-|-------|------|--------|--------|
-| `Device.DeviceInfo_ab1234` | `Device.DeviceInfo` | `_ab1234` | 8 chars ≤ 9 ✓ |
-| `Device.DeviceInfo_ab;rm` | `Device.DeviceInfo` | `_abrm` | `;` stripped |
-| `Device.DeviceInfo_Search-uuid-long` | `Device.DeviceInfo` | `` | >9 chars, discarded |
-| `Device.DeviceInfo` | `Device.DeviceInfo` | `` | no underscore |
+| Input | Base | Suffix | `strlen` from `_` | Decision |
+|-------|------|--------|-------------------|----------|
+| `Device.DeviceInfo_ab1234` | `Device.DeviceInfo` | `_ab1234` | 7 ≤ 9 | accepted |
+| `Device.DeviceInfo_ab12345` | `Device.DeviceInfo` | `_ab12345` | 8 ≤ 9 | accepted |
+| `Device.DeviceInfo_ab;rm` | `Device.DeviceInfo` | `_abrm` | 5 ≤ 9; `;` stripped | accepted (sanitised) |
+| `Device.DeviceInfo_Search-uuid-long` | `Device.DeviceInfo` | `` | 21 > 9 | discarded |
+| `Device.DeviceInfo` | `Device.DeviceInfo` | `` | no `_` present | no suffix |
 
 ### 5.3 Systemd Unit Name Disambiguation
 
 ```c
 time_t epochTime = time(NULL);
+/* Note: time() returns (time_t)-1 on error; snprintf will render it as "-1",
+   which is still a valid unique string and causes no functional regression —
+   the unit name will be unusual but won't conflict with other invocations. */
 snprintf(remoteDebuggerServiceStr, sizeof(remoteDebuggerServiceStr),
          "%s%s%ld", remoteDebuggerPrefix, cmdData->rfcvalue, (long)epochTime);
 /* Result: "remote_debugger_DeviceInfo_1715600000" */
@@ -459,7 +466,7 @@ sequenceDiagram
 
 | Test | File | Scenario |
 |------|------|----------|
-| `test_remote_debugger_trigger_event` (positive) | `test_rrd_static_profile_report_with_suffix.py` | IssueType `Device.Info_ab1bghjh` — archive includes suffix in filename |
+| `test_remote_debugger_trigger_event` (positive) | `test_rrd_static_profile_report_with_suffix.py` | IssueType `Device.Info_ab1bghjh` (the exact value used in the L2 test) — archive filename includes the suffix |
 | Negative case | `test_rrd_static_profile_report_with_suffix_negative_case.py` | Oversized/invalid suffix — upload uses base-only filename |
 
 ### 11.3 Workflow Trigger
