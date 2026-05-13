@@ -1,4 +1,4 @@
-# RRD UUID Support — High-Level Design Document
+# Remote Debugger Supports UUID Information in Debug Report File — High-Level Design Document
 
 ## Document Information
 
