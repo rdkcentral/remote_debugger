@@ -416,7 +416,6 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
-		//before this i have to check length of pIssueNode->Node or pIssueNode->Node+pIssueNode->subNode is less than 34 if true only i have to proceed 
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
     }
 
