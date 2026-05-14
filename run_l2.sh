@@ -72,6 +72,8 @@ pytest  --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_s
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_start_control.json test/functional-tests/tests/test_rrd_start_control.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_start_subscribe_and_wait.json test/functional-tests/tests/test_rrd_start_subscribe_and_wait.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report.json test/functional-tests/tests/test_rrd_static_profile_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report_with_suffix.json test/functional-tests/tests/test_rrd_static_profile_report_with_suffix.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report_with_suffix_negative.json test/functional-tests/tests/test_rrd_static_profile_report_with_suffix_negative_case.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_corrupted_static_profile_report.json test/functional-tests/tests/test_rrd_corrupted_static_profile_report.py
 cp remote_debugger.json /etc/rrd/
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_harmfull_static_profile_report.json test/functional-tests/tests/test_rrd_harmful_command_static_report.py
@@ -85,4 +87,5 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_c_
 
 cp remote_debugger.json /etc/rrd/
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_profile_data.json test/functional-tests/tests/test_rrd_profile_data.py
+
 

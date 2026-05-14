@@ -2,7 +2,7 @@ name: L2 Integration Tests
 
 on:
   pull_request:
-    branches: [ develop ]
+    branches: [ develop, feature/final_backup]
 
 env:
   AUTOMATICS_UNAME: ${{ secrets.AUTOMATICS_UNAME }}
