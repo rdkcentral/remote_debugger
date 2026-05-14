@@ -275,6 +275,7 @@ void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event
     sbuf->inDynamic = false;
     sbuf->appendMode = false;
     sbuf->dsEvent = deepSleepEvent;
+    sbuf->suffix = NULL;
 }
 
 /*Function:  RRD_data_buff_deAlloc
@@ -294,6 +295,10 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
         if (sbuf->jsonPath)
         {
             free(sbuf->jsonPath);
+        }
+        if (sbuf->suffix)
+        {
+            free(sbuf->suffix);
         }
         free(sbuf);
     }
