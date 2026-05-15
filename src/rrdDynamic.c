@@ -136,6 +136,8 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
 
         if(profileName && strlen(profileName) > 0){
 			if (strlen(profileName) > RRD_DYNAMIC_PROFILE_MAX_LENGTH ){
+				profileName = "";
+				RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Profile length greater than 34 \n", __FUNCTION__, __LINE__);
 			    return 0;
 			}
             length = prefixlen + strlen(profileName) + suffixlen + 1;
