@@ -45,10 +45,11 @@ def test_check_and_start_remotedebugger():
 def test_remote_debugger_trigger_event():
     reset_issuetype_rfc()
     sleep(10)
+    ISSUE_STRING = "Device.Info_ab1bghjhfhk"
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
-        'string', 'Device.Info_ab1bghjhfhk'
+        'string', ISSUE_STRING
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0, f"Command failed with error: {result.stderr}"
