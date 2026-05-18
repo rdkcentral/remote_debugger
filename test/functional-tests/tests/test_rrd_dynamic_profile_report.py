@@ -141,7 +141,7 @@ def test_check_issue_in_dynamic_profile():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     testrun1_string = "Test.TestRun1"
-    assert_service_start_success(testrun1_string)
+    check_service_start_success(testrun1_string)
 
     JOURNAL_START = f"journalctl remote_debugger_{testrun1_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
@@ -163,7 +163,7 @@ def test_check_issue_in_dynamic_profile():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     testrun2_string = "Test.TestRun2"
-    assert_service_start_success(testrun2_string)
+    check_service_start_success(testrun2_string)
 
     JOURNAL_START = f"journalctl remote_debugger_{testrun2_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)

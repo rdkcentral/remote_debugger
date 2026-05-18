@@ -73,8 +73,8 @@ def grep_rrdlogs(search: str):
         print(f"Could not read file {LOG_FILE}: {e}")
     return search_result
 
-def assert_service_start_success(issue_type: str):
-    """Assert the service-start logs include a success marker.
+def check_service_start_success(issue_type: str):
+    """Check that service-start logs include a success marker.
 
     Args:
         issue_type: Issue type used in the runtime service name.
@@ -85,8 +85,8 @@ def assert_service_start_success(issue_type: str):
     """
     service_start = f"Starting remote_debugger_{issue_type}"
     start_logs = grep_rrdlogs(service_start)
-    assert service_start in start_logs
-    assert "service success..." in start_logs
+    assert service_start in start_logs, f"Service start message not found for issue type '{issue_type}'"
+    assert "service success..." in start_logs, f"Service success marker not found for issue type '{issue_type}'"
 
 def check_file_exists(file_path):
     return os.path.isfile(file_path)
