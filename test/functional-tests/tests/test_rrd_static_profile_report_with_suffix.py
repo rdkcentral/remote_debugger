@@ -95,7 +95,7 @@ def test_remote_debugger_trigger_event():
 
     check_service_start_success(ISSUE_STRING)
 
-    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING} "
+    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
