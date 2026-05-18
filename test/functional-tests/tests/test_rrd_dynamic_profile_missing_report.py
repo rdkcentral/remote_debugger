@@ -29,6 +29,14 @@ def test_check_rrd_directory_exists():
     dir_path = OUTPUT_DIR
     assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
 
+def test_check_dynamic_config_file():
+    config_file_path = APPEND_JSON_FILE
+    assert check_file_exists(config_file_path), f"Configuration file '{config_file_path}' does not exist."
+
+def test_check_dynamic_directory_exists():
+    dir_path = DYNAMIC_DIR
+    assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
+
 def test_check_and_start_remotedebugger():
     kill_rrd()
     remove_logfile()
