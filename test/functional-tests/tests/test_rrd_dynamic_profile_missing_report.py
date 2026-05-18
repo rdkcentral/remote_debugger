@@ -113,9 +113,6 @@ def test_check_issue_in_dynamic_profile():
     except subprocess.CalledProcessError as e:
         print("Error while executing the script:")
         print(e.stderr)
-    remove_logfile()
-    remove_outdir_contents(OUTPUT_DIR)
-    kill_rrd()
     
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
