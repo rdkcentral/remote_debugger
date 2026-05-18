@@ -191,7 +191,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 
         /* Get mSGLength */
 #ifdef IARMBUS_SUPPORT
-        mSGLength = RRDGetProfileStringLength(pissueStructNode, isDeepSleepAwakeEvent);
+	mSGLength = RRDGetProfileStringLength(pissueStructNode, isDeepSleepAwakeEvent);
 #else
         mSGLength = RRDGetProfileStringLength(pissueStructNode, false);
 #endif
