@@ -129,8 +129,7 @@ def test_check_issue_in_dynamic_profile():
     EXEC_COMMANDS = 'Executing Debug Commands: ""cat /version.txt;uptime;cat /proc/buddyinfo;cat /proc/meminfo;cat /tmp/.deviceDetails.cache""'
     assert EXEC_COMMANDS in grep_rrdlogs(EXEC_COMMANDS)
 
-    START_SERVICE = "Starting remote_debugger_Test.TestRun1"
-    assert START_SERVICE in grep_rrdlogs(START_SERVICE)
+    assert_service_start_success("Test.TestRun1")
 
     USE_JOURNALCTL = "Using journalctl to log command output..."
     assert USE_JOURNALCTL in grep_rrdlogs(USE_JOURNALCTL)

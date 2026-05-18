@@ -73,6 +73,12 @@ def grep_rrdlogs(search: str):
         print(f"Could not read file {LOG_FILE}: {e}")
     return search_result
 
+def assert_service_start_success(issue_type: str):
+    service_start = f"Starting remote_debugger_{issue_type}"
+    start_logs = grep_rrdlogs(service_start)
+    assert service_start in start_logs
+    assert "service success..." in start_logs
+
 def check_file_exists(file_path):
     return os.path.isfile(file_path)
 

@@ -98,8 +98,7 @@ def test_remote_debugger_trigger_event():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     issue_string = "DEEPSLEEP"
-    SERVICE_START = f"Starting remote_debugger_Audio.Audio"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    assert_service_start_success("Audio.Audio")
 
     JOURNAL_START = "journalctl remote_debugger_Audio.Audio"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
@@ -117,8 +116,7 @@ def test_remote_debugger_trigger_event():
     DEBUG_FILE = "Adding Details of Debug commands to Output File"
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
-    SERVICE_START = f"Starting remote_debugger_Video.Video"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    assert_service_start_success("Video.Video")
 
     JOURNAL_START = f"journalctl remote_debugger_Video.Video"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)

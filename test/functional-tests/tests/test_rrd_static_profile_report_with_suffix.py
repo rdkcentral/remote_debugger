@@ -93,8 +93,7 @@ def test_remote_debugger_trigger_event():
     DEBUG_FILE = "Adding Details of Debug commands to Output File"
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
-    SERVICE_START = f"Starting remote_debugger_{ISSUE_STRING}"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    assert_service_start_success(ISSUE_STRING)
 
     JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING} "
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)

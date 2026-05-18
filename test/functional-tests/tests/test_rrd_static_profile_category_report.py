@@ -97,8 +97,7 @@ def test_remote_debugger_trigger_event():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     issue_string = "Device.Info"
-    SERVICE_START = f"Starting remote_debugger_{issue_string}"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    assert_service_start_success(issue_string)
 
     JOURNAL_START = f"journalctl remote_debugger_{issue_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
@@ -117,8 +116,7 @@ def test_remote_debugger_trigger_event():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     issue_string = "Device.Uptime"
-    SERVICE_START = f"Starting remote_debugger_{issue_string}"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    assert_service_start_success(issue_string)
 
     JOURNAL_START = f"journalctl remote_debugger_{issue_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
