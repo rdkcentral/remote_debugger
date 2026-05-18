@@ -74,7 +74,15 @@ def grep_rrdlogs(search: str):
     return search_result
 
 def assert_service_start_success(issue_type: str):
-    """Validate that the service start log for issue_type contains success."""
+    """Assert the service-start logs include a success marker.
+
+    Args:
+        issue_type: Issue type used in the runtime service name.
+
+    Raises:
+        AssertionError: If matching service-start logs are missing or do not
+            include the "service success..." message.
+    """
     service_start = f"Starting remote_debugger_{issue_type}"
     start_logs = grep_rrdlogs(service_start)
     assert service_start in start_logs
