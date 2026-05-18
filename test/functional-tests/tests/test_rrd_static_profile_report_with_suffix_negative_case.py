@@ -106,7 +106,7 @@ def test_remote_debugger_trigger_event():
     SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING} service"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
-    SUFFIX_EXCEEDS = f"Suffix after 'Device.Info' exceeds max length (12 > 10); discarding"
+    SUFFIX_EXCEEDS = f"Suffix after 'Device.Info' exceeds max length (12 > 9); discarding"
     assert SUFFIX_EXCEEDS in grep_rrdlogs(SUFFIX_EXCEEDS)
 
     GENERATE_FILE = f"Generated filename: AABBCCDDEEFF_DEVICE_INFO_"
