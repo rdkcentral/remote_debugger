@@ -39,7 +39,7 @@ def test_check_dynamic_directory_exists():
 
 def test_check_and_start_remotedebugger():
     #kill_rrd()
-    remove_logfile()
+    #remove_logfile()
     test_check_dynamic_directory_exists()
     test_check_dynamic_config_file()
     print("Starting remotedebugger process")
