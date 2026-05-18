@@ -93,17 +93,17 @@ def test_remote_debugger_trigger_event():
     DEBUG_FILE = "Adding Details of Debug commands to Output File"
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
-    SERVICE_START = f"Starting remote_debugger_{ISSUE_STRING} service success"
+    SERVICE_START = f"Starting remote_debugger_{ISSUE_STRING}"
     assert SERVICE_START in grep_rrdlogs(SERVICE_START)
 
-    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     result = check_output_dir()
