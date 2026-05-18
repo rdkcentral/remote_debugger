@@ -129,8 +129,8 @@ def test_remotedebugger_upload_report():
     else:
         print("Upload status not found in logs")
 
-    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
-    SCRIPT_FAILURE = "Debug Information Report upload Success"
+    SCRIPT_SUCCESS = "Debug Information Report upload Success"
+    SCRIPT_FAILURE = "Debug Information Report upload Failed"
     if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
         print("Script execution success")
     elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
