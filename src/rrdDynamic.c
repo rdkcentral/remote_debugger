@@ -187,7 +187,6 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 #else
         mSGLength = RRDGetProfileStringLength(pissueStructNode, false);
 #endif
-		RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: RRD Dynamic request message length compare \n", __FUNCTION__, __LINE__);
         if (mSGLength > 0)
         {
             paramString = (char *)calloc(mSGLength, objSize);
@@ -282,7 +281,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
     }
     else
     {
-		RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Issued Struct Node\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Issued Struct Node\n", __FUNCTION__, __LINE__);
     }
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
