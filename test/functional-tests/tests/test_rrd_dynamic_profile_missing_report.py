@@ -38,7 +38,7 @@ def test_check_dynamic_directory_exists():
     assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
 
 def test_check_and_start_remotedebugger():
-    kill_rrd()
+    #kill_rrd()
     remove_logfile()
     test_check_dynamic_directory_exists()
     test_check_dynamic_config_file()
