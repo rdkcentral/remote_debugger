@@ -127,7 +127,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
     unsigned int prefixlen = strlen(RDM_PKG_PREFIX);
     unsigned int suffixlen = strlen(RDM_PKG_SUFFIX);
     unsigned int nodelen = 0;
-
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Entering .. \n", __FUNCTION__, __LINE__);
     /* Calculate Length for Device Type for Deep Sleep Awake Event*/
     if (isDeepSleepAwakeEvent)
     {
@@ -137,9 +137,10 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
         if(profileName && strlen(profileName) > 0){
 			if (strlen(profileName) > RRD_DYNAMIC_PROFILE_MAX_LENGTH ){
 				profileName = "";
-				RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Profile length greater than 34 \n", __FUNCTION__, __LINE__);
+				RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Profile length greater than 34 \n", __FUNCTION__, __LINE__);
 			    return 0;
 			}
+			RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Profile length less than 34 \n", __FUNCTION__, __LINE__);
             length = prefixlen + strlen(profileName) + suffixlen + 1;
         }
         else{
@@ -151,6 +152,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
         nodelen = strlen(pissueStructNode->Node);
         length = prefixlen + nodelen + suffixlen;
     }
+	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Profile length less than 34 \n", __FUNCTION__, __LINE__);
     return length + 1;
 }
 
@@ -183,10 +185,13 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
 
         /* Get mSGLength */
 #ifdef IARMBUS_SUPPORT
+	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: RRD Dynamic request inside iarm support \n", __FUNCTION__, __LINE__);
 	mSGLength = RRDGetProfileStringLength(pissueStructNode, isDeepSleepAwakeEvent);
 #else
+		RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: RRD Dynamic request not iarm support \n", __FUNCTION__, __LINE__);
         mSGLength = RRDGetProfileStringLength(pissueStructNode, false);
 #endif
+		RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: RRD Dynamic request message length compare \n", __FUNCTION__, __LINE__);
         if (mSGLength > 0)
         {
             paramString = (char *)calloc(mSGLength, objSize);
@@ -281,7 +286,8 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
     }
     else
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Issued Struct Node\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: msg length invalid \n", __FUNCTION__, __LINE__);
+		RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Issued Struct Node\n", __FUNCTION__, __LINE__);
     }
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
