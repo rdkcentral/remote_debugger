@@ -161,6 +161,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
     }
     return length + 1;
 }
+
 /*
  * @function RRDRdmManagerDownloadRequest
  * @brief Sends a request to the RDM Manager to download a specific package based on the
