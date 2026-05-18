@@ -135,8 +135,8 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
         return -1;
     }
 
-    boundedNodeLen = strnlen(pissueStructNode->Node, RRD_DYNAMIC_PROFILE_MAX_LENGTH);
-    if (boundedNodeLen == RRD_DYNAMIC_PROFILE_MAX_LENGTH)
+    boundedNodeLen = strnlen(pissueStructNode->Node, RRD_DYNAMIC_PROFILE_MAX_LENGTH + 1);
+    if (boundedNodeLen >= RRD_DYNAMIC_PROFILE_MAX_LENGTH)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length must be less than %d\n", __FUNCTION__, __LINE__, RRD_DYNAMIC_PROFILE_MAX_LENGTH);
         return -1;
@@ -290,6 +290,8 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
         }
         free(pissueStructNode->Node);
         free(pissueStructNode->subNode);
+        pissueStructNode->Node = NULL;
+        pissueStructNode->subNode = NULL;
     }
     else
     {
