@@ -74,6 +74,7 @@ def grep_rrdlogs(search: str):
     return search_result
 
 def assert_service_start_success(issue_type: str):
+    """Validate that the service start log for issue_type contains success."""
     service_start = f"Starting remote_debugger_{issue_type}"
     start_logs = grep_rrdlogs(service_start)
     assert service_start in start_logs
