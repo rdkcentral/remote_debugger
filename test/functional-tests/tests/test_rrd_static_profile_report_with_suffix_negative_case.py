@@ -96,14 +96,14 @@ def test_remote_debugger_trigger_event():
 
     check_service_start_success("Device.Info")
 
-    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING}"
+    JOURNAL_START = f"journalctl remote_debugger_Device.Info"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING}"
+    SERVICE_STOP = f"Stopping remote_debugger_Device.Info"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     SUFFIX_EXCEEDS = f"Suffix after 'Device.Info' exceeds max length (12 > 9); discarding"
