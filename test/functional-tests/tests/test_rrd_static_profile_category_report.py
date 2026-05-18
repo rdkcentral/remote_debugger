@@ -97,17 +97,17 @@ def test_remote_debugger_trigger_event():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     issue_string = "Device.Info"
-    SERVICE_START = f"Starting remote_debugger_{issue_string} service success"
+    SERVICE_START = f"Starting remote_debugger_{issue_string}"
     assert SERVICE_START in grep_rrdlogs(SERVICE_START)
 
-    JOURNAL_START = f"journalctl remote_debugger_{issue_string} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{issue_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{issue_string} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{issue_string}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     SANITY_CHECK = "Found valid Commands"
@@ -117,17 +117,17 @@ def test_remote_debugger_trigger_event():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     issue_string = "Device.Uptime"
-    SERVICE_START = f"Starting remote_debugger_{issue_string} service success"
+    SERVICE_START = f"Starting remote_debugger_{issue_string}"
     assert SERVICE_START in grep_rrdlogs(SERVICE_START)
 
-    JOURNAL_START = f"journalctl remote_debugger_{issue_string} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{issue_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{issue_string} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{issue_string}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     result = check_output_dir()
