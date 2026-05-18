@@ -286,7 +286,7 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
         }
         else
         {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid profile length %d; skipping download request\n", __FUNCTION__, __LINE__, mSGLength);
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid profile length, skipping download request\n", __FUNCTION__, __LINE__);
         }
         free(pissueStructNode->Node);
         free(pissueStructNode->subNode);
