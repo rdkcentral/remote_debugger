@@ -40,13 +40,17 @@ def test_check_and_start_remotedebugger():
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
     command_to_get_pid = "pidof remotedebugger"
-    pid = ""
-    for _ in range(MAX_START_PID_RETRIES):
+    pid = None
+    for attempt in range(MAX_START_PID_RETRIES):
         pid = run_shell_command(command_to_get_pid)
-        if pid != "":
+        if pid:
             break
+        if attempt < MAX_START_PID_RETRIES - 1:
+            sleep(START_PID_RETRY_INTERVAL_SECONDS)
+    if not pid:
         sleep(START_PID_RETRY_INTERVAL_SECONDS)
-    assert pid != "", "remotedebugger process did not start"
+        pid = run_shell_command(command_to_get_pid)
+    assert pid, "remotedebugger process did not start"
 
 def reset_issuetype_rfc():
     command = 'rbuscli set Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType string ""'
