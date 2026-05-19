@@ -31,6 +31,7 @@ def test_check_rrd_directory_exists():
 
 def test_check_and_start_remotedebugger():
     print("Starting remotedebugger process")
+    sleep(5)
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
     command_to_get_pid = "pidof remotedebugger"
