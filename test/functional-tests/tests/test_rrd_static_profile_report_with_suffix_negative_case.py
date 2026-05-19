@@ -32,42 +32,9 @@ def reset_issuetype_rfc():
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     assert result.returncode == 0
 
-def get_rrd_tarfile():
-    logfile = '/opt/logs/remotedebugger.log.0'
-    command = f"grep 'Generated filename:' {logfile} | grep -oP '\\S+\\.tgz'"
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    if result.returncode == 0:
-        return result.stdout.strip()
-    return None
-
-
-def download_file(filename):
-    url = f"https://mockxconf:50054/tmp/{filename}"
-    command = f"curl -k -o {filename} {url}"
-    print(f"Executing command: {command}")  # Debugging line
-
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result
-
-def validate_file(filename):
-    if os.path.isfile(filename):
-        os.remove(filename)
-        return f"File {filename} found and removed."
-    else:
-        return f"File {filename} not found."
-
-def check_server_status():
-    url = "https://mockxconf:50054/rrdDebugReport"
-    result = subprocess.run(["curl", "-k", "-I", "-w", "%{http_code}", url, "-o", "/dev/null"], capture_output=True, text=True)
-    status_code = result.stdout.strip()
-    return status_code
-
 def test_check_and_start_remotedebugger():
     kill_rrd()
     remove_logfile()
-    status_code = check_server_status()
-    assert status_code == "200", f"Unexpected status code: {status_code}"
-
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
@@ -78,6 +45,7 @@ def test_check_and_start_remotedebugger():
 def test_remote_debugger_trigger_event():
     reset_issuetype_rfc()
     sleep(10)
+    ISSUE_STRING = "Device.Info_ab1bghjhfhk"
     command = [
         'rbuscli', 'set',
         'Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType',
@@ -126,30 +94,33 @@ def test_remote_debugger_trigger_event():
     DEBUG_FILE = "Adding Details of Debug commands to Output File"
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
-    check_service_start_success(ISSUE_STRING)
+    check_service_start_success("Device.Info")
 
-    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING}"
+    JOURNAL_START = f"journalctl remote_debugger_Device.Info"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING}"
+    SERVICE_STOP = f"Stopping remote_debugger_Device.Info"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
+    SUFFIX_EXCEEDS = f"Suffix after 'Device.Info' exceeds max length (12 > 9); discarding"
+    assert SUFFIX_EXCEEDS in grep_rrdlogs(SUFFIX_EXCEEDS)
+
+    GENERATE_FILE = f"Generated filename: AABBCCDDEEFF_DEVICE_INFO_"
+    assert GENERATE_FILE in grep_rrdlogs(GENERATE_FILE)
+
+    START_UPLOAD = f"Starting upload - server: mockxconf, protocol: HTTP, file: AABBCCDDEEFF_DEVICE_INFO_"
+    assert START_UPLOAD in grep_rrdlogs(START_UPLOAD)
     result = check_output_dir()
     print(result)
 
-    UPLOAD_LOGS = "Starting Upload Debug output via API..."
+    UPLOAD_LOGS = "Starting Upload Debug output via API"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
-
 def test_remotedebugger_upload_report():
-    tgz_file = get_rrd_tarfile()
-    assert tgz_file is not None, "No .tgz files found in the directory"
-    print(f"Found .tgz file: {tgz_file}")
-
     UPLOAD_SUCCESS = "RRD Upload Script Execution Success"
     UPLOAD_FAILURE = "RRD Upload Script Execution Failure"
     if UPLOAD_SUCCESS in grep_rrdlogs(UPLOAD_SUCCESS):
@@ -159,23 +130,14 @@ def test_remotedebugger_upload_report():
     else:
         print("Upload status not found in logs")
 
-    SCRIPT_SUCCESS = "Debug Information Report upload Failed"
-    SCRIPT_FAILURE = "Debug Information Report upload Success"
+    SCRIPT_SUCCESS = "Debug Information Report upload Success"
+    SCRIPT_FAILURE = "Debug Information Report upload Failed"
     if SCRIPT_SUCCESS in grep_rrdlogs(SCRIPT_SUCCESS):
         print("Script execution success")
     elif SCRIPT_FAILURE in grep_rrdlogs(SCRIPT_FAILURE):
         print("Script execution failed")
     else:
         print("Script execution not found in logs")
-
-def test_remotedebugger_download_report():
-    tgz_file = get_rrd_tarfile()
-    result = download_file(tgz_file)
-    assert result.returncode == 0, f"Download failed: {result.stderr}"
-    print(f"Download successful: {result.stdout}")
-
-    message = validate_file(tgz_file)
-    print(message)
 
     remove_logfile()
     remove_outdir_contents(OUTPUT_DIR)

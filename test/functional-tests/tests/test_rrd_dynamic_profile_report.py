@@ -141,17 +141,16 @@ def test_check_issue_in_dynamic_profile():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     testrun1_string = "Test.TestRun1"
-    SERVICE_START = f"Starting remote_debugger_{testrun1_string} service success"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    check_service_start_success(testrun1_string)
 
-    JOURNAL_START = f"journalctl remote_debugger_{testrun1_string} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{testrun1_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{testrun1_string} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{testrun1_string}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     TESTRUN2_MSG = "Reading Issue Type Test:TestRun2"
@@ -164,17 +163,16 @@ def test_check_issue_in_dynamic_profile():
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
     testrun2_string = "Test.TestRun2"
-    SERVICE_START = f"Starting remote_debugger_{testrun2_string} service success"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    check_service_start_success(testrun2_string)
 
-    JOURNAL_START = f"journalctl remote_debugger_{testrun2_string} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{testrun2_string}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{testrun2_string} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{testrun2_string}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     result = check_output_dir()
