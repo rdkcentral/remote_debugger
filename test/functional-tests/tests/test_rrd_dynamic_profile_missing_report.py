@@ -30,12 +30,19 @@ def test_check_rrd_directory_exists():
     assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
 
 def test_check_and_start_remotedebugger():
+    kill_rrd()
+    remove_logfile()
+    remove_upload_lock()
     print("Starting remotedebugger process")
-    sleep(5)
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
     command_to_get_pid = "pidof remotedebugger"
-    pid = run_shell_command(command_to_get_pid)
+    pid = ""
+    for _ in range(5):
+        pid = run_shell_command(command_to_get_pid)
+        if pid != "":
+            break
+        sleep(1)
     assert pid != "", "remotedebugger process did not start"
 
 def reset_issuetype_rfc():
