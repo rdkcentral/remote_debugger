@@ -21,6 +21,9 @@ import json
 import subprocess
 from helper_functions import *
 
+MAX_START_PID_RETRIES = 5
+START_PID_RETRY_INTERVAL_SECONDS = 1
+
 def test_check_remote_debugger_config_file():
     config_file_path = JSON_FILE
     assert check_file_exists(config_file_path), f"Configuration file '{config_file_path}' does not exist."
@@ -38,11 +41,11 @@ def test_check_and_start_remotedebugger():
     run_shell_silent(command_to_start)
     command_to_get_pid = "pidof remotedebugger"
     pid = ""
-    for _ in range(5):
+    for _ in range(MAX_START_PID_RETRIES):
         pid = run_shell_command(command_to_get_pid)
         if pid != "":
             break
-        sleep(1)
+        sleep(START_PID_RETRY_INTERVAL_SECONDS)
     assert pid != "", "remotedebugger process did not start"
 
 def reset_issuetype_rfc():
