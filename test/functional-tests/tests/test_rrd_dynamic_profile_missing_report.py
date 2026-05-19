@@ -41,15 +41,11 @@ def test_check_and_start_remotedebugger():
     run_shell_silent(command_to_start)
     command_to_get_pid = "pidof remotedebugger"
     pid = None
-    for attempt in range(MAX_START_PID_RETRIES):
+    for _ in range(MAX_START_PID_RETRIES):
         pid = run_shell_command(command_to_get_pid)
         if pid:
             break
-        if attempt < MAX_START_PID_RETRIES - 1:
-            sleep(START_PID_RETRY_INTERVAL_SECONDS)
-    if not pid:
         sleep(START_PID_RETRY_INTERVAL_SECONDS)
-        pid = run_shell_command(command_to_get_pid)
     assert pid, "remotedebugger process did not start"
 
 def reset_issuetype_rfc():
