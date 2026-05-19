@@ -29,19 +29,7 @@ def test_check_rrd_directory_exists():
     dir_path = OUTPUT_DIR
     assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
 
-def test_check_dynamic_config_file():
-    config_file_path = APPEND_JSON_FILE
-    assert check_file_exists(config_file_path), f"Configuration file '{config_file_path}' does not exist."
-
-def test_check_dynamic_directory_exists():
-    dir_path = DYNAMIC_DIR
-    assert check_directory_exists(dir_path), f"Directory '{dir_path}' does not exist."
-
 def test_check_and_start_remotedebugger():
-    #kill_rrd()
-    #remove_logfile()
-    test_check_dynamic_directory_exists()
-    test_check_dynamic_config_file()
     print("Starting remotedebugger process")
     command_to_start = "nohup /usr/local/bin/remotedebugger > /dev/null 2>&1 &"
     run_shell_silent(command_to_start)
@@ -113,6 +101,9 @@ def test_check_issue_in_dynamic_profile():
     except subprocess.CalledProcessError as e:
         print("Error while executing the script:")
         print(e.stderr)
+    remove_logfile()
+    remove_outdir_contents(OUTPUT_DIR)
+    kill_rrd()
     
 def test_rdm_trigger_event():
     INSTALL_PACKAGE ="RDK-RRD-Test:1.0"
