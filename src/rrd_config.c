@@ -92,7 +92,6 @@ static bool file_non_empty(const char *filepath) {
     struct stat st;
     return (stat(filepath, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0);
 }
-}
 
 int rrd_config_load(rrd_config_t *config) {
     if (!config) return -1;
