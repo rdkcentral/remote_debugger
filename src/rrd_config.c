@@ -90,7 +90,8 @@ static bool file_exists(const char *filepath) {
 static bool file_non_empty(const char *filepath) {
     if (!filepath) return false;
     struct stat st;
-    return (stat(filepath, &st) == 0 && st.st_size > 0);
+    return (stat(filepath, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0);
+}
 }
 
 int rrd_config_load(rrd_config_t *config) {
