@@ -86,6 +86,13 @@ static bool file_exists(const char *filepath) {
     return (stat(filepath, &st) == 0);
 }
 
+// Helper: check if file exists and has non-zero size
+static bool file_non_empty(const char *filepath) {
+    if (!filepath) return false;
+    struct stat st;
+    return (stat(filepath, &st) == 0 && st.st_size > 0);
+}
+
 int rrd_config_load(rrd_config_t *config) {
     if (!config) return -1;
     
@@ -139,9 +146,9 @@ int rrd_config_load(rrd_config_t *config) {
                 __FUNCTION__);
         
         const char *dcm_file = NULL;
-        if (strcmp(config->build_type, "prod") != 0 && file_exists("/opt/dcm.properties")) {
+        if (strcmp(config->build_type, "prod") != 0 && file_non_empty("/opt/dcm.properties")) {
             dcm_file = "/opt/dcm.properties";
-        } else if (file_exists("/etc/dcm.properties")) {
+        } else if (strcmp(config->build_type, "prod") == 0 && file_exists("/etc/dcm.properties")) {
             dcm_file = "/etc/dcm.properties";
         }
         
