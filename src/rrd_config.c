@@ -141,7 +141,7 @@ int rrd_config_load(rrd_config_t *config) {
         const char *dcm_file = NULL;
         if (strcmp(config->build_type, "prod") != 0 && file_exists("/opt/dcm.properties")) {
             dcm_file = "/opt/dcm.properties";
-        } else if (strcmp(config->build_type, "prod") == 0 && file_exists("/etc/dcm.properties")) {
+        } else if ( file_exists("/etc/dcm.properties")) {
             dcm_file = "/etc/dcm.properties";
         }
         
