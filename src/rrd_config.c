@@ -79,15 +79,8 @@ static int execute_command(const char *cmd, char *output, size_t output_size) {
     return (status == 0 && strlen(output) > 0) ? 0 : -1;
 }
 
-// Helper: check if file exists
-static bool file_exists(const char *filepath) {
-    if (!filepath) return false;
-    struct stat st;
-    return (stat(filepath, &st) == 0);
-}
-
 // Helper: check if file exists and has non-zero size
-static bool file_non_empty(const char *filepath) {
+static bool file_exists(const char *filepath) {
     if (!filepath) return false;
     struct stat st;
     return (stat(filepath, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0);
@@ -146,7 +139,7 @@ int rrd_config_load(rrd_config_t *config) {
                 __FUNCTION__);
         
         const char *dcm_file = NULL;
-        if (strcmp(config->build_type, "prod") != 0 && file_non_empty("/opt/dcm.properties")) {
+        if (strcmp(config->build_type, "prod") != 0 && file_exists("/opt/dcm.properties")) {
             dcm_file = "/opt/dcm.properties";
         } else if (strcmp(config->build_type, "prod") == 0 && file_exists("/etc/dcm.properties")) {
             dcm_file = "/etc/dcm.properties";
