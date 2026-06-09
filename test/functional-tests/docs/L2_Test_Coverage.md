@@ -8,17 +8,25 @@
 
 ## Executive Summary
 
-| Metric | Count |
-|---|:---:|
-| Feature files | 21 |
-| Feature scenarios | 90 |
-| Test files (pytest) | 22 |
-| Test functions (`test_*`) | 112 |
-| Feature→Test mapped pairs | 21 / 21 (+ 1 orphan test) |
-| Source modules (always compiled) | 9 |
-| Source modules (conditional IARMBUS) | 7 |
-| **Overall feature coverage** | **95%** (21/22 test files have matching features) |
-| **Source behavior coverage** | **~65%** (happy paths covered; error/edge paths mostly untested) |
+Total source functions (approx): ~123
+Functions with direct L2 coverage: ~55
+Functions with indirect L2 coverage: ~32
+Functions with no L2 coverage: ~36
+
+Active L2 test functions: 118
+Disabled L2 test functions: 0
+Active feature scenarios: 103
+Proposed new test scenarios: 22
+
+High priority: 11
+Medium priority: 7
+Low priority: 4
+
+Test files active: 23
+Test files disabled (commented out): 0
+
+Estimated current L2 functional coverage: ~55%
+Target L2 functional coverage: ~80%
 
 ---
 
