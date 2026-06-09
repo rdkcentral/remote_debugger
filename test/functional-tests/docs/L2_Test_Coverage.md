@@ -6,9 +6,9 @@
 
 ---
 
-## Executive Summary
+**Test Coverage Summary**
 
-Total source functions (approx): ~123
+```Total source functions (approx): ~123
 Functions with direct L2 coverage: ~55
 Functions with indirect L2 coverage: ~32
 Functions with no L2 coverage: ~36
@@ -27,7 +27,7 @@ Test files disabled (commented out): 0
 
 Estimated current L2 functional coverage: ~55%
 Target L2 functional coverage: ~80%
-
+```
 ---
 
 ## 1. Feature File ↔ Test File Mapping
