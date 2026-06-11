@@ -79,11 +79,11 @@ static int execute_command(const char *cmd, char *output, size_t output_size) {
     return (status == 0 && strlen(output) > 0) ? 0 : -1;
 }
 
-// Helper: check if file exists
+// Helper: check if file exists and has non-zero size
 static bool file_exists(const char *filepath) {
     if (!filepath) return false;
     struct stat st;
-    return (stat(filepath, &st) == 0);
+    return (stat(filepath, &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0);
 }
 
 int rrd_config_load(rrd_config_t *config) {
