@@ -32,6 +32,10 @@ mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
 echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
 
+/usr/local/bin/tr69hostif -c /etc/mgrlist.conf -p 10999 -s 11999 | tee /opt/logs/tr69hostIf.log.0 &
+ps -ef
+which tr69hostif
+which remotedebugger
 
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
@@ -88,6 +92,7 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_c_
 cp remote_debugger.json /etc/rrd/
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_profile_data.json test/functional-tests/tests/test_rrd_profile_data.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_rdm_node_length_exceeded.json test/functional-tests/tests/test_rrd_dynamic_profile_rdm_node_length_exceeded.py
+
 
 
 
