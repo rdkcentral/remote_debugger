@@ -60,6 +60,9 @@ jobs:
         run: |
           docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
 
+      - name: Check rdmfile files inside test-xconf container
+        run: |
+          docker exec mockxconf ls -l /etc/xconf/certs/
 
       - name: Move dependent repositories in native-platform container to /usr
         run: |
