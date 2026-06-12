@@ -19,7 +19,7 @@
 
 #include "rrdCommandSanity.h"
 #include <ctype.h>
-
+/* hi */
 /*
  * @function updateBackgroundCmd
  * @brief Modifies the given command string by replacing instances of "&;" with "& "
