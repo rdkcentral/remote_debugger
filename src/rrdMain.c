@@ -147,7 +147,8 @@ int main(int argc, char *argv[])
     initCache();
 	rdk_otlp_init("RRD", "1.0.0");
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:[OTEL] OTEL initialized\n", __FUNCTION__, __LINE__);
-	rdk_otlp_start_child_span("RRD_ctx", "set");
+	//rdk_otlp_start_child_span("RRD_ctx", "set");
+	rdk_otlp_start_distributed_trace("RRD_ctx", "set");
 
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
@@ -166,7 +167,7 @@ int main(int argc, char *argv[])
 
     RRD_subscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Started RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
-	rdk_otlp_finish_child_span();
+	rdk_otlp_finish_distributed_trace();
 	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:[OTEL] Finish child span\n",__FUNCTION__,__LINE__);
 
     /* Create Thread for listening TR69 events */
