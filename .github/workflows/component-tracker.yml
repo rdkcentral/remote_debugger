@@ -1,0 +1,141 @@
+name: Component Commit & Release Tracker
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release
+      - release/**
+      - support
+      - support/**
+      - feature/test_tracker 
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-confluence-tracker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Compute release fix status
+        id: release_fix
+        shell: bash
+        run: |
+          set +e
+
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            echo "status=-" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ -z "${GITHUB_SHA}" ]]; then
+            echo "status=Not evaluated" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --all --prune --quiet
+
+          mapfile -t branches < <(
+            git for-each-ref --format='%(refname:short)' refs/remotes/origin/release refs/remotes/origin/release/* \
+            | sed 's#^origin/##' \
+            | sort -u
+          )
+
+          if [[ ${#branches[@]} -eq 0 ]]; then
+            echo "status=No active release branches found" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          status_list=()
+          for b in "${branches[@]}"; do
+            if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${b}"; then
+              status_list+=("${b}: merged")
+            else
+              status_list+=("${b}: not merged")
+            fi
+          done
+
+          joined=$(IFS='; '; echo "${status_list[*]}")
+          echo "status=${joined}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate deterministic summaries
+        id: summaries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            tag="${{ github.event.release.tag_name }}"
+            name="${{ github.event.release.name }}"
+            body="${{ github.event.release.body }}"
+            first_line=$(printf '%s' "$body" | head -n 1)
+
+            l1="Release ${tag} published${name:+ - ${name}}"
+            if [[ -n "$first_line" ]]; then
+              l2="${first_line}"
+            else
+              l2="Published by ${{ github.actor }} for ${{ github.repository }}"
+            fi
+          else
+            subject="${{ github.event.head_commit.message }}"
+            subject=$(printf '%s' "$subject" | head -n 1)
+            short_sha="${GITHUB_SHA::7}"
+            ref="${GITHUB_REF_NAME}"
+
+            l1="${ref}: ${subject:-Commit update}"
+            l2="Commit ${short_sha} by ${{ github.actor }} on ${{ github.repository }}"
+          fi
+
+          {
+            echo "l1<<EOF"
+            echo "$l1"
+            echo "EOF"
+            echo "l2<<EOF"
+            echo "$l2"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update Confluence tracker
+        env:
+          TRACKER_CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL }}
+          TRACKER_CONFLUENCE_EMAIL: ${{ secrets.CONFLUENCE_EMAIL }}
+          TRACKER_CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          TRACKER_CONFLUENCE_PAGE_ID: ${{ secrets.CONFLUENCE_PAGE_ID }}
+
+          TRACKER_COMPONENT_NAME: ${{ github.event.repository.name }}
+          TRACKER_EVENT_NAME: ${{ github.event_name }}
+          TRACKER_GITHUB_SHA: ${{ github.sha }}
+          TRACKER_GITHUB_REF_NAME: ${{ github.ref_name }}
+          TRACKER_GITHUB_REPOSITORY: ${{ github.repository }}
+          TRACKER_GITHUB_SERVER_URL: ${{ github.server_url }}
+          TRACKER_ACTOR: ${{ github.actor }}
+
+          TRACKER_RELEASE_TAG: ${{ github.event.release.tag_name }}
+          TRACKER_RELEASE_NAME: ${{ github.event.release.name }}
+          TRACKER_RELEASE_BODY: ${{ github.event.release.body }}
+          TRACKER_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+
+          TRACKER_JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          TRACKER_ENABLE_JIRA_LINKS: ${{ vars.ENABLE_JIRA_LINKS }}
+          TRACKER_RELEASE_FIX_STATUS: ${{ steps.release_fix.outputs.status }}
+          TRACKER_L1_SUMMARY: ${{ steps.summaries.outputs.l1 }}
+          TRACKER_L2_SUMMARY: ${{ steps.summaries.outputs.l2 }}
+        run: python scripts/update_confluence_tracker.py

@@ -1,0 +1,154 @@
+name: Confluence Jira Sync
+
+# Stable ownership model:
+# - Jira delivery + regression sync runs in this workflow
+# - Commit/release branch tracking runs in component-tracker.yml
+# - Regression blast-radius checks run in regression-impact.yml
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which Jira sync to run"
+        type: choice
+        default: both
+        options:
+          - both
+          - jira-status
+          - jira-regression
+
+permissions:
+  contents: read
+
+jobs:
+  jira-status-to-confluence:
+    name: Jira delivery status -> Confluence
+    if: >
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'jira-status' || github.event.inputs.target == 'both'))
+    runs-on: ubuntu-latest
+    env:
+      TRACKER_CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL }}
+      TRACKER_CONFLUENCE_EMAIL: ${{ secrets.CONFLUENCE_EMAIL }}
+      TRACKER_CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+      TRACKER_CONFLUENCE_JIRA_PAGE_ID: ${{ secrets.CONFLUENCE_JIRA_PAGE_ID }}
+      TRACKER_JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      TRACKER_JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      TRACKER_JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      TRACKER_JIRA_JQL: ${{ vars.JIRA_JQL }}
+      TRACKER_JIRA_TEAM_NAME: ${{ vars.JIRA_TEAM_NAME }}
+      TRACKER_JIRA_TEAM_FIELD: ${{ vars.JIRA_TEAM_FIELD }}
+      TRACKER_SLA_IN_PROGRESS_DAYS: ${{ vars.SLA_IN_PROGRESS_DAYS }}
+      TRACKER_SLA_BLOCKED_DAYS: ${{ vars.SLA_BLOCKED_DAYS }}
+      TRACKER_BLOCKED_STATUSES: ${{ vars.BLOCKED_STATUSES }}
+      TRACKER_DONE_STATUSES: ${{ vars.DONE_STATUSES }}
+      TRACKER_BLOCKED_REASON_FIELD: ${{ vars.BLOCKED_REASON_FIELD }}
+      TRACKER_DEPENDENCY_LINK_TYPES: ${{ vars.DEPENDENCY_LINK_TYPES }}
+      TRACKER_REMOVE_STALE_ROWS: ${{ vars.REMOVE_STALE_ROWS }}
+      TRACKER_KEEP_SNAPSHOT_ROWS: ${{ vars.KEEP_SNAPSHOT_ROWS }}
+      TRACKER_OPEN_REGRESSION_COUNT: ${{ vars.OPEN_REGRESSION_COUNT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Validate required env vars (names only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          required=(
+            TRACKER_CONFLUENCE_BASE_URL
+            TRACKER_CONFLUENCE_EMAIL
+            TRACKER_CONFLUENCE_API_TOKEN
+            TRACKER_CONFLUENCE_JIRA_PAGE_ID
+            TRACKER_JIRA_BASE_URL
+            TRACKER_JIRA_EMAIL
+            TRACKER_JIRA_API_TOKEN
+            TRACKER_JIRA_JQL
+          )
+          for v in "${required[@]}"; do
+            if [[ -z "${!v:-}" ]]; then
+              missing+=("$v")
+            fi
+          done
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "Missing required env vars: ${missing[*]}" >&2
+            exit 1
+          fi
+          echo "Required env validation passed."
+
+      - name: Sync Jira delivery status into Confluence
+        working-directory: scripts
+        run: python update_confluence_jira.py
+
+  jira-regression-to-confluence:
+    name: Jira regression tracker -> Confluence
+    if: >
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.target == 'jira-regression' || github.event.inputs.target == 'both'))
+    runs-on: ubuntu-latest
+    env:
+      TRACKER_CONFLUENCE_BASE_URL: ${{ secrets.CONFLUENCE_BASE_URL }}
+      TRACKER_CONFLUENCE_EMAIL: ${{ secrets.CONFLUENCE_EMAIL }}
+      TRACKER_CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+      TRACKER_CONFLUENCE_REGRESSION_PAGE_ID: ${{ secrets.CONFLUENCE_REGRESSION_PAGE_ID }}
+      TRACKER_JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      TRACKER_JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      TRACKER_JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      TRACKER_JIRA_REGRESSION_JQL: ${{ vars.JIRA_REGRESSION_JQL }}
+      TRACKER_JIRA_PARENT_LINK_TYPE: ${{ vars.JIRA_PARENT_LINK_TYPE }}
+      TRACKER_JIRA_TEAM_NAME: ${{ vars.JIRA_TEAM_NAME }}
+      TRACKER_JIRA_TEAM_FIELD: ${{ vars.JIRA_TEAM_FIELD }}
+      TRACKER_PARENT_LINK_SLA_DAYS: ${{ vars.PARENT_LINK_SLA_DAYS }}
+      TRACKER_REMOVE_STALE_ROWS: ${{ vars.REMOVE_STALE_ROWS }}
+      TRACKER_KEEP_SNAPSHOT_ROWS: ${{ vars.KEEP_SNAPSHOT_ROWS }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Validate required env vars (names only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          required=(
+            TRACKER_CONFLUENCE_BASE_URL
+            TRACKER_CONFLUENCE_EMAIL
+            TRACKER_CONFLUENCE_API_TOKEN
+            TRACKER_CONFLUENCE_REGRESSION_PAGE_ID
+            TRACKER_JIRA_BASE_URL
+            TRACKER_JIRA_EMAIL
+            TRACKER_JIRA_API_TOKEN
+            TRACKER_JIRA_REGRESSION_JQL
+            TRACKER_JIRA_PARENT_LINK_TYPE
+          )
+          for v in "${required[@]}"; do
+            if [[ -z "${!v:-}" ]]; then
+              missing+=("$v")
+            fi
+          done
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "Missing required env vars: ${missing[*]}" >&2
+            exit 1
+          fi
+          echo "Required env validation passed."
+
+      - name: Sync regression tickets into Confluence
+        working-directory: scripts
+        run: python update_confluence_regression.py

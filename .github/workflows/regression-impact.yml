@@ -1,0 +1,60 @@
+name: Regression Impact Check
+
+# Manually triggered from the Actions tab.
+# Provide the culprit commit SHA (short or full) and an optional Jira ticket.
+# The workflow:
+#   1. Checks which tracked branches (main, develop, release/*, support/*)
+#      contain that commit.
+#   2. Prints a categorised impact report in the workflow log.
+#   3. Posts a note row to the Confluence tracker page (same secrets as the
+#      main component-tracker workflow — no extra setup required).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Culprit commit SHA (short or full)"
+        required: true
+      ticket:
+        description: "Jira ticket ID for this regression (e.g. RDKB-1234)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  regression-impact:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository (full history + all remote refs)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history required for git branch --contains
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run regression impact check
+        env:
+          REGRESSION_SHA:    ${{ inputs.sha }}
+          REGRESSION_TICKET: ${{ inputs.ticket }}
+          # Confluence credentials — reuse the same secrets as the tracker
+          TRACKER_CONFLUENCE_BASE_URL:  ${{ secrets.CONFLUENCE_BASE_URL }}
+          TRACKER_CONFLUENCE_EMAIL:     ${{ secrets.CONFLUENCE_EMAIL }}
+          TRACKER_CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          TRACKER_CONFLUENCE_PAGE_ID:   ${{ secrets.CONFLUENCE_PAGE_ID }}
+          # Repo context for commit links
+          TRACKER_GITHUB_REPOSITORY:    ${{ github.repository }}
+          TRACKER_GITHUB_SERVER_URL:    ${{ github.server_url }}
+        run: |
+          python scripts/check_regression_impact.py \
+            --sha "$REGRESSION_SHA" \
+            --ticket "$REGRESSION_TICKET" \
+            --post-confluence
