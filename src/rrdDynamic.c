@@ -127,7 +127,20 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
     unsigned int prefixlen = strlen(RDM_PKG_PREFIX);
     unsigned int suffixlen = strlen(RDM_PKG_SUFFIX);
     unsigned int nodelen = 0;
+    size_t boundedNodeLen = 0;
 
+    if ((pissueStructNode == NULL) || (pissueStructNode->Node == NULL))
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid issue node data for profile length calculation\n", __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    boundedNodeLen = strnlen(pissueStructNode->Node, RRD_DYNAMIC_PROFILE_MAX_LENGTH + 1);
+    if (boundedNodeLen > RRD_DYNAMIC_PROFILE_MAX_LENGTH)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue node length must be less than %d\n", __FUNCTION__, __LINE__, RRD_DYNAMIC_PROFILE_MAX_LENGTH);
+        return -1;
+    }
     /* Calculate Length for Device Type for Deep Sleep Awake Event*/
     if (isDeepSleepAwakeEvent)
     {
@@ -143,7 +156,7 @@ int RRDGetProfileStringLength(issueNodeData *pissueStructNode, bool isDeepSleepA
     }
     else
     {
-        nodelen = strlen(pissueStructNode->Node);
+        nodelen = boundedNodeLen;
         length = prefixlen + nodelen + suffixlen;
     }
     return length + 1;
@@ -270,9 +283,15 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
             {
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for Request RDM Manager Download.\n", __FUNCTION__, __LINE__);
             }
-            free(pissueStructNode->Node);
-            free(pissueStructNode->subNode);
         }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid profile length, skipping download request\n", __FUNCTION__, __LINE__);
+        }
+        free(pissueStructNode->Node);
+        free(pissueStructNode->subNode);
+        pissueStructNode->Node = NULL;
+        pissueStructNode->subNode = NULL;
     }
     else
     {

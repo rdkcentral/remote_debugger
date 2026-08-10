@@ -58,6 +58,7 @@ extern "C"
 #define RRD_MEDIA_APPS "/media/apps/"
 #define RDM_PKG_PREFIX "RDK-RRD-"
 #define RDM_PKG_SUFFIX ":1.0"
+#define RRD_DYNAMIC_PROFILE_MAX_LENGTH 34
 
 #ifndef RRD_PROFILE_LIST
 #define RRD_DEVICE_PROFILE ""
