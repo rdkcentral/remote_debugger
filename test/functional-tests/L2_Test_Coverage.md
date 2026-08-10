@@ -19,6 +19,11 @@
 | Source modules (conditional IARMBUS) | 7 |
 | **Overall feature coverage** | **95%** (21/22 test files have matching features) |
 | **Source behavior coverage** | **~65%** (happy paths covered; error/edge paths mostly untested) |
+<!-- lcov-metrics-start -->
+| **Line coverage (lcov)** | pending |
+| **Branch coverage (lcov)** | pending |
+| **Function coverage (lcov)** | pending |
+<!-- lcov-metrics-end -->
 
 ---
 
