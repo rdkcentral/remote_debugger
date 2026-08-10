@@ -55,6 +55,8 @@ def remove_logfile():
 
 
 def kill_rrd(signal: int=9):
+    if os.environ.get("RRD_COVERAGE_MODE") and signal == 9:
+        signal = 15
     print(f"Received Signal to kill remotedebugger {signal} with pid {get_pid('remotedebugger')}")
     resp = subprocess.run(f"kill -{signal} {get_pid('remotedebugger')}", shell=True, capture_output=True)
     print(resp.stdout.decode('utf-8'))
