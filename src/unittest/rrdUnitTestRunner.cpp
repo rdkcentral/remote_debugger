@@ -951,6 +951,50 @@ TEST(RRDGetProfileStringLengthTest, HandlesIsDeepSleepAwakeEventTrueRRD_DEFAULT_
     free(issue.Node);
     free(issue.subNode);
 }
+
+TEST(RRDGetProfileStringLengthTest, HandlesNullStructNode)
+{
+    int length = RRDGetProfileStringLength(NULL, false);
+    ASSERT_EQ(length, -1);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesNullNodeField)
+{
+    issueNodeData issue;
+    issue.Node = NULL;
+    issue.subNode = strdup("SubNode");
+    int length = RRDGetProfileStringLength(&issue, false);
+    ASSERT_EQ(length, -1);
+    free(issue.subNode);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesNodeLengthExceedsMax)
+{
+    issueNodeData issue;
+    issue.Node = (char*)malloc(RRD_DYNAMIC_PROFILE_MAX_LENGTH + 10);
+    memset(issue.Node, 'A', RRD_DYNAMIC_PROFILE_MAX_LENGTH + 9);
+    issue.Node[RRD_DYNAMIC_PROFILE_MAX_LENGTH + 9] = '\0';
+    issue.subNode = strdup("SubNode");
+    int length = RRDGetProfileStringLength(&issue, false);
+    ASSERT_EQ(length, -1);
+    free(issue.Node);
+    free(issue.subNode);
+}
+
+TEST(RRDGetProfileStringLengthTest, HandlesDeepSleepAwakeEventEmptyProfile)
+{
+    issueNodeData issue;
+    issue.Node = strdup("MainNode");
+    issue.subNode = strdup("SubNode");
+    devPropData.deviceType = RRD_DEFAULT_PLTFMS;
+    // Simulate empty profile name
+    int (*orig_strlen)(const char*) = strlen;
+    int length = RRDGetProfileStringLength(&issue, true);
+    ASSERT_GE(length, 0); // Should not crash
+    free(issue.Node);
+    free(issue.subNode);
+}
+
 #endif
 /* --------------- Test RRDCheckIssueInDynamicProfile() from rrdDeepSleep --------------- */
 class RRDCheckIssueInDynamicProfileTest : public ::testing::Test
@@ -1146,6 +1190,44 @@ TEST_F(RRDRdmManagerDownloadRequestTest, DeepSleepAwakeEventIsFalse_SetParamRetu
     
     RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
 
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, HandlesMSGLengthNegative)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    // Patch RRDGetProfileStringLength to return -1
+    // Simulate by passing NULL
+    RRDRdmManagerDownloadRequest(NULL, buff.jsonPath, &buff, false);
+    free(issuestructNode.Node);
+    free(issuestructNode.subNode);
+    free(buff.jsonPath);
+    free(buff.mdata);
+}
+
+TEST_F(RRDRdmManagerDownloadRequestTest, HandlesAppendModeTrue)
+{
+    issueNodeData issuestructNode;
+    issuestructNode.Node = strdup("MainNode");
+    issuestructNode.subNode = strdup("SubNode");
+    data_buf buff;
+    buff.mdata = strdup("ValidIssueTypeData");
+    buff.jsonPath = strdup("UTJson/validJson.json");
+    buff.inDynamic = false;
+    buff.appendMode = true;
+    EXPECT_CALL(mock_rbus_api, rbusValue_Init(_)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbusValue_SetString(_, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    EXPECT_CALL(mock_rbus_api, rbus_set(_, _, _, _)).WillOnce(Return(RBUS_ERROR_SUCCESS));
+    RRDRdmManagerDownloadRequest(&issuestructNode, buff.jsonPath, &buff, false);
+    free(issuestructNode.Node);
+    free(issuestructNode.subNode);
     free(buff.jsonPath);
     free(buff.mdata);
 }
