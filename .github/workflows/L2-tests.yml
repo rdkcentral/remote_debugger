@@ -98,36 +98,91 @@ jobs:
         if: github.event_name == 'push'
         run: docker cp native-platform:/tmp/l2_coverage/coverage.info /tmp/coverage.info
 
-      - name: Update L2_Coverage.md with lcov metrics
+      - name: Generate L2_Coverage.md
         if: github.event_name == 'push'
         run: |
-          sudo apt-get install -y --quiet lcov
-          lcov --summary /tmp/coverage.info --rc lcov_branch_coverage=1 2>&1 | tee /tmp/lcov_summary.txt
-          python3 - <<'EOF'
-          import re, datetime
-          summary = open('/tmp/lcov_summary.txt').read()
-          def parse(pattern, text):
-              m = re.search(pattern, text)
-              return (m.group(1) + '%', f"({m.group(2)} of {m.group(3)})") if m else ('N/A', '')
-          lines_pct,  lines_detail  = parse(r'lines\.+:\s+([\d.]+)%\s+\((\d+) of (\d+)', summary)
-          branch_pct, branch_detail = parse(r'branches\.+:\s+([\d.]+)%\s+\((\d+) of (\d+)', summary)
-          funcs_pct,  funcs_detail  = parse(r'functions\.+:\s+([\d.]+)%\s+\((\d+) of (\d+)', summary)
-          today = datetime.date.today().strftime('%Y-%m-%d')
-          new_block = (
-              '<!-- lcov-metrics-start -->\n'
-              f'| **Line coverage (lcov)** | **{lines_pct}** {lines_detail} |\n'
-              f'| **Branch coverage (lcov)** | **{branch_pct}** {branch_detail} |\n'
-              f'| **Function coverage (lcov)** | **{funcs_pct}** {funcs_detail} |\n'
-              '<!-- lcov-metrics-end -->'
-          )
-          path = 'remote_debugger/test/functional-tests/L2_Coverage.md'
-          content = open(path).read()
-          content = re.sub(r'<!-- lcov-metrics-start -->.*?<!-- lcov-metrics-end -->', new_block, content, flags=re.DOTALL)
-          content = re.sub(r'\*\*Generated:\*\* \S+', f'**Generated:** {today}', content)
-          open(path, 'w').write(content)
-          print(f'lines={lines_pct}  branches={branch_pct}  functions={funcs_pct}')
-          EOF
+            sudo apt-get install -y --quiet lcov
 
+            lcov --summary /tmp/coverage.info --rc lcov_branch_coverage=1 2>&1 | tee /tmp/lcov_summary.txt
+
+            python3 <<'EOF'
+            import re
+            import json
+            import glob
+            import datetime
+            from pathlib import Path
+
+            summary = Path("/tmp/lcov_summary.txt").read_text()
+
+            def parse(pattern):
+                m = re.search(pattern, summary)
+                if not m:
+                    return ("N/A","0","0")
+                return m.group(1), m.group(2), m.group(3)
+
+            line_pct, line_cov, line_total = parse(
+                r'lines\.+:\s+([\d.]+)%\s+\((\d+)\s+of\s+(\d+)\)'
+            )
+
+            branch_pct, branch_cov, branch_total = parse(
+                r'branches\.+:\s+([\d.]+)%\s+\((\d+)\s+of\s+(\d+)\)'
+            )
+
+            func_pct, func_cov, func_total = parse(
+                r'functions\.+:\s+([\d.]+)%\s+\((\d+)\s+of\s+(\d+)\)'
+            )
+
+            feature_files = glob.glob(
+                "remote_debugger/test/functional-tests/features/*.feature"
+            )
+
+            test_files = glob.glob(
+                "remote_debugger/test/functional-tests/tests/test_*.py"
+            )
+
+            total_tests = 0
+            total_passed = 0
+
+            for report in glob.glob("/tmp/L2_TEST_RESULTS/*.json"):
+                try:
+                    data = json.load(open(report))
+                    summary_data = data.get("summary", {})
+                    total_tests += summary_data.get("collected", 0)
+                    total_passed += summary_data.get("passed", 0)
+                except Exception:
+                    pass
+
+            report = f"""# Remote Debugger L2 Coverage Report
+
+            **Generated:** {datetime.date.today()}
+
+            ## Coverage Metrics
+
+            | Metric | Coverage |
+            |----------|----------|
+            | Line Coverage | {line_pct}% ({line_cov}/{line_total}) |
+            | Branch Coverage | {branch_pct}% ({branch_cov}/{branch_total}) |
+            | Function Coverage | {func_pct}% ({func_cov}/{func_total}) |
+
+            ## Test Inventory
+
+            | Item | Count |
+            |--------|--------|
+            | Feature Files | {len(feature_files)} |
+            | Test Files | {len(test_files)} |
+            | Tests Passed | {total_passed} |
+            | Tests Collected | {total_tests} |
+
+            Generated automatically from L2 CI execution.
+            """
+
+            Path(
+              "remote_debugger/test/functional-tests/L2_Coverage.md"
+            ).write_text(report)
+
+            print("Generated L2_Coverage.md")
+            EOF
+      
       - name: Commit updated L2_Coverage.md
         if: github.event_name == 'push'
         run: |
