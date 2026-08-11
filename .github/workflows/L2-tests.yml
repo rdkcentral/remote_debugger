@@ -98,7 +98,7 @@ jobs:
         if: github.event_name == 'push'
         run: docker cp native-platform:/tmp/l2_coverage/coverage.info /tmp/coverage.info
 
-      - name: Update L2_Test_Coverage.md with lcov metrics
+      - name: Update L2_Coverage.md with lcov metrics
         if: github.event_name == 'push'
         run: |
           sudo apt-get install -y --quiet lcov
@@ -120,7 +120,7 @@ jobs:
               f'| **Function coverage (lcov)** | **{funcs_pct}** {funcs_detail} |\n'
               '<!-- lcov-metrics-end -->'
           )
-          path = 'remote_debugger/test/functional-tests/L2_Test_Coverage.md'
+          path = 'remote_debugger/test/functional-tests/L2_Coverage.md'
           content = open(path).read()
           content = re.sub(r'<!-- lcov-metrics-start -->.*?<!-- lcov-metrics-end -->', new_block, content, flags=re.DOTALL)
           content = re.sub(r'\*\*Generated:\*\* \S+', f'**Generated:** {today}', content)
@@ -128,12 +128,12 @@ jobs:
           print(f'lines={lines_pct}  branches={branch_pct}  functions={funcs_pct}')
           EOF
 
-      - name: Commit updated L2_Test_Coverage.md
+      - name: Commit updated L2_Coverage.md
         if: github.event_name == 'push'
         run: |
           cd remote_debugger
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add test/functional-tests/L2_Test_Coverage.md
+          git add test/functional-tests/L2_Coverage.md
           git diff --cached --quiet || git commit -m "ci: update L2 lcov coverage metrics [skip ci]"
           git push
