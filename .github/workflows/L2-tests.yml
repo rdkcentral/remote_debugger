@@ -98,42 +98,21 @@ jobs:
         if: github.event_name == 'push'
         run: docker cp native-platform:/tmp/l2_coverage/coverage.info /tmp/coverage.info
 
-      - name: Update L2_Test_Coverage.md with lcov metrics
+      - name: Generate L2_Coverage.md
         if: github.event_name == 'push'
         run: |
-          sudo apt-get install -y --quiet lcov
-          lcov --summary /tmp/coverage.info --rc lcov_branch_coverage=1 2>&1 | tee /tmp/lcov_summary.txt
-          python3 - <<'EOF'
-          import re, datetime
-          summary = open('/tmp/lcov_summary.txt').read()
-          def parse(pattern, text):
-              m = re.search(pattern, text)
-              return (m.group(1) + '%', f"({m.group(2)} of {m.group(3)})") if m else ('N/A', '')
-          lines_pct,  lines_detail  = parse(r'lines\.+:\s+([\d.]+)%\s+\((\d+) of (\d+)', summary)
-          branch_pct, branch_detail = parse(r'branches\.+:\s+([\d.]+)%\s+\((\d+) of (\d+)', summary)
-          funcs_pct,  funcs_detail  = parse(r'functions\.+:\s+([\d.]+)%\s+\((\d+) of (\d+)', summary)
-          today = datetime.date.today().strftime('%Y-%m-%d')
-          new_block = (
-              '<!-- lcov-metrics-start -->\n'
-              f'| **Line coverage (lcov)** | **{lines_pct}** {lines_detail} |\n'
-              f'| **Branch coverage (lcov)** | **{branch_pct}** {branch_detail} |\n'
-              f'| **Function coverage (lcov)** | **{funcs_pct}** {funcs_detail} |\n'
-              '<!-- lcov-metrics-end -->'
-          )
-          path = 'remote_debugger/test/functional-tests/L2_Test_Coverage.md'
-          content = open(path).read()
-          content = re.sub(r'<!-- lcov-metrics-start -->.*?<!-- lcov-metrics-end -->', new_block, content, flags=re.DOTALL)
-          content = re.sub(r'\*\*Generated:\*\* \S+', f'**Generated:** {today}', content)
-          open(path, 'w').write(content)
-          print(f'lines={lines_pct}  branches={branch_pct}  functions={funcs_pct}')
-          EOF
+          python3 remote_debugger/test/functional-tests/generate_l2_coverage_report.py \
+            --tracefile    /tmp/coverage.info \
+            --features-dir remote_debugger/test/functional-tests/features \
+            --tests-dir    remote_debugger/test/functional-tests/tests \
+            --output       remote_debugger/test/functional-tests/L2_Coverage.md
 
-      - name: Commit updated L2_Test_Coverage.md
+      - name: Commit L2_Coverage.md
         if: github.event_name == 'push'
         run: |
           cd remote_debugger
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add test/functional-tests/L2_Test_Coverage.md
-          git diff --cached --quiet || git commit -m "ci: update L2 lcov coverage metrics [skip ci]"
+          git add test/functional-tests/L2_Coverage.md
+          git diff --cached --quiet || git commit -m "ci: regenerate L2_Coverage.md [skip ci]"
           git push
