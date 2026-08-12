@@ -23,6 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: remote_debugger
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
@@ -95,11 +96,13 @@ jobs:
           docker exec -i ci-container bash -c "echo 'Contents in workspace directory' && ls -l && echo '===============================' && echo 'Contents in /tmp/L2_TEST_RESULTS' && ls -l /tmp/L2_TEST_RESULTS && echo '===============================' && git config --global --add safe.directory /mnt/L2_CONTAINER_SHARED_VOLUME/remote_debugger && gtest-json-result-push.py /tmp/L2_TEST_RESULTS https://rdkeorchestrationservice.apps.cloud.comcast.net/rdke_orchestration_api/push_unit_test_results /mnt/L2_CONTAINER_SHARED_VOLUME/remote_debugger"
 
       - name: Copy lcov tracefile from container
+        id: copy_tracefile
         if: github.event_name == 'push'
+        continue-on-error: true
         run: docker cp native-platform:/tmp/l2_coverage/coverage.info /tmp/coverage.info
 
       - name: Generate L2_Coverage.md
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
         run: |
           python3 remote_debugger/test/functional-tests/generate_l2_coverage_report.py \
             --tracefile    /tmp/coverage.info \
@@ -108,7 +111,7 @@ jobs:
             --output       remote_debugger/test/functional-tests/L2_Coverage.md
 
       - name: Commit L2_Coverage.md
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
         run: |
           cd remote_debugger
           git config user.name  "github-actions[bot]"
