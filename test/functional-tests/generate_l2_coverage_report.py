@@ -145,7 +145,7 @@ def build_mapping(features, tests):
 # ---------------------------------------------------------------------------
 
 _RECOMMENDATIONS = """\
-## 5. Gap Recommendations
+## 6. Gap Recommendations
 
 ### Priority 1 — Must Fix
 
@@ -425,7 +425,7 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
     lines += [
         '---',
         '',
-        '## 6. Appendix: File Inventory',
+        '## 7. Appendix: File Inventory',
         '',
         '### Feature Files',
         '',
