@@ -22,19 +22,23 @@ RESULT_DIR="/tmp/l2_test_report"
 STATIC_PROFILE_DIR="/etc/rrd"
 OUTPUT_DIR="/tmp/rrd"
 LIB_DIR="/lib/rdk"
+COV_DIR="/tmp/l2_coverage"
+
+export RRD_COVERAGE_MODE=1
 
 mkdir -p "$RESULT_DIR"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$STATIC_PROFILE_DIR"
 mkdir -p "$LIB_DIR"
+mkdir -p "$COV_DIR"
 mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
 echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
 
 
-apt-get remove systemd
-apt-get update && apt-get install -y tcpdump
+apt-get remove -y systemd || true
+apt-get update && apt-get install -y tcpdump lcov
 
 echo "LOG_PATH=/opt/logs" >> /etc/include.properties
 cp remote_debugger.json /etc/rrd/remote_debugger.json
@@ -59,6 +63,11 @@ ln -s /usr/local/bin/journalctl /usr/bin/journalctl
 
 rm -rf /tmp/rrd/*
 rm -rf /opt/logs/remotedebugger.log*
+
+# lcov baseline — capture zero counters before any test runs
+lcov --zerocounters --directory "$(pwd)/src"
+lcov --capture --initial --directory "$(pwd)/src" \
+     --output-file "$COV_DIR/coverage_base.info" --rc lcov_branch_coverage=1
 
 # Run L2 Test cases
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_missing_report.json test/functional-tests/tests/test_rrd_dynamic_profile_missing_report.py
@@ -90,5 +99,18 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_pr
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_rdm_node_length_exceeded.json test/functional-tests/tests/test_rrd_dynamic_profile_rdm_node_length_exceeded.py
 
 
-
+# Capture, filter, and report coverage
+lcov --capture --directory "$(pwd)/src" \
+     --output-file "$COV_DIR/coverage_test.info" --rc lcov_branch_coverage=1
+lcov --add-tracefile "$COV_DIR/coverage_base.info" \
+     --add-tracefile "$COV_DIR/coverage_test.info" \
+     --output-file "$COV_DIR/coverage_merged.info" --rc lcov_branch_coverage=1
+lcov --remove "$COV_DIR/coverage_merged.info" '/usr/*' \
+     --output-file "$COV_DIR/coverage.info" --rc lcov_branch_coverage=1
+genhtml "$COV_DIR/coverage.info" \
+        --output-directory "$COV_DIR/html" \
+        --title "Remote Debugger L2 Coverage" \
+        --branch-coverage --legend
+echo "Coverage report : $COV_DIR/html/index.html"
+echo "lcov tracefile  : $COV_DIR/coverage.info"
 
