@@ -24,6 +24,9 @@
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
 
+#ifdef INCLUDE_BREAKPAD
+#include "breakpad_wrapper.h"
+#endif
 
 devicePropertiesData devPropData;
 
