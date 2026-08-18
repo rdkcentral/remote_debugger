@@ -85,5 +85,18 @@ AC_ARG_ENABLE([iarmbusSupport],
 esac],[iarmbusSupport=false])
 AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 
+BREAKPAD_CFLAGS=" "
+BREAKPAD_LFLAGS=" "
+AC_ARG_ENABLE([breakpad],
+	      AS_HELP_STRING([--enable-breakpad],[enable breakpad support (default is no)]),
+	      [
+	        case "${enableval}" in
+	         yes) BREAKPAD_CFLAGS="-DINCLUDE_BREAKPAD" ;;
+		 no) AC_MSG_ERROR([breakpad is disabled]) ;;
+		 *) AC_MSG_ERROR([bad value ${enableval} for --enable-breakpad]) ;;
+		 esac
+		 ],
+              [echo "breakpad is disabled"])
+
 AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT
