@@ -427,6 +427,13 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         return;
     }
 
+    char traceParent[TRACE_MAX] = {0};
+    char traceState[TRACE_MAX] = {0};
+    rbusHandle_GetTraceContextAsString(handle,traceParent, sizeof(traceParent),traceState, sizeof(traceState));
+
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]  Thamim: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Thamim: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, traceParent);
+
     int len = strlen(rbusValue_GetString(value, NULL))+1;
     dataMsg = (char *) calloc(1, len);
     if(!dataMsg)
