@@ -37,6 +37,7 @@ extern "C"
 #endif
 #endif
 
+#include "rdk_otlp_instrumentation.h"
 #define TRACE_MAX 512
 
 #define RDK_REMOTE_DEBUGGER_NAME "REMOTE_DEBUGGER"

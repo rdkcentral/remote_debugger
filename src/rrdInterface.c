@@ -130,6 +130,9 @@ int RRD_subscribe()
 	return ret;
     }
 #endif
+    //rdk_otlp_init
+    rdk_otlp_init("remote_debugger_consumer", "1.0.0");
+
     //RBUS Event Subscribe for RRD
     ret = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
     if (ret != 0)
@@ -418,21 +421,25 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     (void)(handle);
     (void)(subscription);
 
-    rbusValue_t value = rbusObject_GetValue(event->data, "value");
-
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
-    if(!value)
-    {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: event->data value is NULL \n", __FUNCTION__, __LINE__);
-        return;
-    }
-
     char traceParent[TRACE_MAX] = {0};
     char traceState[TRACE_MAX] = {0};
     rbusHandle_GetTraceContextAsString(handle,traceParent, sizeof(traceParent),traceState, sizeof(traceState));
 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]  Thamim: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Thamim: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, traceParent);
+
+    if (traceParent[0] != '\0')
+    {
+        rdk_otlp_start_child_from_traceparent(traceParent,"rbus.event.receive");
+    }
+
+    rbusValue_t value = rbusObject_GetValue(event->data, "value");
+
+    if(!value)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: event->data value is NULL \n", __FUNCTION__, __LINE__);
+        return;
+    }
 
     int len = strlen(rbusValue_GetString(value, NULL))+1;
     dataMsg = (char *) calloc(1, len);
@@ -454,6 +461,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         /* coverity[leaked_storage] */
     }
 
+    rdk_otlp_finish_child_span();
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 
