@@ -86,7 +86,35 @@ void processIssueTypeEvent(data_buf *rbuf)
                 cmdBuff = (data_buf *)malloc(sizeof(data_buf));
                 if (cmdBuff)
                 {
-                    dataMsgLen = strlen(cmdMap[index]) + 1;
+                    char base[128] = {0};
+                    char local_suffix[128] = {0};
+                    split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty issue type after parsing token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
+                    removeSpecialCharacterfromIssueTypeList(base);
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty base after sanitization for token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
+                    dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
                     if(cmdBuff->inDynamic)
@@ -95,9 +123,19 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
+
+                    /* Store suffix for this issue type */
+                    cmdBuff->suffix = NULL;
+                    if (local_suffix[0] != '\0') {
+                        cmdBuff->suffix = strdup(local_suffix);
+                        if (cmdBuff->suffix == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to allocate memory for suffix... \n", __FUNCTION__, __LINE__);
+                        }
+                    }
                     if (cmdBuff->mdata)
                     {
-                        strncpy((char *)cmdBuff->mdata, cmdMap[index], dataMsgLen);
+                        strncpy((char *)cmdBuff->mdata, base, dataMsgLen);
                         processIssueType(cmdBuff);
                     }
                     else
@@ -106,6 +144,11 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
 		    if(cmdBuff)
 		    {
+                    if (cmdBuff->suffix)
+                    {
+                        free(cmdBuff->suffix);
+                        cmdBuff->suffix = NULL;
+                    }
                         free(cmdBuff);
 			cmdBuff = NULL;
 		    }
@@ -175,31 +218,126 @@ static void processIssueType(data_buf *rbuf)
                     if (staticprofiledata == NULL)
                     {
                         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Command Info not found for IssueType!!! \n", __FUNCTION__, __LINE__);
+                        // Free dynamicprofiledata since we can't proceed
+                        if (dynamicprofiledata != NULL)
+                        {
+                            if (dynamicprofiledata->rfcvalue != NULL)
+                            {
+                                free(dynamicprofiledata->rfcvalue);
+                            }
+                            if (dynamicprofiledata->command != NULL)
+                            {
+                                free(dynamicprofiledata->command);
+                            }
+                            free(dynamicprofiledata);
+                        }
                     }
                     else
                     {
                         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Read complete for Static Profile: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticprofiledata->rfcvalue, staticprofiledata->command, staticprofiledata->timeout);
-                        //Remove the double quotes
-                        size_t staticstrlen = strlen(staticprofiledata->command);
-                        size_t dynamicstrlen = strlen(dynamicprofiledata->command);
-                        if (staticstrlen > 0 && staticprofiledata->command[staticstrlen - 1] == '"') {
-                            staticprofiledata->command[staticstrlen - 1] = '\0';
+                        
+                        // Check if commands are NULL before using them
+                        if (dynamicprofiledata->command == NULL || staticprofiledata->command == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Command is NULL in dynamic or static profile... \n", __FUNCTION__, __LINE__);
+                            // Free dynamicprofiledata
+                            if (dynamicprofiledata != NULL)
+                            {
+                                if (dynamicprofiledata->rfcvalue != NULL)
+                                {
+                                    free(dynamicprofiledata->rfcvalue);
+                                }
+                                if (dynamicprofiledata->command != NULL)
+                                {
+                                    free(dynamicprofiledata->command);
+                                }
+                                free(dynamicprofiledata);
+                            }
+                            // Free staticprofiledata
+                            if (staticprofiledata != NULL)
+                            {
+                                if (staticprofiledata->rfcvalue != NULL)
+                                {
+                                    free(staticprofiledata->rfcvalue);
+                                }
+                                if (staticprofiledata->command != NULL)
+                                {
+                                    free(staticprofiledata->command);
+                                }
+                                free(staticprofiledata);
+                            }
                         }
-                        if (dynamicprofiledata->command[0] == '"') {
-                            dynamicprofiledata->command[0] = COMMAND_DELIM;
-                        }
-                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamicprofiledata->command);
+                        else
+                        {
+                            //Remove the double quotes
+                            size_t staticstrlen = strlen(staticprofiledata->command);
+                            size_t dynamicstrlen = strlen(dynamicprofiledata->command);
+                            if (staticstrlen > 0 && staticprofiledata->command[staticstrlen - 1] == '"') {
+                                staticprofiledata->command[staticstrlen - 1] = '\0';
+                                staticstrlen--; // Update length after removing trailing quote
+                            }
+                            if (dynamicprofiledata->command[0] == '"') {
+                                dynamicprofiledata->command[0] = COMMAND_DELIM;
+                            }
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamicprofiledata->command);
 
-                        size_t appendstrlen = ((staticstrlen - 1) + dynamicstrlen + 1);
-                        char *appendcommandstr = (char *)realloc(staticprofiledata->command, appendstrlen);
-                        if (appendcommandstr == NULL) {
-                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                            size_t appendstrlen = (staticstrlen + dynamicstrlen + 1);
+                            char *appendcommandstr = (char *)realloc(staticprofiledata->command, appendstrlen);
+                            if (appendcommandstr == NULL) {
+                                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                                // Free staticprofiledata on realloc failure
+                                if (staticprofiledata != NULL)
+                                {
+                                    if (staticprofiledata->rfcvalue != NULL)
+                                    {
+                                        free(staticprofiledata->rfcvalue);
+                                    }
+                                    if (staticprofiledata->command != NULL)
+                                    {
+                                        free(staticprofiledata->command);
+                                    }
+                                    free(staticprofiledata);
+                                    staticprofiledata = NULL; // Set to NULL to prevent double-free
+                                }
+                                // Free dynamicprofiledata on realloc failure
+                                if (dynamicprofiledata != NULL)
+                                {
+                                    if (dynamicprofiledata->rfcvalue != NULL)
+                                    {
+                                        free(dynamicprofiledata->rfcvalue);
+                                    }
+                                    if (dynamicprofiledata->command != NULL)
+                                    {
+                                        free(dynamicprofiledata->command);
+                                    }
+                                    free(dynamicprofiledata);
+                                    dynamicprofiledata = NULL; // Set to NULL to prevent double-free
+                                }
+                            }
+                            else
+                            {
+                                strcat(appendcommandstr, dynamicprofiledata->command);
+                                staticprofiledata->command = appendcommandstr;
+                                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Updated command after append from dynamic and static profile: %s \n", __FUNCTION__, __LINE__, staticprofiledata->command);
+                                RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
+                                checkIssueNodeInfo(pIssueNode, NULL, rbuf, false, staticprofiledata);
+                                // NOTE: staticprofiledata is freed by executeCommands() via checkIssueNodeInfo()
+                                // Do NOT free staticprofiledata here to avoid double-free
+                            }
+                            // Free dynamicprofiledata after use
+                            if (dynamicprofiledata != NULL)
+                            {
+                                if (dynamicprofiledata->rfcvalue != NULL)
+                                {
+                                    free(dynamicprofiledata->rfcvalue);
+                                }
+                                if (dynamicprofiledata->command != NULL)
+                                {
+                                    free(dynamicprofiledata->command);
+                                }
+                                free(dynamicprofiledata);
+                            }
                         }
-                        strcat(appendcommandstr, dynamicprofiledata->command);
-                        staticprofiledata->command = appendcommandstr;
-                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Updated command after append from dynamic and static profile: %s \n", __FUNCTION__, __LINE__, staticprofiledata->command);
-                        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
-                        checkIssueNodeInfo(pIssueNode, NULL, rbuf, false, staticprofiledata); 
                     }
                 }
 	    }	    
@@ -308,12 +446,17 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
 #if !defined(GTEST_ENABLE)
     jsonParsed = readAndParseJSON(RRD_JSON_FILE);
 #else
-    jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    if (rbuf->jsonPath != NULL)
+    {
+        jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    }
 #endif
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+        return;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Static JSON... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
@@ -469,6 +612,29 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     suffixlen = strlen(RDM_PKG_SUFFIX);
     dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
 #else
+    if ((rbuf == NULL) || (rbuf->jsonPath == NULL))
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL, skipping installed package check... \n", __FUNCTION__, __LINE__);
+        if (rbuf != NULL)
+        {
+            if (rbuf->mdata != NULL)
+            {
+                free(rbuf->mdata);
+                rbuf->mdata = NULL;
+            }
+			if (rbuf->suffix != NULL)
+            {
+                free(rbuf->suffix);
+                rbuf->suffix = NULL;
+            }
+            if (rbuf->jsonPath != NULL)
+            {
+                free(rbuf->jsonPath);
+                rbuf->jsonPath = NULL;
+            }
+        }
+        return;
+    }
     int utjsonlen = strlen(rbuf->jsonPath);
     dynJSONPath = (char *)malloc(utjsonlen + 1);
 #endif
@@ -553,7 +719,7 @@ static void removeSpecialCharacterfromIssueTypeList(char *str)
 
     while (str[source] != '\0')
     {
-        if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
+		if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
         {
             str[destination] = str[source];
             ++destination;
@@ -577,7 +743,6 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
     int cnt = 1, i = 0;
     char *str = input_str;
 
-    removeSpecialCharacterfromIssueTypeList(str);
     while (*str == delimeter)
         str++;
 

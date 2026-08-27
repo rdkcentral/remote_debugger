@@ -73,6 +73,21 @@ def grep_rrdlogs(search: str):
         print(f"Could not read file {LOG_FILE}: {e}")
     return search_result
 
+def check_service_start_success(issue_type: str):
+    """Check that service-start logs include a success marker.
+
+    Args:
+        issue_type: Issue type used in the runtime service name.
+
+    Raises:
+        AssertionError: If matching service-start logs are missing or do not
+            include the "service success..." message.
+    """
+    service_start = f"Starting remote_debugger_{issue_type}"
+    start_logs = grep_rrdlogs(service_start)
+    assert service_start in start_logs, f"Service start message not found for issue type '{issue_type}'"
+    assert "service success..." in start_logs, f"Service success marker not found for issue type '{issue_type}'"
+
 def check_file_exists(file_path):
     return os.path.isfile(file_path)
 
@@ -103,6 +118,20 @@ def get_issue_type():
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode == 0
     return result.stdout.strip()
+
+
+def remove_upload_lock():
+    """Remove the upload lock file to prevent test hangs"""
+    lock_file = "/tmp/.log-upload.lock"
+    try:
+        if os.path.exists(lock_file):
+            os.remove(lock_file)
+            print(f"Upload lock file {lock_file} removed.")
+        else:
+            print(f"Upload lock file {lock_file} does not exist.")
+    except Exception as e:
+        print(f"Could not remove upload lock file {lock_file}: {e}")
+
 
 def remove_outdir_contents(directory):
     if os.path.exists(directory):

@@ -26,6 +26,7 @@ extern "C"
 #endif
 
 #include "rrdCommon.h"
+#include "rrd_upload.h"
 
 int uploadDebugoutput(char *outdir, char *issuename);
 

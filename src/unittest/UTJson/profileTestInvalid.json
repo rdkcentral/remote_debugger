@@ -1,0 +1,15 @@
+{
+  "Video": [
+    {
+      "VideoDecodeFailure": {
+        "Commands": "cat /proc/cpuinfo"
+      }
+    }
+  // Missing closing brace and comma errors
+  "Audio": [
+    {
+      "AudioLoss" {
+        "Commands": "amixer"
+      }
+    }
+  ]

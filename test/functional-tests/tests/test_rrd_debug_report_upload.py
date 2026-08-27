@@ -34,11 +34,12 @@ def reset_issuetype_rfc():
 
 def get_rrd_tarfile():
     logfile = '/opt/logs/remotedebugger.log.0'
-    command = f"grep 'uploadSTBLogs.sh' {logfile} | grep -oP '\\S+\\.tgz'"
+    command = f"grep 'Generated filename:' {logfile} | grep -oP '\\S+\\.tgz'"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         return result.stdout.strip()
     return None
+
 
 def download_file(filename):
     url = f"https://mockxconf:50054/tmp/{filename}"
@@ -125,23 +126,22 @@ def test_remote_debugger_trigger_event():
     DEBUG_FILE = "Adding Details of Debug commands to Output File"
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
-    SERVICE_START = f"Starting remote_debugger_{ISSUE_STRING} service success"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    check_service_start_success(ISSUE_STRING)
 
-    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{ISSUE_STRING}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{ISSUE_STRING}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     result = check_output_dir()
     print(result)
 
-    UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
+    UPLOAD_LOGS = "Starting Upload Debug output via API..."
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
 

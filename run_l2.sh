@@ -30,6 +30,8 @@ mkdir -p "$LIB_DIR"
 mkdir -p /media/apps/RDK-RRD-Test/etc/rrd
 
 touch /media/apps/RDK-RRD-Test/etc/rrd/remote_debugger.json
+echo "AA:BB:CC:DD:EE:FF" >> /tmp/.estb_mac
+
 
 apt-get remove systemd
 apt-get update && apt-get install -y tcpdump
@@ -70,6 +72,8 @@ pytest  --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_s
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_start_control.json test/functional-tests/tests/test_rrd_start_control.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_start_subscribe_and_wait.json test/functional-tests/tests/test_rrd_start_subscribe_and_wait.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report.json test/functional-tests/tests/test_rrd_static_profile_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report_with_suffix.json test/functional-tests/tests/test_rrd_static_profile_report_with_suffix.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_static_profile_report_with_suffix_negative.json test/functional-tests/tests/test_rrd_static_profile_report_with_suffix_negative_case.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_corrupted_static_profile_report.json test/functional-tests/tests/test_rrd_corrupted_static_profile_report.py
 cp remote_debugger.json /etc/rrd/
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_harmfull_static_profile_report.json test/functional-tests/tests/test_rrd_harmful_command_static_report.py
@@ -79,3 +83,12 @@ pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_st
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_background_cmd_static_profile_report.json test/functional-tests/tests/test_rrd_background_cmd_static_profile_report.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_debug_report_upload.json test/functional-tests/tests/test_rrd_debug_report_upload.py
 pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_deepsleep_static.json test/functional-tests/tests/test_rrd_deepsleep_static_report.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_c_api_upload.json test/functional-tests/tests/test_rrd_c_api_upload.py
+
+cp remote_debugger.json /etc/rrd/
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_profile_data.json test/functional-tests/tests/test_rrd_profile_data.py
+pytest --json-report --json-report-summary --json-report-file $RESULT_DIR/rrd_dynamic_profile_rdm_node_length_exceeded.json test/functional-tests/tests/test_rrd_dynamic_profile_rdm_node_length_exceeded.py
+
+
+
+

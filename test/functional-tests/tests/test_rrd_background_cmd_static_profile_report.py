@@ -108,23 +108,22 @@ def test_remote_debugger_trigger_event():
     DEBUG_FILE = "Adding Details of Debug commands to Output File"
     assert DEBUG_FILE in grep_rrdlogs(DEBUG_FILE)
 
-    SERVICE_START = f"Starting remote_debugger_{BACKGROUND_STRING} service success"
-    assert SERVICE_START in grep_rrdlogs(SERVICE_START)
+    check_service_start_success(BACKGROUND_STRING)
 
-    JOURNAL_START = f"journalctl remote_debugger_{BACKGROUND_STRING} service success"
+    JOURNAL_START = f"journalctl remote_debugger_{BACKGROUND_STRING}"
     assert JOURNAL_START in grep_rrdlogs(JOURNAL_START)
 
     SLEEP_TIME = "Sleeping with timeout"
     assert SLEEP_TIME in grep_rrdlogs(SLEEP_TIME)
     sleep(20)
 
-    SERVICE_STOP = f"Stopping remote_debugger_{BACKGROUND_STRING} service"
+    SERVICE_STOP = f"Stopping remote_debugger_{BACKGROUND_STRING}"
     assert SERVICE_STOP in grep_rrdlogs(SERVICE_STOP)
 
     result = check_output_dir()
     print(result)
 
-    UPLOAD_LOGS = "Starting Upload Debug output Script: /lib/rdk/uploadRRDLogs.sh"
+    UPLOAD_LOGS = "Starting Upload Debug output via API"
     assert UPLOAD_LOGS in grep_rrdlogs(UPLOAD_LOGS)
 
 def test_remotedebugger_upload_report():

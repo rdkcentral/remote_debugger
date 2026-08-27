@@ -47,6 +47,8 @@ issueData* getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg,ch
 bool processAllDebugCommand(cJSON *jsoncfg, issueNodeData *issuestructNode, char *rfcbuf);
 bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issuestructNode, char *rfcbuf);
 
+void split_issue_type(const char *input, char *base, size_t base_len, char *suffix, size_t suffix_len);
+
 #ifdef __cplusplus
 }
 #endif
