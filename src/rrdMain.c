@@ -23,7 +23,9 @@
 #include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
+#ifdef ENABLE_OTEL
 #include "rdk_otlp_instrumentation.h"
+#endif
 
 devicePropertiesData devPropData;
 
@@ -38,7 +40,6 @@ void *RRDEventThreadFunc(void *arg)
 {
     data_buf *rbuf;
     msgRRDHdr msgHdr;
-
     while (1)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69/RBUS Events... \n", __FUNCTION__, __LINE__);
@@ -145,10 +146,28 @@ int main(int argc, char *argv[])
 #endif
     /* Initialize Cache */
     initCache();
+#ifdef ENABLE_OTEL
 	rdk_otlp_init("RRD", "1.0.0");
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:[OTEL] OTEL initialized\n", __FUNCTION__, __LINE__);
-	//rdk_otlp_start_child_span("RRD_ctx", "set");
-	//rdk_otlp_start_distributed_trace("RRD_ctx", "set");
+	RDK_LOG(RDK_LOG_DEBUG,"LOG.RDK.OTEL","[%s:%d]:[OTEL] OTEL initialized\n", __FUNCTION__, __LINE__);
+
+	rdk_LogOutput_File otelFileLog;
+	strncpy(otelFileLog.fileName, "rdk_otel_tracer.log", sizeof(otelFileLog.fileName) - 1);
+	otelFileLog.fileName[sizeof(otelFileLog.fileName) - 1] = '\0';
+	strncpy(otelFileLog.fileLocation, "/opt/logs/", sizeof(otelFileLog.fileLocation) - 1);
+	otelFileLog.fileLocation[sizeof(otelFileLog.fileLocation) - 1] = '\0';
+
+	rdk_logger_ext_config_t otelLogConfig = {
+		.pModuleName = "LOG.RDK.OTEL",
+		.loglevel = RDK_LOG_INFO,
+		.output = RDKLOG_OUTPUT_FILE,
+		.format = RDKLOG_FORMAT_WITH_TS,
+		.pFilePolicy = &otelFileLog
+	};
+
+	if (rdk_logger_ext_init(&otelLogConfig) != RDK_SUCCESS) {
+		RDK_LOG(RDK_LOG_ERROR, "LOG.RDK.OTEL", "[%s:%d]: OTEL logger ext init failed\n", __FUNCTION__, __LINE__);
+	}
+#endif
 
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
@@ -167,8 +186,9 @@ int main(int argc, char *argv[])
 
     RRD_subscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Started RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
-	//rdk_otlp_finish_distributed_trace();
-	RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:[OTEL] Finish child span\n",__FUNCTION__,__LINE__);
+#ifdef ENABLE_OTEL
+	RDK_LOG(RDK_LOG_DEBUG,"LOG.RDK.OTEL","[%s:%d]:[OTEL] Finish child span\n",__FUNCTION__,__LINE__);
+#endif
 
     /* Create Thread for listening TR69 events */
     pthread_create (&RRDTR69ThreadID, NULL, RRDEventThreadFunc, NULL);
