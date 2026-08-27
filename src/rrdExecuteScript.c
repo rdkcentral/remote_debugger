@@ -21,7 +21,9 @@
 #define RRD_SCRIPT "/lib/rdk/uploadRRDLogs.sh"
 #if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
+#ifdef ENABLE_OTEL
 #include "rdk_otlp_instrumentation.h"
+#endif
 #endif
 
 static void normalizeIssueName(char *str);
@@ -40,9 +42,9 @@ int uploadDebugoutput(char *outdir, char *issuename)
     if(outdir != NULL && issuename != NULL)
     {
         normalizeIssueName(issuename);
-#if !defined(GTEST_ENABLE)
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
         rdk_otlp_start_child_span("RRD_ctx", "uploadDebugReport");
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
 #endif
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
@@ -55,9 +57,9 @@ int uploadDebugoutput(char *outdir, char *issuename)
         {
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Upload orchestration completed successfully\n",__FUNCTION__,__LINE__);
         }
-#if !defined(GTEST_ENABLE)
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
         rdk_otlp_finish_child_span();
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
 #endif
     }
 
