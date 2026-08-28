@@ -94,7 +94,7 @@ AC_ARG_ENABLE([otel],
       *) AC_MSG_ERROR([bad value ${enableval} for --enable-otel]) ;;
     esac],
     [otelSupport=false])
-AM_CONDITIONAL([ENABLE_OTEL], [test x$otelSupport = xtrue])
+AM_CONDITIONAL([OTEL_SUPPORT], [test x$otelSupport = xtrue])
 
 AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT
