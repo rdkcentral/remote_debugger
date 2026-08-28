@@ -26,7 +26,7 @@ if IARMBUS_ENABLE
 remotedebugger_LDFLAGS += -luploadstblogs 
 remotedebugger_LDADD = -lfwutils -lz -luploadstblogs
 if ENABLE_OTEL
-remotedebugger_CFLAGS += "-DENABLE_OTEL"
+remotedebugger_CFLAGS += "OTEL_SUPPORT"
 remotedebugger_LDFLAGS += "-lrdk_otlp"
 #remotedebugger_LDADD += "-lrdk_otlp"
 endif
