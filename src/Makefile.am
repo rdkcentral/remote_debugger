@@ -27,7 +27,7 @@ remotedebugger_LDFLAGS += -luploadstblogs
 remotedebugger_LDADD = -lfwutils -lz -luploadstblogs
 if OTEL_SUPPORT
 remotedebugger_CFLAGS += "-DENABLE_OTEL"
-remotedebugger_LDFLAGS += "-lrdk_otlp"
+#remotedebugger_LDFLAGS += "-lrdk_otlp"
 #remotedebugger_LDADD += "-lrdk_otlp"
 endif
 endif
