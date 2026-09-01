@@ -31,3 +31,4 @@ remotedebugger_CFLAGS += "-DENABLE_OTEL"
 #remotedebugger_LDADD += "-lrdk_otlp"
 endif
 endif
+remotedebugger_LDFLAGS += "-lrdk_otlp"
