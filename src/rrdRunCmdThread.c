@@ -26,6 +26,9 @@
 #include "rrdCommandSanity.h"
 #if !defined(GTEST_ENABLE)
 #include "secure_wrapper.h"
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 #endif
 
 pthread_mutex_t rrdCacheMut;
@@ -293,6 +296,10 @@ bool executeCommands(issueData *cmdinfo)
     const char *remoteDebuggerPrefix = "remote_debugger_";
     int retval;
 
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "executeCommands");
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for executeCommands\n", __FUNCTION__, __LINE__);
+#endif
     cmdData = (issueData *)cmdinfo;
  
     if(cmdData->command)
@@ -421,11 +428,19 @@ bool executeCommands(issueData *cmdinfo)
             free(cmdData->command); // free updated command info received from RRDEventThreadFunc
             free(cmdData);
 #endif
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+            RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for executeCommands\n", __FUNCTION__, __LINE__);
+            rdk_otlp_finish_child_span();
+#endif
             return true;
         }
     }
     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
     free(cmdData);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for executeCommands\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
     return false;
 }
 

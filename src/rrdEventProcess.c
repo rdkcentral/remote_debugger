@@ -20,6 +20,11 @@
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#if !defined(GTEST_ENABLE)
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
+#endif
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
@@ -63,6 +68,10 @@ void processIssueTypeEvent(data_buf *rbuf)
     int index = 0, count = 0, dataMsgLen = 0;
     data_buf *cmdBuff = NULL;
 
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "processIssueTypeEvent");
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for processIssueTypeEvent\n", __FUNCTION__, __LINE__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     if (NULL != rbuf)
     {
@@ -165,6 +174,10 @@ void processIssueTypeEvent(data_buf *rbuf)
         }
     }
     
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_finish_child_span();
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for processIssueTypeEvent\n", __FUNCTION__, __LINE__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
 }
@@ -182,6 +195,10 @@ static void processIssueType(data_buf *rbuf)
     issueData *dynamicprofiledata = NULL;
     issueData *staticprofiledata = NULL;    
 
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "processIssueType");
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for processIssueType\n", __FUNCTION__, __LINE__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     if (rbuf->mdata != NULL) // issue data exits
     {
@@ -355,6 +372,10 @@ static void processIssueType(data_buf *rbuf)
     }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for processIssueType\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
     return;
 }
 
@@ -430,6 +451,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     cJSON *jsonParsed = NULL;
     bool isStaticIssue = false;
 
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "processIssueTypeInStaticProfile");
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for processIssueTypeInStaticProfile\n", __FUNCTION__, __LINE__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Static Profile... \n", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
@@ -468,6 +493,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     freeParsedJson(jsonParsed);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for processIssueTypeInStaticProfile\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
     return;
 }
 
@@ -766,4 +795,3 @@ static int issueTypeSplitter(char *input_str, const char delimeter, char ***args
 
     return cnt;
 }
-
