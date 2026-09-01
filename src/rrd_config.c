@@ -19,9 +19,9 @@
 
 #include "rrd_config.h"
 #include "rrdCommon.h"
-#ifdef ENABLE_OTEL
+//#ifdef ENABLE_OTEL
 #include "rdk_otlp_instrumentation.h"
-#endif
+//#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
