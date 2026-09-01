@@ -67,10 +67,9 @@ void *RRDEventThreadFunc(void *arg)
             break;
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
-            free(rbuf->mdata);
-            free(rbuf);
             break;
         }
+        RRD_data_buff_deAlloc(rbuf);
 #if GTEST_ENABLE
         break;
 #endif
