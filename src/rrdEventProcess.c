@@ -1,6 +1,5 @@
 /*
- *
- * If not stated otherwise in this file or this component's Licenses.txt file the
+ * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
  * Copyright 2018 RDK Management
@@ -16,842 +15,756 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+*/
 
-#include "rrdInterface.h"
-#include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#if !defined(GTEST_ENABLE)
-#include "webconfig_framework.h"
+#include "rrdJsonParser.h"
+#include "rrdEventProcess.h"
 
-extern int msqid;
-#else
-int msqid = 0;
-key_t key = 1234;
-#endif
+#define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
-uint32_t gWebCfgBloBVersion = 0;
-rbusHandle_t    rrdRbusHandle;
 
-// File-local storage for profile category
-static char RRDProfileCategory[BUF_LEN_256] = "all";
-#define MAX_PROFILE_JSON_SIZE 32768
+static void processIssueType(data_buf *rbuf);
+static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode);
+static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode);
+static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode);
+static void removeSpecialCharacterfromIssueTypeList(char *str);
+static int issueTypeSplitter(char *input_str, const char delimeter, char ***args);
+static void freeParsedJson(cJSON *jsonParsed);
 
-// Helper functions for profile category file-based storage
-int load_profile_category(void) {
-    FILE *fp = fopen(RRD_PROFILE_CATEGORY_FILE, "r");
-    if (fp) {
-        if (fgets(RRDProfileCategory, sizeof(RRDProfileCategory), fp)) {
-            // Remove trailing newline
-            char *newline = strchr(RRDProfileCategory, '\n');
-            if (newline) *newline = '\0';
-            fclose(fp);
-            return 0;
-        }
-        fclose(fp);
-    }
-    // Default to "all" if file doesn't exist or read fails
-    strncpy(RRDProfileCategory, "all", sizeof(RRDProfileCategory) - 1);
-    RRDProfileCategory[sizeof(RRDProfileCategory) - 1] = '\0';
-    return -1;
-}
-
-int save_profile_category(void) {
-    int fd, ret = -1;
-    fd = open(RRD_PROFILE_CATEGORY_FILE, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
-    if (fd >= 0) {
-        FILE *fp = fdopen(fd, "w");
-        if (fp) {
-            if (fprintf(fp, "%s\n", RRDProfileCategory) > 0) {
-                ret = 0;
-            }
-            fclose(fp); // This also closes the underlying fd
-        } else {
-            close(fd); // Close fd if fdopen failed
-        }
-    }
-    return ret;
-}
-
-#define DATA_HANDLER_SET_MACRO \
-    { \
-        NULL, \
-        rrd_SetHandler, \
-        NULL, \
-        NULL, \
-        NULL, \
-        NULL \
-    }
-
-#define DATA_HANDLER_GET_MACRO \
-    { \
-        rrd_GetHandler, \
-        NULL, \
-        NULL, \
-        NULL, \
-        NULL, \
-        NULL \
-    }
-
-// Data elements for profile data RBUS provider
-rbusDataElement_t profileDataElements[2] = {
-    {
-        RRD_SET_PROFILE_EVENT,
-        RBUS_ELEMENT_TYPE_PROPERTY,
-        DATA_HANDLER_SET_MACRO
-    },
-    {
-        RRD_GET_PROFILE_EVENT,
-        RBUS_ELEMENT_TYPE_PROPERTY, 
-        DATA_HANDLER_GET_MACRO
-    }
-};
-
-/*Function: RRD_subscribe
- *Details: This helps to perform Bus init/connect and event handler registration for receiving
- *events from the TR181 parameter.
- *Input: NULL
- *Output: 0 for success and non 0 for failure
+/*
+ * @function processWebCfgTypeEvent
+ * @brief Processes a web configuration type event by decoding the data and freeing the buffer data.
+ * @param data_buf *rbuf - Buffer containing event data and metadata.
+ * @return void
  */
-
-int RRD_subscribe()
+void processWebCfgTypeEvent(data_buf *rbuf)
 {
-    int ret = 0;
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-#ifdef IARMBUS_SUPPORT
-    ret = RRD_IARM_subscribe();
-    if (ret != 0)
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    if(rbuf && rbuf->mdata)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Subscribe!!! \n ", __FUNCTION__, __LINE__);
-	return ret;
+        decodeWebCfgData(rbuf->mdata);
+        free(rbuf->mdata);
+        rbuf->mdata = NULL;
     }
-#endif
-    //RBUS Event Subscribe for RRD
-    ret = rbus_open(&rrdRbusHandle, REMOTE_DEBUGGER_RBUS_HANDLE_NAME);
-    if (ret != 0)
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return;
+}
+
+/*
+ * @function processIssueTypeEvent
+ * @brief Processes an issue type event by splitting the issue types from the input data buffer,
+ *              initializing command buffers and handling each issue type individually.
+ * @param data_buf *rbuf - Buffer containing event data and metadata.
+ * @return void
+ */
+void processIssueTypeEvent(data_buf *rbuf)
+{
+    char **cmdMap = NULL;
+    int index = 0, count = 0, dataMsgLen = 0;
+    data_buf *cmdBuff = NULL;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    if (NULL != rbuf)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Open Failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType List [%s]... \n", __FUNCTION__, __LINE__, rbuf->mdata);
+        count = issueTypeSplitter(rbuf->mdata, ',', &cmdMap);
+        
+        if (count > 0)
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType Count [%d]... \n", __FUNCTION__, __LINE__, count);
+            for (index = 0; index < count; index++)
+            {
+                cmdBuff = NULL;
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType [%s]... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                cmdBuff = (data_buf *)malloc(sizeof(data_buf));
+                if (cmdBuff)
+                {
+                    char base[128] = {0};
+                    char local_suffix[128] = {0};
+                    split_issue_type(cmdMap[index], base, sizeof(base), local_suffix, sizeof(local_suffix));
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty issue type after parsing token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
+                    removeSpecialCharacterfromIssueTypeList(base);
+                    if (base[0] == '\0')
+                    {
+                        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Empty base after sanitization for token [%s], skipping... \n", __FUNCTION__, __LINE__, cmdMap[index]);
+                        free(cmdBuff);
+                        cmdBuff = NULL;
+                        if (cmdMap[index])
+                        {
+                            free(cmdMap[index]);
+                            cmdMap[index] = NULL;
+                        }
+                        continue;
+                    }
+                    dataMsgLen = strlen(base) + 1;
+                    RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
+                    cmdBuff->inDynamic = rbuf->inDynamic;
+                    if(cmdBuff->inDynamic)
+                    {
+                        cmdBuff->jsonPath = rbuf->jsonPath;
+                    }
+		    cmdBuff->appendMode = rbuf->appendMode;
+                    cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
+
+                    /* Store suffix for this issue type */
+                    cmdBuff->suffix = NULL;
+                    if (local_suffix[0] != '\0') {
+                        cmdBuff->suffix = strdup(local_suffix);
+                        if (cmdBuff->suffix == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to allocate memory for suffix... \n", __FUNCTION__, __LINE__);
+                        }
+                    }
+                    if (cmdBuff->mdata)
+                    {
+                        strncpy((char *)cmdBuff->mdata, base, dataMsgLen);
+                        processIssueType(cmdBuff);
+                    }
+                    else
+                    {
+                        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                    }
+		    if(cmdBuff)
+		    {
+                    if (cmdBuff->suffix)
+                    {
+                        free(cmdBuff->suffix);
+                        cmdBuff->suffix = NULL;
+                    }
+                        free(cmdBuff);
+			cmdBuff = NULL;
+		    }
+                }
+                else
+                {
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                }
+		if( cmdMap[index])
+		{
+                    free(cmdMap[index]);
+		    cmdMap[index] = NULL;
+		}
+		
+            }
+	    if( cmdMap)
+	    {
+                free(cmdMap);
+		cmdMap = NULL;
+	    }
+        }
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Open! \n", __FUNCTION__, __LINE__);
-#if !defined(GTEST_ENABLE)
-    subscriptions[0].eventName = RRD_SET_ISSUE_EVENT;
-    subscriptions[0].filter = NULL;
-    subscriptions[0].duration = 0;
-    subscriptions[0].handler  = _remoteDebuggerEventHandler;
-    subscriptions[0].userData = NULL;
+    
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return;
+}
 
-    subscriptions[1].eventName = RRD_WEBCFG_ISSUE_EVENT;
-    subscriptions[1].filter = NULL;
-    subscriptions[1].duration = 0;
-    subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
-    subscriptions[1].userData = NULL;
+/*
+ * @function processIssueType
+ * @brief Processes the given issue type by extracting issue node data and determining
+ *              whether to handle it as a dynamic or static profile.
+ * @param data_buf *rbuf - Buffer containing event data and metadata.
+ * @return void
+ */
+static void processIssueType(data_buf *rbuf)
+{
+    issueNodeData *pIssueNode = NULL;
+    issueData *dynamicprofiledata = NULL;
+    issueData *staticprofiledata = NULL;    
 
-#ifdef IARMBUS_SUPPORT
-#ifdef USE_L2_SUPPORT
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-   subscriptions[2].filter = NULL;
-   subscriptions[2].duration = 0;
-   subscriptions[2].handler  = _rdmDownloadEventHandler;
-   subscriptions[2].userData = NULL;
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
-#else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
-#endif
-#else
-   subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
-   subscriptions[2].filter = NULL;
-   subscriptions[2].duration = 0;
-   subscriptions[2].handler  = _rdmDownloadEventHandler;
-   subscriptions[2].userData = NULL;
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
-#endif
-#endif
-    if(ret != 0)
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    if (rbuf->mdata != NULL) // issue data exits
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Event Subscribe for RRD return value is : %s \n ", __FUNCTION__, __LINE__, rbusError_ToString((rbusError_t)ret));
+        pIssueNode = (issueNodeData *)malloc(sizeof(issueNodeData));
+        if(pIssueNode)
+        {
+            getIssueInfo((char *)rbuf->mdata, pIssueNode); // issue data extract
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Extracted Node %s and Sub Node %s \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode);
+            if (rbuf->appendMode)
+            {
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received append request to process static and dynamic profiles... \n", __FUNCTION__, __LINE__);
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Reading dynamic profile command info... \n", __FUNCTION__, __LINE__);
+                dynamicprofiledata = processIssueTypeInDynamicProfileappend(rbuf, pIssueNode);
+                if (dynamicprofiledata == NULL)
+                {
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profie Info not found, Download RDM package... \n", __FUNCTION__, __LINE__);
+                }
+                else
+                {
+                    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Read complete for Dynamic Profile: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicprofiledata->rfcvalue, dynamicprofiledata->command, dynamicprofiledata->timeout);
+                    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Reading static profile command info... \n", __FUNCTION__, __LINE__);
+                    staticprofiledata = processIssueTypeInStaticProfileappend(rbuf, pIssueNode);
+                    if (staticprofiledata == NULL)
+                    {
+                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Command Info not found for IssueType!!! \n", __FUNCTION__, __LINE__);
+                        // Free dynamicprofiledata since we can't proceed
+                        if (dynamicprofiledata != NULL)
+                        {
+                            if (dynamicprofiledata->rfcvalue != NULL)
+                            {
+                                free(dynamicprofiledata->rfcvalue);
+                            }
+                            if (dynamicprofiledata->command != NULL)
+                            {
+                                free(dynamicprofiledata->command);
+                            }
+                            free(dynamicprofiledata);
+                        }
+                    }
+                    else
+                    {
+                        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Read complete for Static Profile: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticprofiledata->rfcvalue, staticprofiledata->command, staticprofiledata->timeout);
+                        
+                        // Check if commands are NULL before using them
+                        if (dynamicprofiledata->command == NULL || staticprofiledata->command == NULL)
+                        {
+                            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Command is NULL in dynamic or static profile... \n", __FUNCTION__, __LINE__);
+                            // Free dynamicprofiledata
+                            if (dynamicprofiledata != NULL)
+                            {
+                                if (dynamicprofiledata->rfcvalue != NULL)
+                                {
+                                    free(dynamicprofiledata->rfcvalue);
+                                }
+                                if (dynamicprofiledata->command != NULL)
+                                {
+                                    free(dynamicprofiledata->command);
+                                }
+                                free(dynamicprofiledata);
+                            }
+                            // Free staticprofiledata
+                            if (staticprofiledata != NULL)
+                            {
+                                if (staticprofiledata->rfcvalue != NULL)
+                                {
+                                    free(staticprofiledata->rfcvalue);
+                                }
+                                if (staticprofiledata->command != NULL)
+                                {
+                                    free(staticprofiledata->command);
+                                }
+                                free(staticprofiledata);
+                            }
+                        }
+                        else
+                        {
+                            //Remove the double quotes
+                            size_t staticstrlen = strlen(staticprofiledata->command);
+                            size_t dynamicstrlen = strlen(dynamicprofiledata->command);
+                            if (staticstrlen > 0 && staticprofiledata->command[staticstrlen - 1] == '"') {
+                                staticprofiledata->command[staticstrlen - 1] = '\0';
+                                staticstrlen--; // Update length after removing trailing quote
+                            }
+                            if (dynamicprofiledata->command[0] == '"') {
+                                dynamicprofiledata->command[0] = COMMAND_DELIM;
+                            }
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamicprofiledata->command);
+
+                            size_t appendstrlen = (staticstrlen + dynamicstrlen + 1);
+                            char *appendcommandstr = (char *)realloc(staticprofiledata->command, appendstrlen);
+                            if (appendcommandstr == NULL) {
+                                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+                                // Free staticprofiledata on realloc failure
+                                if (staticprofiledata != NULL)
+                                {
+                                    if (staticprofiledata->rfcvalue != NULL)
+                                    {
+                                        free(staticprofiledata->rfcvalue);
+                                    }
+                                    if (staticprofiledata->command != NULL)
+                                    {
+                                        free(staticprofiledata->command);
+                                    }
+                                    free(staticprofiledata);
+                                    staticprofiledata = NULL; // Set to NULL to prevent double-free
+                                }
+                                // Free dynamicprofiledata on realloc failure
+                                if (dynamicprofiledata != NULL)
+                                {
+                                    if (dynamicprofiledata->rfcvalue != NULL)
+                                    {
+                                        free(dynamicprofiledata->rfcvalue);
+                                    }
+                                    if (dynamicprofiledata->command != NULL)
+                                    {
+                                        free(dynamicprofiledata->command);
+                                    }
+                                    free(dynamicprofiledata);
+                                    dynamicprofiledata = NULL; // Set to NULL to prevent double-free
+                                }
+                            }
+                            else
+                            {
+                                strcat(appendcommandstr, dynamicprofiledata->command);
+                                staticprofiledata->command = appendcommandstr;
+                                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Updated command after append from dynamic and static profile: %s \n", __FUNCTION__, __LINE__, staticprofiledata->command);
+                                RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
+                                checkIssueNodeInfo(pIssueNode, NULL, rbuf, false, staticprofiledata);
+                                // NOTE: staticprofiledata is freed by executeCommands() via checkIssueNodeInfo()
+                                // Do NOT free staticprofiledata here to avoid double-free
+                            }
+                            // Free dynamicprofiledata after use
+                            if (dynamicprofiledata != NULL)
+                            {
+                                if (dynamicprofiledata->rfcvalue != NULL)
+                                {
+                                    free(dynamicprofiledata->rfcvalue);
+                                }
+                                if (dynamicprofiledata->command != NULL)
+                                {
+                                    free(dynamicprofiledata->command);
+                                }
+                                free(dynamicprofiledata);
+                            }
+                        }
+                    }
+                }
+	    }	    
+	    else if (rbuf->inDynamic)
+            {
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking if Issue marked inDynamic... \n", __FUNCTION__, __LINE__);
+                processIssueTypeInDynamicProfile(rbuf, pIssueNode);
+            }
+            else
+            {
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue not marked as inDynamic... \n", __FUNCTION__, __LINE__);
+		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking Issue from Static... \n", __FUNCTION__, __LINE__);
+                processIssueTypeInStaticProfile(rbuf, pIssueNode);
+            }
+	    //CID-336989: Resource leak
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+        }
     }
     else
     {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Event Subscribe for RRD done! \n", __FUNCTION__, __LINE__);
+        /* Fix for warning Wformat-overflow : directive argument is null*/
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Value is empty for RFC Parameter \n", __FUNCTION__, __LINE__);
     }
 
-    // Load profile category from file
-    if (load_profile_category() == 0) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Loaded profile category: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
-    } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: No stored profile category, defaulting to 'all'\n", __FUNCTION__, __LINE__);
-    }
-
-    // Register RBUS data elements for profile data provider
-    int res = rbus_regDataElements(rrdRbusHandle, 2, profileDataElements);
-    if (res != RBUS_ERROR_SUCCESS) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS regDataElements failed with error: %d\n", __FUNCTION__, __LINE__, res);
-        if (ret == RBUS_ERROR_SUCCESS) {
-            ret = res;
-        }
-    } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements registered\n", __FUNCTION__, __LINE__);
-    }
-
-    webconfigFrameworkInit();
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting.. \n", __FUNCTION__, __LINE__);
-    return ret;
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return;
 }
 
-bool checkAppendRequest(char *issueRequest)
+/*
+ * @function processIssueTypeInDynamicProfile
+ * @brief Processes the given issue type by checking if the issue exists in the dynamic profile JSON.
+ *              If the issue is found, it handles the issue appropriately.
+ * @param data_buf *rbuf - Buffer containing event data and metadata.
+ * @param issueNodeData *pIssueNode - Pointer to structure containing issue node data.
+ * @return void
+ */
+static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIssueNode)
 {
-    size_t issuestr_len = strlen(issueRequest);
-    size_t suffixstr_len = strlen(APPEND_SUFFIX);
-    char *suffixptr = NULL;
+    cJSON *jsonParsed = NULL;
+    bool isDynamicIssue=false;
 
-    suffixptr = issueRequest + issuestr_len - suffixstr_len;
-
-    if (issuestr_len >= suffixstr_len)
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Marked as inDynamic... \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Checking Dynamic Profile... \n", __FUNCTION__, __LINE__);
+    if (rbuf->jsonPath == NULL) // Dynamic Profile JSON does not exists
     {
-        if (strcmp(suffixptr, APPEND_SUFFIX) == 0)
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile JSON Not Found... \n", __FUNCTION__, __LINE__);
+        free(rbuf->mdata);
+        rbuf->mdata = NULL;
+    }
+    else
+    {
+        jsonParsed = readAndParseJSON(rbuf->jsonPath); // Parse Dynamic Profile JSON from Package
+        if (jsonParsed == NULL)
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Remove suffix from the issuetype to process the request \n", __FUNCTION__, __LINE__);
-            issueRequest[issuestr_len - suffixstr_len] = '\0';
-            return true;
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic JSON Parse/Read failed... %s\n", __FUNCTION__, __LINE__, rbuf->jsonPath);
+            free(rbuf->mdata);
+            rbuf->mdata = NULL;
+            free(rbuf->jsonPath);
+            rbuf->jsonPath = NULL;
+        }
+        else
+        {
+            isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+            if (!isDynamicIssue) // Issue Data not in Dynamic Profile JSON
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue Data not found in Dynamic JSON %s... \n", __FUNCTION__, __LINE__, rbuf->jsonPath);
+                free(rbuf->mdata);
+                rbuf->mdata = NULL;
+                free(rbuf->jsonPath);
+                rbuf->jsonPath = NULL;
+            }
+            else
+            {
+                // Issue found in Dynamic Prof JSON
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, rbuf->jsonPath);
+                checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
+            }
+        }
+        freeParsedJson(jsonParsed);
+    }
+
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return;
+}
+
+/*
+ * @function processIssueTypeInStaticProfile
+ * @brief Processes the given issue type by checking if the issue exists in the static profile JSON.
+ *              If the issue is found, it handles the issue appropriately. If not found, it will further
+ *              check in the installed package.
+ * @param data_buf *rbuf - Buffer containing event data and metadata.
+ * @param issueNodeData *pIssueNode - Pointer to structure containing issue node data.
+ * @return void
+ */
+static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssueNode)
+{
+    cJSON *jsonParsed = NULL;
+    bool isStaticIssue = false;
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Static Profile... \n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)
+    jsonParsed = readAndParseJSON(RRD_JSON_FILE);
+#else
+    if (rbuf->jsonPath != NULL)
+    {
+        jsonParsed = readAndParseJSON(rbuf->jsonPath);
+    }
+#endif
+    if (jsonParsed == NULL)
+    { // Static Profile JSON Parsing or Read Fail
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+        return;
+    }
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Static JSON... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    isStaticIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+    if (isStaticIssue)
+    {
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
+	// CID 336988: Double free (USE_AFTER_FREE)
+	if(rbuf)
+	{
+	    checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
+	}
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
+        processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+    }
+
+    freeParsedJson(jsonParsed);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return;
+}
+
+issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode)
+{
+    issueData *dynamicdata = NULL;
+    cJSON *jsonParsed = NULL;
+    char *dynJSONPath = NULL;
+    int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0;
+    bool isDynamicIssue = false;
+
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    rrdjsonlen = strlen(RRD_JSON_FILE);
+#ifdef IARMBUS_SUPPORT
+    persistentAppslen = strlen(RRD_MEDIA_APPS);
+#else
+    persistentAppslen = strlen(RRD_TMP_DIR);
+#endif
+    prefixlen = strlen(RDM_PKG_PREFIX);
+    dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
+
+    if(dynJSONPath == NULL)
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+        return dynamicdata;
+    }
+#ifdef IARMBUS_SUPPORT
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_MEDIA_APPS, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#else	
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_TMP_DIR, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#endif
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Dynamic Profile... \n", __FUNCTION__, __LINE__);
+    jsonParsed = readAndParseJSON(dynJSONPath);
+    if (jsonParsed == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)
+        RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
+#endif
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Dynamic JSON... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+        if (isDynamicIssue)
+        {
+            // Issue Data in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+            free(dynJSONPath);
+            // Get the command for received Issue Type of the Issue Category
+            dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+        }
+        else
+        {
+            // Issue Data not in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Requested Issue Data not found in Dynamic Profile JSON!!! \n", __FUNCTION__, __LINE__);
         }
     }
-    return false;
+    freeParsedJson(jsonParsed);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return dynamicdata;
 }
 
-void webconfigFrameworkInit()
+issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *pIssueNode)
 {
-    char *sub_doc = "remotedebugger";
+    cJSON *jsonParsed = NULL;
+    bool isStaticIssue = false;
+    issueData *staticdata = NULL;
 
-    blobRegInfo *blobData;
-    blobData = (blobRegInfo*) malloc( sizeof(blobRegInfo));
-    memset(blobData, 0, sizeof(blobRegInfo));
-    strncpy( blobData->subdoc_name, sub_doc, strlen(sub_doc) + 1);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Reading Static Profile Commands... \n", __FUNCTION__, __LINE__);
 
-    register_sub_docs(blobData, 1 /*SubDoc Count*/, NULL, NULL);
-}
-
-uint32_t getBlobVersion(char* subdoc)
-{
-        return gWebCfgBloBVersion;
-}
-
-/* API to update the subdoc version */
-int setBlobVersion(char* subdoc,uint32_t version)
-{
-        gWebCfgBloBVersion = version;
-        return 0;
-}
-
-void RRDMsgDeliver(int msgqid, data_buf *sbuf)
-{
-    msgRRDHdr msgHdr;
-    size_t msgLen = -1;
-    msgHdr.type = RRD_EVENT_MSG_REQUEST;
-    msgHdr.mbody = (void *)sbuf;
-    msgLen = sizeof(msgHdr.mbody);
-
-    if (msgsnd(msgqid, (void *)&msgHdr, msgLen, 0) < 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%u MbufSize=%d !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen);
-        exit(1);
+    jsonParsed = readAndParseJSON(RRD_JSON_FILE);
+    if (jsonParsed == NULL)
+    { // Static Profile JSON Parsing or Read Fail
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+        return staticdata;
     }
-}
-
-/*Function:  RRD_data_buff_init
- *  *Details: Initialize the data buffer for MSG Queue
- *  *Input: Pointer to Data Buffer and Event Id
- *  *Output: NULL
- *    */
-void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event_et deepSleepEvent)
-{
-    sbuf->mtype = sndtype;
-    sbuf->mdata = NULL;
-    sbuf->jsonPath = NULL;
-    sbuf->inDynamic = false;
-    sbuf->appendMode = false;
-    sbuf->dsEvent = deepSleepEvent;
-    sbuf->suffix = NULL;
-}
-
-/*Function:  RRD_data_buff_deAlloc
- *  *Details: De Aollocate Data Buffer
- *  *Input: Pointer to Data Buffer
- *  *Output:void
- *    */
-void RRD_data_buff_deAlloc(data_buf *sbuf)
-{
-    if (sbuf)
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Static JSON... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    isStaticIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+    if (isStaticIssue)
     {
-        if (sbuf->mdata)
-        {
-            free(sbuf->mdata);
-        }
+        // Issue in Static Profile JSON
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
+        // Get the command for received Issue Type of the Issue Category
+        staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
+    }
 
-        if (sbuf->jsonPath)
+    freeParsedJson(jsonParsed);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return staticdata;
+}
+
+/*
+ * @function processIssueTypeInInstalledPackage
+ * @brief Processes the given issue type by checking if the issue exists in the installed package's dynamic profile JSON.
+ *              If the issue is found, it handles the issue appropriately. If the JSON read or parse fails, it sends an RDM request.
+ * @param data_buf *rbuf - Buffer containing event data and metadata.
+ * @param issueNodeData *pIssueNode - Pointer to structure containing issue node data.
+ * @return void
+ */
+static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pIssueNode)
+{
+    cJSON *jsonParsed = NULL;
+    char *dynJSONPath = NULL;
+    int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0, suffixlen = 0;
+    bool isDynamicIssue = false;
+
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)
+    rrdjsonlen = strlen(RRD_JSON_FILE);
+#ifdef IARMBUS_SUPPORT
+    persistentAppslen = strlen(RRD_MEDIA_APPS);
+#else
+    persistentAppslen = strlen(RRD_TMP_DIR);
+#endif
+    prefixlen = strlen(RDM_PKG_PREFIX);
+    suffixlen = strlen(RDM_PKG_SUFFIX);
+    dynJSONPath = (char *)malloc(persistentAppslen + prefixlen + suffixlen + strlen(pIssueNode->Node) + rrdjsonlen + 1);
+#else
+    if ((rbuf == NULL) || (rbuf->jsonPath == NULL))
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: jsonPath is NULL, skipping installed package check... \n", __FUNCTION__, __LINE__);
+        if (rbuf != NULL)
         {
-            free(sbuf->jsonPath);
+            if (rbuf->mdata != NULL)
+            {
+                free(rbuf->mdata);
+                rbuf->mdata = NULL;
+            }
+			if (rbuf->suffix != NULL)
+            {
+                free(rbuf->suffix);
+                rbuf->suffix = NULL;
+            }
+            if (rbuf->jsonPath != NULL)
+            {
+                free(rbuf->jsonPath);
+                rbuf->jsonPath = NULL;
+            }
         }
-        if (sbuf->suffix)
+        return;
+    }
+    int utjsonlen = strlen(rbuf->jsonPath);
+    dynJSONPath = (char *)malloc(utjsonlen + 1);
+#endif
+
+    if(dynJSONPath == NULL)
+    {    
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
+        return;
+    }
+#if !defined(GTEST_ENABLE)
+#ifdef IARMBUS_SUPPORT
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_MEDIA_APPS, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#else
+    sprintf(dynJSONPath, "%s%s%s%s", RRD_TMP_DIR, RDM_PKG_PREFIX, pIssueNode->Node, RRD_JSON_FILE);
+#endif
+#else
+    sprintf(dynJSONPath, "%s", rbuf->jsonPath);
+#endif
+
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Dynamic Profile... \n", __FUNCTION__, __LINE__);
+    jsonParsed = readAndParseJSON(dynJSONPath);
+    if (jsonParsed == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Going to RDM Request... \n", __FUNCTION__, __LINE__);
+#if !defined(GTEST_ENABLE)	    
+        RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false); //goto RDM_RRD_REQ_LABEL;
+#endif
+    }
+    else
+    {
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Check if Issue in Parsed Dynamic JSON... %s\n", __FUNCTION__, __LINE__, dynJSONPath);
+        isDynamicIssue = findIssueInParsedJSON(pIssueNode, jsonParsed);
+        if (isDynamicIssue)
         {
-            free(sbuf->suffix);
+            // Issue Data in Dynamic Profile JSON
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
+            free(dynJSONPath);
+            checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
         }
-        free(sbuf);
+        else
+        {
+            // Issue Data not in Dynamic Profile JSON
+#if !defined(GTEST_ENABLE)
+            RRDRdmManagerDownloadRequest(pIssueNode, dynJSONPath, rbuf, false);
+#endif
+        }
+    }
+    freeParsedJson(jsonParsed);
+
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    return;
+}
+
+/*
+ * @function freeParsedJson
+ * @brief Frees the memory allocated to a parsed cJSON object.
+ * @param cJSON *jsonParsed - Pointer to the parsed JSON object to be freed.
+ * @return void
+ */
+static void freeParsedJson(cJSON *jsonParsed)
+{
+    if(jsonParsed)
+    {
+        cJSON_Delete(jsonParsed);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Free static JSON Parsed...\n", __FUNCTION__, __LINE__);
     }
 }
 
 /*
- * @function _remoteDebuggerEventHandler
- * @brief Receives the RBUS event and sends the value as a message in the message-queue to the thread function.
- * @param rbusHandle_t handle - RBUS handle.
- * @param rbusEvent_t const* event - RBUS event object.
- * @param rbusEventSubscription_t* subscription - RBUS event subscription object.
+ * @function removeSpecialCharacterfromIssueTypeList
+ * @brief Removes special characters from the issue type list, retaining only alphanumeric
+ *              characters, commas, and periods.
+ * @param char *str - The string from which special characters will be removed.
  * @return void
  */
-#if !defined(GTEST_ENABLE)
-void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
+static void removeSpecialCharacterfromIssueTypeList(char *str)
 {
-    data_buf *sendbuf;
-    int recPkglen = 0, rrdjsonlen = 0, recPkgNamelen = 0;
-    cacheData *cache = NULL;
+    int source = 0;
+    int destination = 0;
 
-    rbusError_t retCode = RBUS_ERROR_BUS_ERROR;
-    rbusValue_t value = NULL;
-    rbusValue_Init(&value);
-    char const* issue = NULL;
-    retCode = rbus_get(rrdRbusHandle, RRD_SET_ISSUE_EVENT, &value);
-    if(retCode != RBUS_ERROR_SUCCESS || value == NULL)
+    while (str[source] != '\0')
     {
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: RBUS get failed for the event [%s]\n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
-	 return;
-    }	
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: issue type_value: = [%s]\n", __FUNCTION__, __LINE__, rbusValue_GetString(value, NULL));
-    issue =rbusValue_GetString(value, NULL);
-    char *dot_position = strchr(issue, '.'); // Find the first occurrence of '.'
-    if (dot_position != NULL) 
-    {
-        *dot_position = '\0'; // Replace '.' with null terminator
-    }
-    size_t len = strlen(RDM_PKG_PREFIX) + strlen(issue) + 1;
-
-    char *pkg_name = (char *)malloc(len);
-    if(pkg_name == NULL)
-    {
-        return;
-    }
-    strncpy(pkg_name, RDM_PKG_PREFIX, strlen(RDM_PKG_PREFIX) + 1);
-    strncat(pkg_name, issue, len - strlen(RDM_PKG_PREFIX) - 1);
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: pkg_name : [%s]\n",  __FUNCTION__, __LINE__, pkg_name);
-
-    char *pkg_inst_path = (char *)malloc(strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1);
-    if( pkg_inst_path == NULL)
-    {
-        free(pkg_name);
-        return;
-    }
-    snprintf(pkg_inst_path, strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1, "%s%s", RRD_TMP_DIR, pkg_name);
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: pkg_inst_path : [%s]\n",  __FUNCTION__, __LINE__, pkg_inst_path);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-
-    (void)(handle);
-    (void)(subscription);
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RDM_DOWNLOAD_EVENT %s \n", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
-    cache = findPresentInCache(pkg_name);
-    if (cache != NULL)
-    {
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package found in Cache...%s \n", __FUNCTION__, __LINE__, cache->issueString);
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Package Details jsonPath: %s \n", __FUNCTION__, __LINE__, pkg_inst_path);
-    	rrdjsonlen = strlen(RRD_JSON_FILE);
-    	recPkglen = strlen(pkg_inst_path) + 1;
-    	recPkgNamelen = strlen(cache->issueString) + 1;
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:recPkgNamelen=%d recPkglen=%d rrdjsonlen=%d \n", __FUNCTION__, __LINE__, recPkgNamelen, recPkglen, rrdjsonlen);
-	sendbuf = (data_buf *)malloc(sizeof(data_buf));
-    	RRD_data_buff_init(sendbuf, EVENT_MSG, RRD_DEEPSLEEP_RDM_PKG_INSTALL_COMPLETE);
-    	sendbuf->mdata = (char *) calloc(recPkgNamelen, sizeof(char));
-	if(!sendbuf->mdata)
+		if (isalnum(str[source]) || str[source] == ',' || str[source] == '.')
         {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
-            RRD_data_buff_deAlloc(sendbuf);
-            return;
+            str[destination] = str[source];
+            ++destination;
         }
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:JSON_PATH_LEN=%d \n", __FUNCTION__, __LINE__, recPkglen + rrdjsonlen);
-    	sendbuf->jsonPath = (char *)calloc(recPkglen + rrdjsonlen, sizeof(char));
-    	if (!sendbuf->jsonPath)
-        {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for the rdm download event \n", __FUNCTION__, __LINE__);
-            RRD_data_buff_deAlloc(sendbuf);
-            return;
-        }
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Cache.issueString=%s Cache.issueString.Len=%d\n", __FUNCTION__, __LINE__, cache->issueString, strlen(cache->issueString));
-    	strncpy((char *)sendbuf->mdata, cache->issueString, recPkgNamelen);
-	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s...\n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata);
-        snprintf(sendbuf->jsonPath, strlen(pkg_inst_path) + rrdjsonlen + 1, "%s%s", pkg_inst_path, RRD_JSON_FILE);
-    	sendbuf->inDynamic = true;
-	if (checkAppendRequest(sendbuf->mdata))
-    	{
-        	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
-        	sendbuf->inDynamic = false;
-        	sendbuf->appendMode = true;
-    	}		    
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: IssueType: %s... jsonPath: %s... \n", __FUNCTION__, __LINE__, (char *)sendbuf->mdata, sendbuf->jsonPath);
-    	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
-    	RRDMsgDeliver(msqid, sendbuf);
-	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
-	remove_item(cache);
+        ++source;
+    }
+    str[destination] = '\0';
+}
+
+/*
+ * @function issueTypeSplitter
+ * @brief Splits a given string into tokens based on a specified delimiter, and removes any
+ *              special characters from the string before splitting.
+ * @param char *input_str - The input string to be split.
+ * @param const char delimiter - The character used to split the string.
+ * @param char ***args - Pointer to an array of strings where the tokens will be stored.
+ * @return int - The number of tokens found in the string.
+ */
+static int issueTypeSplitter(char *input_str, const char delimeter, char ***args)
+{
+    int cnt = 1, i = 0;
+    char *str = input_str;
+
+    while (*str == delimeter)
+        str++;
+
+    char *str2 = str;
+    while (*(str2++))
+        if (*str2 == delimeter && *(str2 + 1) != delimeter && *(str2 + 1) != 0)
+            cnt++;
+
+    (*args) = (char **)malloc(sizeof(char *) * cnt);
+
+    if (*args == NULL)
+    {
+        cnt = 0;
     }
     else
     {
-    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
-    }
-    free(pkg_name);
-    free(pkg_inst_path);
-}
-void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
-{
-    char *dataMsg = NULL;
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-
-    (void)(handle);
-    (void)(subscription);
-
-    rbusValue_t value = rbusObject_GetValue(event->data, "value");
-
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_SET_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_SET_ISSUE_EVENT);
-    if(!value)
-    {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: event->data value is NULL \n", __FUNCTION__, __LINE__);
-        return;
-    }
-
-    int len = strlen(rbusValue_GetString(value, NULL))+1;
-    dataMsg = (char *) calloc(1, len);
-    if(!dataMsg)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failed for %s \n", __FUNCTION__, __LINE__, rbusValue_ToString(value, NULL, 0));
-        return;
-    }
-    strncpy(dataMsg, rbusValue_GetString(value, NULL), len-1);
-    dataMsg[len-1]='\0';
-    if (dataMsg[0] == '\0' || len <= 0  )
-    {
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
-        free(dataMsg);
-    }
-    else
-    {
-        pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
-        /* coverity[leaked_storage] */
-    }
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-}
-
-void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
-{
-    char *inString = NULL;
-
-    (void)(handle);
-    (void)(subscription);
-
-    rbusValue_t value = rbusObject_GetValue(event->data, "value");
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_WEBCFG_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_WEBCFG_ISSUE_EVENT);
-    if (value)
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
-			                        rbusValue_ToString(value, NULL, 0));
-        int len = strlen(rbusValue_GetString(value, NULL));
-        inString = (char *)calloc(1, len);
-        if(inString)
+        for (i = 0; i < cnt; i++)
         {
-            strncpy(inString, rbusValue_GetString(value, NULL), len);
-            pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
+            char *ts = str;
+            while (*str != delimeter && *str != 0)
+                   str++;
+
+            int len = (str - ts + 1);
+            (*args)[i] = (char *)malloc(sizeof(char) * len);
+            memcpy((*args)[i], ts, sizeof(char) * (len - 1));
+            (*args)[i][len - 1] = 0;
+
+            while (*str == delimeter)
+                str++;
         }
     }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
-}
-#endif
-void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
-{
-    data_buf *sbuf = NULL;
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
-    sbuf = (data_buf *)malloc(sizeof(data_buf));
-    if (!sbuf)
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed\n", __FUNCTION__, __LINE__);
-    }
-    else
-    {
-        RRD_data_buff_init(sbuf, sndtype, RRD_DEEPSLEEP_INVALID_DEFAULT);
-        sbuf->mdata = issueTypeList;
-        if (checkAppendRequest(sbuf->mdata))
-        {
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
-            sbuf->appendMode = true;
-        }	
-        RRDMsgDeliver(msqid, sbuf);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
-        /* coverity[leaked_storage] */
-    }
+
+    return cnt;
 }
 
-/*Function: RRD_unsubscribe
- *Details: This helps to perform Bus disconnect/terminate and unregister event handler.
- *Input: NULL
- *Output: 0 for success and non-zero for failure
- */
-
-int RRD_unsubscribe()
-{
-    int ret = 0;
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
-#if defined(IARMBUS_SUPPORT) || defined(GTEST_ENABLE)
-    ret = RRD_IARM_unsubscribe();
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: IARM Unsubscribe failed!!! \n ", __FUNCTION__, __LINE__);
-        return ret;
-    }
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
-#endif
-#if !defined(GTEST_ENABLE)
-    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);
-        return ret;
-    }
-
-    // Unregister RBUS data elements for profile data provider
-    ret = rbus_unregDataElements(rrdRbusHandle, 2, profileDataElements);
-    if (ret != RBUS_ERROR_SUCCESS) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS unregDataElements failed with error: %d\n", __FUNCTION__, __LINE__, ret);
-    } else {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements unregistered\n", __FUNCTION__, __LINE__);
-    }
-
-    ret = rbus_close(rrdRbusHandle);
-    if (ret != 0)
-    {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Termination failed!!! \n ", __FUNCTION__, __LINE__);
-	return ret;
-    }
-    else
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS Termination done!\n", __FUNCTION__, __LINE__);
-    }
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-#endif
-    return ret;
-}
-/**
- * @brief Set handler for RDK Remote Debugger profile category selection
- */
-rbusError_t rrd_SetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusSetHandlerOptions_t* opts)
-{
-    rbusValue_t value;
-    rbusValueType_t type;
-    char const* propertyName;
-
-    (void)handle;
-    (void)opts;
-
-    if(prop == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL property passed to set handler\n", __FUNCTION__, __LINE__);
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-
-    propertyName = rbusProperty_GetName(prop);
-    if(propertyName == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL property name in set handler\n", __FUNCTION__, __LINE__);
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-
-    value = rbusProperty_GetValue(prop);
-    if(value == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL property value for [%s]\n", __FUNCTION__, __LINE__, propertyName);
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-
-    type = rbusValue_GetType(value);
-
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Set handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
-
-    if(strcmp(propertyName, RRD_SET_PROFILE_EVENT) == 0) {
-        if (type == RBUS_STRING) {
-            const char* str = rbusValue_GetString(value, NULL);
-            if(str == NULL) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL string for setProfileData\n", __FUNCTION__, __LINE__);
-                return RBUS_ERROR_INVALID_INPUT;
-            }
-            if(strlen(str) > BUF_LEN_256 - 1) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: String too long for setProfileData\n", __FUNCTION__, __LINE__);
-                return RBUS_ERROR_INVALID_INPUT;
-            }
-
-            strncpy(RRDProfileCategory, str, sizeof(RRDProfileCategory)-1);
-            RRDProfileCategory[sizeof(RRDProfileCategory)-1] = '\0';
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: setProfileData value: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
-
-            // Store the category selection to file
-            if(save_profile_category() != 0) {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to store profile category\n", __FUNCTION__, __LINE__);
-                return RBUS_ERROR_BUS_ERROR;
-            }
-            
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Successfully set profile category to: %s\n", __FUNCTION__, __LINE__, RRDProfileCategory);
-            return RBUS_ERROR_SUCCESS;
-        } else {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid type for setProfileData\n", __FUNCTION__, __LINE__);
-            return RBUS_ERROR_INVALID_INPUT;
-        }
-    }
-    
-    return RBUS_ERROR_INVALID_INPUT;
-}
-
-/**
- * @brief Check if a category has direct commands (not nested structure)
- */
-bool has_direct_commands(cJSON *category)
-{
-    cJSON *item = NULL;
-    if (!category) {
-        return false;
-    }
-    cJSON_ArrayForEach(item, category) {
-        if (cJSON_IsObject(item)) {
-            cJSON *commands = cJSON_GetObjectItem(item, "Commands");
-            if (commands && cJSON_IsString(commands)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-/**
- * @brief Read and validate JSON profile file
- */
-char* read_profile_json_file(const char* filename, long* file_size)
-{
-    if (file_size == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: file_size is NULL\n", __FUNCTION__, __LINE__);
-        return NULL;
-    }
-
-    *file_size = 0;
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
-        return NULL;
-    }
-    
-    fseek(fp, 0L, SEEK_END);
-
-    long fileSz = ftell(fp);
-    if (fileSz < 0) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Failed to determine file size for %s\n", __FUNCTION__, __LINE__, filename);
-        fclose(fp);
-        return NULL;
-    }
-    rewind(fp);
-    
-    if (fileSz <= 0 || fileSz >= MAX_PROFILE_JSON_SIZE) {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Invalid file size: %ld\n", __FUNCTION__, __LINE__, fileSz);
-        fclose(fp);
-        return NULL;
-    }
-    
-    char *jsonBuffer = malloc(fileSz + 1);
-    if (!jsonBuffer) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory allocation failed for JSON buffer\n", __FUNCTION__, __LINE__);
-        fclose(fp);
-        return NULL;
-    }
-    
-    size_t bytesRead = fread(jsonBuffer, 1U, (size_t)fileSz, fp);
-    if (bytesRead != (size_t)fileSz) {
-        jsonBuffer[bytesRead] = '\0';
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to read complete profile file from %s (expected %ld bytes, read %zu bytes)\n", __FUNCTION__, __LINE__, filename, fileSz, bytesRead);
-        fclose(fp);
-        free(jsonBuffer);
-        return NULL;
-    }
-    jsonBuffer[bytesRead] = '\0';
-    fclose(fp);
-    
-    *file_size = (long)bytesRead;
-    return jsonBuffer;
-}
-
-/**
- * @brief Generate JSON for all categories
- */
-char* get_all_categories_json(cJSON* json)
-{
-    cJSON *response = cJSON_CreateObject();
-
-    if (!json) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: json is NULL\n", __FUNCTION__, __LINE__);
-        char *result_str = cJSON_Print(response);
-        cJSON_Delete(response);
-        return result_str;
-    }
-
-    cJSON *category = NULL;
-    cJSON_ArrayForEach(category, json) {
-        if (cJSON_IsObject(category) && category->string) {
-            if (has_direct_commands(category)) {
-                // Create array for this category's issue types
-                cJSON *issueTypesArray = cJSON_CreateArray();
-                cJSON *issueType = NULL;
-                cJSON_ArrayForEach(issueType, category) {
-                    if (cJSON_IsObject(issueType) && issueType->string) {
-                        cJSON_AddItemToArray(issueTypesArray, cJSON_CreateString(issueType->string));
-                    }
-                }
-                
-                // Add this category and its issue types to response
-                if (cJSON_GetArraySize(issueTypesArray) > 0) {
-                    cJSON_AddItemToObject(response, category->string, issueTypesArray);
-                } else {
-                    cJSON_Delete(issueTypesArray);
-                }
-            }
-        }
-    }
-    
-    char *result_str = cJSON_Print(response);
-    cJSON_Delete(response);
-    return result_str;
-}
-
-/**
- * @brief Generate JSON for specific category
- */
-char* get_specific_category_json(cJSON* json, const char* category_name)
-{
-    cJSON *category = cJSON_GetObjectItem(json, category_name);
-    if (!category || !cJSON_IsObject(category)) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Category %s not found \n", __FUNCTION__, __LINE__, category_name);
-        return get_all_categories_json(json);
-    }
-    
-    if (!has_direct_commands(category)) {
-        cJSON *empty_array = NULL;
-        char *result_str = NULL;
-
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Category %s has nested structure, returning empty\n", 
-            __FUNCTION__, __LINE__, category_name);
-
-        empty_array = cJSON_CreateArray();
-        result_str = cJSON_Print(empty_array);
-        cJSON_Delete(empty_array);
-        return result_str;
-    }
-    
-    cJSON *issueTypes = cJSON_CreateArray();
-    cJSON *issueType = NULL;
-    cJSON_ArrayForEach(issueType, category) {
-        if (cJSON_IsObject(issueType) && issueType->string) {
-            cJSON_AddItemToArray(issueTypes, cJSON_CreateString(issueType->string));
-        }
-    }
-    
-    char *result_str = cJSON_Print(issueTypes);
-    cJSON_Delete(issueTypes);
-    return result_str;
-}
-
-/**
- * @brief Set RBUS property response with JSON string
- */
-rbusError_t set_rbus_response(rbusProperty_t prop, const char* json_str)
-{
-    rbusValue_t rbusValue = NULL;
-
-    if (!prop || !json_str) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid input: prop=%p json_str=%p\n",
-                __FUNCTION__, __LINE__, (void*)prop, (void*)json_str);
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    rbusValue_Init(&rbusValue);
-    if (!rbusValue) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: rbusValue_Init failed\n", __FUNCTION__, __LINE__);
-        return RBUS_ERROR_BUS_ERROR;
-    }
-
-    rbusValue_SetString(rbusValue, json_str);
-    rbusProperty_SetValue(prop, rbusValue);
-    rbusValue_Release(rbusValue);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Successfully returned profile data\n", __FUNCTION__, __LINE__);
-    return RBUS_ERROR_SUCCESS;
-}
-
-/**
- * @brief Get handler for RDK Remote Debugger profile data retrieval
- */
-rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts)
-{
-    (void)handle;
-    (void)opts;
-
-    char const* propertyName = rbusProperty_GetName(prop);
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Get handler called for [%s]\n", __FUNCTION__, __LINE__, propertyName);
-
-    if(strcmp(propertyName, RRD_GET_PROFILE_EVENT) != 0) {
-        return RBUS_ERROR_INVALID_INPUT;
-    }
-    
-    const char *filename = RRD_JSON_FILE;
-    long file_size;
-    
-    // Read JSON file
-    char *jsonBuffer = read_profile_json_file(filename, &file_size);
-    if (!jsonBuffer) {
-        return RBUS_ERROR_BUS_ERROR;
-    }
-    
-    // Parse JSON
-    cJSON *json = cJSON_Parse(jsonBuffer);
-    if (!json) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to parse JSON from %s\n", __FUNCTION__, __LINE__, filename);
-        free(jsonBuffer);
-        return RBUS_ERROR_BUS_ERROR;
-    }
-    
-    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: JSON parsed successfully, processing categories\n", __FUNCTION__, __LINE__);
-    
-    // Generate appropriate JSON response
-    char *result_str = NULL;
-    if (strlen(RRDProfileCategory) == 0 || strcmp(RRDProfileCategory, "all") == 0) {
-        result_str = get_all_categories_json(json);
-    } else {
-        result_str = get_specific_category_json(json, RRDProfileCategory);
-    }
-    
-    // Set RBUS response
-    rbusError_t error = set_rbus_response(prop, result_str);
-    
-    // Log success if getHandler completed successfully
-    if (error == RBUS_ERROR_SUCCESS) {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: getHandler completed successfully for property [%s] with category [%s]\n", 
-                __FUNCTION__, __LINE__, propertyName, RRDProfileCategory);
-    }
-    
-    // Cleanup
-    cJSON_Delete(json);
-    free(jsonBuffer);
-    cJSON_free(result_str);
-    
-    return error;
-}
