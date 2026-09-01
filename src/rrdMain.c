@@ -70,9 +70,7 @@ void *RRDEventThreadFunc(void *arg)
             break;
         }
         RRD_data_buff_deAlloc(rbuf);
-#if GTEST_ENABLE
         break;
-#endif
     }
     
     return arg;
