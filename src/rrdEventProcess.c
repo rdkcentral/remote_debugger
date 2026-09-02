@@ -166,11 +166,11 @@ void processIssueTypeEvent(data_buf *rbuf)
 		}
 		
             }
-	    if( cmdMap)
-	    {
-                free(cmdMap);
-		cmdMap = NULL;
-	    }
+        }
+        if( cmdMap)
+        {
+            free(cmdMap);
+	    cmdMap = NULL;
         }
     }
     
