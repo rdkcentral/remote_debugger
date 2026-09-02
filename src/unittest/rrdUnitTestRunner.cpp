@@ -4099,7 +4099,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveFailure) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDefaultType) {
     data_buf rbuf;
-    rbuf.mtype = DEFAULT;
+    RRD_data_buff_init(&rbuf, DEFAULT, RRD_DEEPSLEEP_INVALID_DEFAULT);
     rbuf.mdata = strdup("Test Message");
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
