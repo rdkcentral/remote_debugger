@@ -350,7 +350,10 @@ static void processIssueType(data_buf *rbuf)
 		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking Issue from Static... \n", __FUNCTION__, __LINE__);
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
-	    //CID-336989: Resource leak
+                free(pIssueNode->Node);
+                free(pIssueNode->subNode);
+                free(pIssueNode);
+                pIssueNode = NULL;
         }
         else
         {
