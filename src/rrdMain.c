@@ -55,6 +55,7 @@ void *RRDEventThreadFunc(void *arg)
         {
         case EVENT_MSG:
             processIssueTypeEvent(rbuf);
+                RRD_data_buff_deAlloc(rbuf);
             break;
         case EVENT_WEBCFG_MSG:
             processWebCfgTypeEvent(rbuf);
@@ -67,8 +68,8 @@ void *RRDEventThreadFunc(void *arg)
             break;
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
-            free(rbuf->mdata);
-            free(rbuf);
+                free(rbuf->mdata);
+                free(rbuf);
             break;
         }
 #if GTEST_ENABLE
