@@ -20,6 +20,7 @@
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#include "rrdInterface.h"
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
