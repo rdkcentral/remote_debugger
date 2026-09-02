@@ -65,6 +65,7 @@ void *RRDEventThreadFunc(void *arg)
             /*Process Deep Sleep Events*/
             RRDProcessDeepSleepAwakeEvents(rbuf);
 #endif
+                RRD_data_buff_deAlloc(rbuf);
             break;
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
