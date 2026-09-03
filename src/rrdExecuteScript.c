@@ -44,7 +44,7 @@ int uploadDebugoutput(char *outdir, char *issuename)
         normalizeIssueName(issuename);
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
         rdk_otlp_start_child_span("RRD_ctx", "uploadDebugReport");
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
 #endif
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
@@ -59,7 +59,7 @@ int uploadDebugoutput(char *outdir, char *issuename)
         }
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
         rdk_otlp_finish_child_span();
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
 #endif
     }
 
