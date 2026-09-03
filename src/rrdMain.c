@@ -148,31 +148,18 @@ int main(int argc, char *argv[])
     initCache();
 #ifdef ENABLE_OTEL
 	rdk_otlp_init("RRD", "1.0.0");
-	RDK_LOG(RDK_LOG_DEBUG,"LOG.RDK.OTEL","[%s:%d]:[OTEL] OTEL initialized\n", __FUNCTION__, __LINE__);
-
-	rdk_LogOutput_File otelFileLog;
-	strncpy(otelFileLog.fileName, "rdk_otel_tracer.log", sizeof(otelFileLog.fileName) - 1);
-	otelFileLog.fileName[sizeof(otelFileLog.fileName) - 1] = '\0';
-	strncpy(otelFileLog.fileLocation, "/opt/logs/", sizeof(otelFileLog.fileLocation) - 1);
-	otelFileLog.fileLocation[sizeof(otelFileLog.fileLocation) - 1] = '\0';
-
-	rdk_logger_ext_config_t otelLogConfig = {
-		.pModuleName = "LOG.RDK.OTEL",
-		.loglevel = RDK_LOG_INFO,
-		.output = RDKLOG_OUTPUT_FILE,
-		.format = RDKLOG_FORMAT_WITH_TS,
-		.pFilePolicy = &otelFileLog
-	};
-
-	if (rdk_logger_ext_init(&otelLogConfig) != RDK_SUCCESS) {
-		RDK_LOG(RDK_LOG_ERROR, "LOG.RDK.OTEL", "[%s:%d]: OTEL logger ext init failed\n", __FUNCTION__, __LINE__);
-	}
+    rdk_otlp_logs_init();
+    RRD_OTEL_LOG(RDK_LOG_INFO, LOG_OTEL, "[%s:%d]: [OTEL] Tracer and logs initialized\n", __FUNCTION__, __LINE__);
 #endif
 
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
     if(!isEnabled) {
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is disabled, stopping remote-debugger\n", __FUNCTION__, __LINE__);
+#ifdef ENABLE_OTEL
+		rdk_otlp_force_flush();
+		rdk_otlp_shutdown();
+#endif
         exit(0);
     }
     
@@ -186,9 +173,6 @@ int main(int argc, char *argv[])
 
     RRD_subscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Started RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
-#ifdef ENABLE_OTEL
-	RDK_LOG(RDK_LOG_DEBUG,"LOG.RDK.OTEL","[%s:%d]:[OTEL] Finish child span\n",__FUNCTION__,__LINE__);
-#endif
 
     /* Create Thread for listening TR69 events */
     pthread_create (&RRDTR69ThreadID, NULL, RRDEventThreadFunc, NULL);
@@ -197,6 +181,10 @@ int main(int argc, char *argv[])
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopping RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
     RRD_unsubscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopped RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
+#ifdef ENABLE_OTEL
+	rdk_otlp_force_flush();
+	rdk_otlp_shutdown();
+#endif
 
     return 0;
 }
