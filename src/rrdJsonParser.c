@@ -231,7 +231,7 @@ cJSON *readAndParseJSON(char *jsonFile)
     cJSON *jsoncfg = NULL;
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "readAndParseJSON");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
 #endif
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Start Reading JSON File... %s\n",__FUNCTION__,__LINE__, jsonFile);
     file_content = readJsonFile(jsonFile);
@@ -239,7 +239,7 @@ cJSON *readAndParseJSON(char *jsonFile)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Reading json file failed, Skipping Parse!!\n",__FUNCTION__,__LINE__);
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
         rdk_otlp_finish_child_span();
 #endif
         return NULL;
@@ -254,7 +254,7 @@ cJSON *readAndParseJSON(char *jsonFile)
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s Parse Failed...!!\n",__FUNCTION__,__LINE__,jsonFile);
         free(file_content);     // free file content received from readJsonFile
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
         rdk_otlp_finish_child_span();
 #endif
         return NULL;
@@ -264,7 +264,7 @@ cJSON *readAndParseJSON(char *jsonFile)
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Json File parse Success... %s\n",__FUNCTION__,__LINE__,jsonFile);
         free(file_content);
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for readAndParseJSON\n", __FUNCTION__, __LINE__);
         rdk_otlp_finish_child_span();
 #endif
         return jsoncfg;
@@ -288,7 +288,7 @@ void getIssueInfo(char *issuestr, issueNodeData *issue)
 
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "getIssueInfo");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for getIssueInfo\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for getIssueInfo\n", __FUNCTION__, __LINE__);
 #endif
 
     issuestrlen = strlen(issuestr) + 1;
@@ -327,7 +327,7 @@ void getIssueInfo(char *issuestr, issueNodeData *issue)
     }
     RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:  Received Main Node= %s, SubNode= %s\n",__FUNCTION__,__LINE__,issue->Node,issue->subNode);
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for getIssueInfo\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for getIssueInfo\n", __FUNCTION__, __LINE__);
     rdk_otlp_finish_child_span();
 #endif
 }
@@ -349,7 +349,7 @@ bool findIssueInParsedJSON(issueNodeData *issuestructNode, cJSON *jsoncfg)
 
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "findIssueInParsedJSON");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for findIssueInParsedJSON\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for findIssueInParsedJSON\n", __FUNCTION__, __LINE__);
 #endif
 
     if (!issuestructNode->Node)
@@ -409,7 +409,7 @@ bool findIssueInParsedJSON(issueNodeData *issuestructNode, cJSON *jsoncfg)
         }
     }
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for findIssueInParsedJSON\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for findIssueInParsedJSON\n", __FUNCTION__, __LINE__);
     rdk_otlp_finish_child_span();
 #endif
     return result;
@@ -535,7 +535,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
 
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "invokeSanityandCommandExec");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for invokeSanityandCommandExec\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for invokeSanityandCommandExec\n", __FUNCTION__, __LINE__);
 #endif
 
     if(deepSleepAwkEvnt)
@@ -630,7 +630,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     }
 
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for invokeSanityandCommandExec\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for invokeSanityandCommandExec\n", __FUNCTION__, __LINE__);
     rdk_otlp_finish_child_span();
 #endif
     return exresult;
@@ -655,7 +655,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     struct tm *ltime;
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "checkIssueNodeInfo");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
 #endif
     rfcbuf = strdup(buff->mdata);
 
@@ -782,7 +782,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
 	}
     }
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
     rdk_otlp_finish_child_span();
 #endif
 }
