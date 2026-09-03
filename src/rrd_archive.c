@@ -18,6 +18,9 @@
 */
 
 #include "rrd_archive.h"
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -300,6 +303,10 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
 }
 
 int rrd_archive_create(const char *source_dir, const char *working_dir, const char *archive_filename) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_archive_create");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Started child span for rrd_archive_create\n", __FUNCTION__);
+#endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Creating archive: %s from source: %s\n",
             __FUNCTION__, archive_filename, source_dir);
     
@@ -365,16 +372,28 @@ int rrd_archive_create(const char *source_dir, const char *working_dir, const ch
     if (rc == 0) {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Archive created successfully: %s (%lld bytes)\n",
                 __FUNCTION__, outpath, (long long)st.st_size);
+#ifdef ENABLE_OTEL
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Stopping child span for rrd_archive_create\n", __FUNCTION__);
+        rdk_otlp_finish_child_span();
+#endif
         return 0;
     } else {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to create archive: %s\n",
                 __FUNCTION__, outpath);
+#ifdef ENABLE_OTEL
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Stopping child span for rrd_archive_create\n", __FUNCTION__);
+        rdk_otlp_finish_child_span();
+#endif
         return -2;
     }
 }
 
 // Generate archive filename: <mac>_<issue_type>_<timestamp>_RRD_DEBUG_LOGS.tgz
 int rrd_archive_generate_filename(const char *mac, const char *issue_type, const char *timestamp, char *filename, size_t size) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_archive_generate_filename");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Started child span for rrd_archive_generate_filename\n", __FUNCTION__);
+#endif
     if (!mac || !issue_type || !timestamp || !filename || size < 128) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Invalid parameters\n", __FUNCTION__);
         return -1;
@@ -385,6 +404,10 @@ int rrd_archive_generate_filename(const char *mac, const char *issue_type, const
         return -1;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Generated filename: %s\n", __FUNCTION__, filename);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Stopping child span for rrd_archive_generate_filename\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 
@@ -394,16 +417,28 @@ int rrd_archive_cleanup(const char *archive_path) {
         return -1;
     }
     
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_archive_cleanup");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Started child span for rrd_archive_cleanup\n", __FUNCTION__);
+#endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Cleaning up archive: %s\n", __FUNCTION__, archive_path);
     int ret = remove(archive_path);
     
     if (ret == 0) {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Archive removed successfully: %s\n",
                 __FUNCTION__, archive_path);
+#ifdef ENABLE_OTEL
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Stopping child span for rrd_archive_cleanup\n", __FUNCTION__);
+        rdk_otlp_finish_child_span();
+#endif
         return 0;
     } else {
         RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "[%s] Failed to remove archive: %s (error: %s)\n",
                 __FUNCTION__, archive_path, strerror(errno));
+#ifdef ENABLE_OTEL
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Stopping child span for rrd_archive_cleanup\n", __FUNCTION__);
+        rdk_otlp_finish_child_span();
+#endif
         return -2;
     }
 }

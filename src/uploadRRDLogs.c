@@ -31,6 +31,9 @@
 #include "rrd_archive.h"   // Archive Manager
 #include "rrd_upload.h"    // Upload Manager
 #include "rrd_log.h"       // Logging Subsystem
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 // --- Main Orchestration Layer ---
 
@@ -42,6 +45,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
         return 1;
     }
     
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_upload_orchestrate");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_upload_orchestrate\n", __FUNCTION__);
+#endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Executing binary to upload Debug info of ISSUETYPE=%s\n", __FUNCTION__, issue_type);
 
     // 2. Initialize logging subsystem
@@ -136,6 +143,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     rrd_upload_cleanup_source_dir(upload_dir);
 
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Exit\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 

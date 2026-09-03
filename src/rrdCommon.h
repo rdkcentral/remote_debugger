@@ -53,6 +53,16 @@ extern "C"
 #define RRD_DEVICE_PROP_FILE "UTJson/device.properties"
 #endif
 #define LOG_REMDEBUG "LOG.RDK.REMOTEDEBUGGER"
+#define LOG_OTEL "LOG.RDK.OTEL"
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+#include "rdk_otlp_instrumentation.h"
+#define RRD_OTEL_LOG(level, module, format, ...) do { \
+     char rrd_otel_log_buffer[512]; \
+     snprintf(rrd_otel_log_buffer, sizeof(rrd_otel_log_buffer), format, ##__VA_ARGS__); \
+     RDK_LOG(level, module, "%s", rrd_otel_log_buffer); \
+     rdk_otlp_emit_log(level, module, rrd_otel_log_buffer); \
+} while (0)
+#endif
 #define DEEP_SLEEP_STR "DEEPSLEEP"
 #define RDM_MGR_PKG_INST "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage"
 #define RRD_MEDIA_APPS "/media/apps/"
