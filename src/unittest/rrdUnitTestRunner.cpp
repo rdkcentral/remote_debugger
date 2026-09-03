@@ -4143,8 +4143,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessWebCfgMsgType) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDeepSleepEventType) {
     data_buf rbuf;
-    rbuf.mtype = DEEPSLEEP_EVENT_MSG;
-    rbuf.mdata = nullptr;
+    RRD_data_buff_init(&rbuf, DEEPSLEEP_EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);
