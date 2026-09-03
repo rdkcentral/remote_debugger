@@ -298,7 +298,7 @@ bool executeCommands(issueData *cmdinfo)
 
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "executeCommands");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for executeCommands\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for executeCommands\n", __FUNCTION__, __LINE__);
 #endif
     cmdData = (issueData *)cmdinfo;
  
@@ -429,7 +429,7 @@ bool executeCommands(issueData *cmdinfo)
             free(cmdData);
 #endif
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-            RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for executeCommands\n", __FUNCTION__, __LINE__);
+            RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for executeCommands\n", __FUNCTION__, __LINE__);
             rdk_otlp_finish_child_span();
 #endif
             return true;
@@ -438,7 +438,7 @@ bool executeCommands(issueData *cmdinfo)
     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
     free(cmdData);
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for executeCommands\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for executeCommands\n", __FUNCTION__, __LINE__);
     rdk_otlp_finish_child_span();
 #endif
     return false;
