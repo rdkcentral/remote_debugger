@@ -94,7 +94,7 @@ int rrd_config_load(rrd_config_t *config) {
     
 #ifdef ENABLE_OTEL
     rdk_otlp_start_child_span("RRD_ctx", "rrd_config_load");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "%s: [OTEL] Started child span for rrd_config_load\n", __FUNCTION__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_config_load\n", __FUNCTION__);
 #endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Loading configuration...\n", __FUNCTION__);
     
@@ -174,14 +174,14 @@ int rrd_config_load(rrd_config_t *config) {
     if (strlen(config->http_upload_link) == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: HTTP_UPLOAD_LINK is empty after all config attempts!\n", __FUNCTION__);
 #ifdef ENABLE_OTEL
-        RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "%s: [OTEL] Stopping child span for rrd_config_load\n", __FUNCTION__);
+        RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_config_load\n", __FUNCTION__);
         rdk_otlp_finish_child_span();
 #endif
         return -3;
     }
     
 #ifdef ENABLE_OTEL
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "%s: [OTEL] Stopping child span for rrd_config_load\n", __FUNCTION__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_config_load\n", __FUNCTION__);
     rdk_otlp_finish_child_span();
 #endif
     return 0;
