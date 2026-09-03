@@ -419,7 +419,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 #ifdef ENABLE_OTEL
 	rdk_otlp_start_distributed_trace("RRD_ctx", "set");
-	RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span... \n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started distributed trace\n", __FUNCTION__, __LINE__);
 #endif
 
     (void)(handle);
@@ -456,7 +456,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 
 #ifdef ENABLE_OTEL
 	rdk_otlp_finish_distributed_trace();
-	RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span...\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping distributed trace\n", __FUNCTION__, __LINE__);
 #endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
@@ -492,7 +492,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
     data_buf *sbuf = NULL;
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
     rdk_otlp_start_child_span("RRD_ctx", "pushIssueTypesToMsgQueue");
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Started child span for pushIssueTypesToMsgQueue\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for pushIssueTypesToMsgQueue\n", __FUNCTION__, __LINE__);
 #endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
     sbuf = (data_buf *)malloc(sizeof(data_buf));
@@ -514,7 +514,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         /* coverity[leaked_storage] */
     }
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for pushIssueTypesToMsgQueue\n", __FUNCTION__, __LINE__);
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for pushIssueTypesToMsgQueue\n", __FUNCTION__, __LINE__);
     rdk_otlp_finish_child_span();
 #endif
 }
