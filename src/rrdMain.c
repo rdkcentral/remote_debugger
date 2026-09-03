@@ -55,20 +55,22 @@ void *RRDEventThreadFunc(void *arg)
         {
         case EVENT_MSG:
             processIssueTypeEvent(rbuf);
+                RRD_data_buff_deAlloc(rbuf);
             break;
         case EVENT_WEBCFG_MSG:
             processWebCfgTypeEvent(rbuf);
+                RRD_data_buff_deAlloc(rbuf);
             break;
         case DEEPSLEEP_EVENT_MSG:
 #ifdef IARMBUS_SUPPORT
             /*Process Deep Sleep Events*/
             RRDProcessDeepSleepAwakeEvents(rbuf);
 #endif
+                RRD_data_buff_deAlloc(rbuf);
             break;
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
-            free(rbuf->mdata);
-            free(rbuf);
+                RRD_data_buff_deAlloc(rbuf);
             break;
         }
 #if GTEST_ENABLE

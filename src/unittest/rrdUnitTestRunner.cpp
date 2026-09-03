@@ -4099,7 +4099,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveFailure) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDefaultType) {
     data_buf rbuf;
-    rbuf.mtype = DEFAULT;
+    RRD_data_buff_init(&rbuf, DEFAULT, RRD_DEEPSLEEP_INVALID_DEFAULT);
     rbuf.mdata = strdup("Test Message");
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
@@ -4130,8 +4130,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessEventMsgType) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessWebCfgMsgType) {
     data_buf rbuf;
-    rbuf.mtype = EVENT_WEBCFG_MSG;
-    rbuf.mdata = nullptr;
+    RRD_data_buff_init(&rbuf, EVENT_WEBCFG_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);
@@ -4144,8 +4143,7 @@ TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessWebCfgMsgType) {
 
 TEST_F(RRDEventThreadFuncTest, MessageReceiveSuccessDeepSleepEventType) {
     data_buf rbuf;
-    rbuf.mtype = DEEPSLEEP_EVENT_MSG;
-    rbuf.mdata = nullptr;
+    RRD_data_buff_init(&rbuf, DEEPSLEEP_EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
     msgRRDHdr msgHdr;
     msgHdr.mbody = malloc(sizeof(data_buf));
     ASSERT_NE(msgHdr.mbody, nullptr);

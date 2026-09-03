@@ -508,7 +508,9 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         type = cJSON_GetObjectItem(category, issuestructNode->subNode);
     }
     free(issuestructNode->Node); // free main node
+        issuestructNode->Node = NULL;
     free(issuestructNode->subNode); // free sub node
+        issuestructNode->subNode = NULL;
     issuestdata = (issueData *) malloc(sizeof(issueData));
     if(issuestdata == NULL)
     {
@@ -658,7 +660,9 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 {
                     execstatus = executeCommands(appendprofiledata);
                     free(issuestructNode->Node); // free main node
+                        issuestructNode->Node = NULL;
                     free(issuestructNode->subNode); // free sub node
+                        issuestructNode->subNode = NULL;
                 }
                 else
                 {
@@ -840,6 +844,7 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Printing RootNode name %s \n", __FUNCTION__, __LINE__, rootNodeName);
     free(issuestructNode->Node); // Deep Sleep String not required.
+        issuestructNode->Node = NULL;
 
     if (issueCategoryCount)
     {
