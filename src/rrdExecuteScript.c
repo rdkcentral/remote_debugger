@@ -46,11 +46,10 @@ int uploadDebugoutput(char *outdir, char *issuename)
     if(outdir != NULL && issuename != NULL)
     {
         normalizeIssueName(issuename);
-		#ifdef IARMBUS_SUPPORT
+#ifdef IARMBUS_SUPPORT
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
 
         ret = rrd_upload_orchestrate(outdir, issuename);
-        
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Upload orchestration failed with code: %d\n",__FUNCTION__,__LINE__, ret);
@@ -59,6 +58,13 @@ int uploadDebugoutput(char *outdir, char *issuename)
         {
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Upload orchestration completed successfully\n",__FUNCTION__,__LINE__);
         }
+#else
+		RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output Script: %s... \n",__FUNCTION__,__LINE__,RRD_SCRIPT);
+        if(v_secure_system("%s %s %s",RRD_SCRIPT,outdir,issuename) != 0)
+		{
+            ret = 1;
+        }			
+#endif
 
     }
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
