@@ -38,14 +38,14 @@ static void normalizeIssueName(char *str);
 int uploadDebugoutput(char *outdir, char *issuename)
 {
     int ret = 0;
-
-    if(outdir != NULL && issuename != NULL)
-    {
-        normalizeIssueName(issuename);
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
         rdk_otlp_start_child_span("RRD_ctx", "uploadDebugReport");
         RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
 #endif
+
+    if(outdir != NULL && issuename != NULL)
+    {
+        normalizeIssueName(issuename);
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Starting Upload Debug output via API... \n",__FUNCTION__,__LINE__);
         
 		v_secure_system("%s %s %s",RRD_SCRIPT,outdir,issuename);
@@ -57,12 +57,12 @@ int uploadDebugoutput(char *outdir, char *issuename)
         {
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Upload orchestration completed successfully\n",__FUNCTION__,__LINE__);
         }
+
+    }
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
         rdk_otlp_finish_child_span();
         RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for uploadDebugReport\n", __FUNCTION__, __LINE__);
 #endif
-    }
-
     return ret;
 }
 	
