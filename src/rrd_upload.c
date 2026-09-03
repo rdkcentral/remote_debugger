@@ -1,5 +1,6 @@
 /*
- * If not stated otherwise in this file or this component's LICENSE file the
+ *
+ * If not stated otherwise in this file or this component's Licenses.txt file the
  * following copyright and licenses apply:
  *
  * Copyright 2018 RDK Management
@@ -15,170 +16,203 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
-#include "rrdCommandSanity.h"
-#include <ctype.h>
+#include "rrd_upload.h"
+#include "rrdCommon.h"
 #ifdef ENABLE_OTEL
 #include "rdk_otlp_instrumentation.h"
 #endif
 
-/*
- * @function updateBackgroundCmd
- * @brief Modifies the given command string by replacing instances of "&;" with "& "
- *              to handle commands specified for background execution properly.
- * @param char *str - The command string to be processed.
- * @return int - Returns 0 on success, or 1 if the input string is NULL.
- */
-int updateBackgroundCmd(char * str)
-{
-    int i = 0;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <fcntl.h>
 
-    if(str == NULL)
-    {
-        return 1;
+
+
+
+int rrd_upload_execute(const char *log_server, const char *protocol, const char *http_link, const char *working_dir, const char *archive_filename, const char *source_dir) {
+    // Validate required parameters
+    if (!log_server || strlen(log_server) == 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid or empty log_server\n", __FUNCTION__);
+        return -1;
     }
-    else
-    {
-        while(str[i]!='\0')
-        {
-            if(str[i]=='&' && str[i+1]==';') // replace '&;' in commands by '& '
-            {
-                str[i+1]=' ';
-            }
-            i++;
-        }
+    if (!protocol) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid upload protocol\n", __FUNCTION__);
+        return -1;
     }
-
-    return 0;
-}
-
-/*
- * @function replaceRRDLocation
- * @brief Replaces occurrences of the DEFAULT_DIR macro in the command string with the given
- *              directory location.
- * @param char* commandStr - The command string containing the macro to be replaced.
- * @param char* dirLocation - The directory location to replace the macro with.
- * @return char* - Returns the updated command string on success, or NULL on failure.
- */
-char *replaceRRDLocation(char* commandStr, char* dirLocation)
-{
-    char *data = NULL;
-    char *matchptr = NULL;
-    char *iterptr = NULL;
-    char *tempptr = NULL;
-    size_t deflen = 0, dirlen = 0, cmdlen = 0;
-    size_t datalen = 0,skiplen = 0;
-    int cnt = 0;
-
-    cmdlen = strlen(commandStr);
-    deflen = strlen(DEFAULT_DIR);
-    dirlen = strlen(dirLocation);
-
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be replaced: %s \n",__FUNCTION__,__LINE__,commandStr);
-    iterptr = commandStr;
-    while (NULL != (matchptr = strstr(iterptr, DEFAULT_DIR)))
-    {
-        cnt++;
-        iterptr = matchptr + deflen;
+    if (!http_link) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid HTTP upload link\n", __FUNCTION__);
+        return -1;
     }
-
-    datalen = cmdlen + cnt * (dirlen - deflen);
-    data = (char *) malloc( sizeof(char) * (datalen + 1) ); // allocate memory for updating directory location for MACRO commands
-
-    if (data != NULL)
-    {
-        tempptr = data;
-        iterptr = commandStr;
-
-        while (NULL != (matchptr = strstr(iterptr, DEFAULT_DIR)))
-        {
-            skiplen = matchptr - iterptr;
-            strncpy(tempptr, iterptr, skiplen);
-            tempptr += skiplen;
-            strncpy(tempptr, dirLocation, dirlen);
-            tempptr += dirlen;
-
-            iterptr = matchptr + deflen;
-        }
-        strcpy(tempptr, iterptr);
+    if (!working_dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid working directory\n", __FUNCTION__);
+        return -1;
     }
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be executed: %s \n",__FUNCTION__,__LINE__,data);
-    free(commandStr); // free old command received with MACRO
-    commandStr = (char *) data; // Update new command to the argument
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Copying updated command to argument: %s \n",__FUNCTION__,__LINE__,commandStr);
-
-    return commandStr;
-}
-
-/*
- * @function isCommandsValid
- * @brief Checks for harmful commands in the input command string against a list of
- *              sanctioned commands to prevent damage to platforms.
- * @param char *issuecmd - The command string to be validated.
- * @param cJSON *sanitylist - JSON object containing the list of sanctioned commands.
- * @return int - Returns 0 if the command is valid, or 1 if the command is harmful or invalid.
- */
-int isCommandsValid(char *issuecmd,cJSON *sanitylist)
-{
-    int i = 0,result = 0,sitems = 0;
-    cJSON *subcmd = NULL;
-    char *sanitycmd = NULL;
-    char *checkcmd = NULL;
-    char *sanitystr = NULL;
-
-#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    rdk_otlp_start_child_span("RRD_ctx", "isCommandsValid");
-    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+    if (!archive_filename) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid archive filename\n", __FUNCTION__);
+        return -1;
+    }
+    
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Starting upload - server: %s, protocol: %s, file: %s\n", 
+            __FUNCTION__, log_server, protocol, archive_filename);
+    
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_upload_execute");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_upload_execute\n", __FUNCTION__);
 #endif
-    sanitycmd = cJSON_Print(sanitylist); // Print sanity commands data from the Json object sanitylist
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands List: %s \n",__FUNCTION__,__LINE__,sanitycmd);
-    cJSON_free(sanitycmd); // free sanity commands data
-    sitems = cJSON_GetArraySize(sanitylist);
-    for (i = 0 ; i < sitems; i++)
-    {
-         subcmd = cJSON_GetArrayItem(sanitylist, i);
-         checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
-         int len = strlen(checkcmd);
-         if (len >= 2 && checkcmd[0] == '"' && checkcmd[len - 1] == '"') 
-         {
-             checkcmd[len - 1] = '\0'; // Remove closing quote
-             checkcmd++;               // Move pointer forward to skip opening quote
-             len -= 2;            // Adjust length after removing quotes
-         }
-         // Trim trailing spaces
-         int j = len - 1;
-         while (j >= 0 && isspace(checkcmd[j])) {
-         checkcmd[j] = '\0';
-         j--;
-         }
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands... \n",__FUNCTION__,__LINE__,checkcmd);
-         sanitystr = strstr(issuecmd,checkcmd);
-         if (sanitystr)
-         {
-             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
-             return 1;
-         }
-         else
-         {
-             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Found valid Commands, Execute... \n",__FUNCTION__,__LINE__);
-         }
+    
+    // 1. Check for upload lock (matching shell script line 67)
+    bool locked = false;
+    if (rrd_upload_check_lock(&locked) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to check upload lock\n", __FUNCTION__);
+        return -1;
     }
-
-    if(strstr(issuecmd,"&"))
-    {
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Received Commands to execute in background... \n",__FUNCTION__,__LINE__);
-        result = updateBackgroundCmd(issuecmd);
-        if (result != 0)
-        {
-            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Removing special charater failed!!! \n",__FUNCTION__,__LINE__);
-            return 1;
+    if (locked) {
+        RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Upload lock detected, waiting...\n", __FUNCTION__);
+        if (rrd_upload_wait_for_lock(10, 60) != 0) {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Upload lock timeout\n", __FUNCTION__);
+            return -2;
         }
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Upload lock cleared\n", __FUNCTION__);
     }
 
-#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
-    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+    // 2. Prepare full path to archive file
+    char archive_fullpath[512];
+    snprintf(archive_fullpath, sizeof(archive_fullpath), "%s%s", working_dir, archive_filename);
+    
+    // 3. Prepare parameters for uploadstblogs_run
+    UploadSTBLogsParams params = {
+        .flag = 1,
+        .dcm_flag = 0, // Not a DCM-triggered upload
+        .upload_on_reboot = false,
+        .upload_protocol = protocol,
+        .upload_http_link = http_link,
+        .trigger_type = TRIGGER_ONDEMAND,
+        .rrd_flag = true,
+        .rrd_file = archive_fullpath
+    };
+
+    int result = uploadstblogs_run(&params);
+    if (result != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Log upload failed with error code: %d\n", __FUNCTION__, result);
+        fprintf(stderr, "Log upload failed: %d\n", result);
+        return -3;
+    }
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Upload completed successfully\n", __FUNCTION__);
+    
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_execute\n", __FUNCTION__);
     rdk_otlp_finish_child_span();
 #endif
     return 0;
+}
+
+// Check for concurrent upload lock file (matching uploadstblogs binary)
+int rrd_upload_check_lock(bool *is_locked) {
+    if (!is_locked) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid is_locked pointer\n", __FUNCTION__);
+        return -1;
+    }
+    
+    // Try to acquire a non-blocking lock on the same file uploadstblogs uses
+    int fd = open("/tmp/.log-upload.lock", O_RDONLY | O_CREAT, 0644);
+    if (fd == -1) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to open lock file (errno: %d)\n", __FUNCTION__, errno);
+        return -1;
+    }
+    
+    // Try to acquire a non-blocking shared lock (LOCK_SH | LOCK_NB)
+    // If uploadstblogs has an exclusive lock (LOCK_EX), this will fail with EWOULDBLOCK
+    int lock_ret = flock(fd, LOCK_SH | LOCK_NB);
+    if (lock_ret == 0) {
+        // Successfully acquired shared lock - no exclusive lock held
+        *is_locked = false;
+        flock(fd, LOCK_UN);  // Release our shared lock
+        close(fd);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: free\n", __FUNCTION__);
+    } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
+        // Exclusive lock is held by another process
+        *is_locked = true;
+        close(fd);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Lock status: locked\n", __FUNCTION__);
+    } else {
+        // Some other error
+        close(fd);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: flock failed (errno: %d)\n", __FUNCTION__, errno);
+        return -1;
+    }
+    
+    return 0;
+}
+
+// Wait for lock file to clear (matching uploadstblogs binary lock)
+int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Waiting for upload lock to clear (max attempts: %d, wait: %ds)\n", 
+            __FUNCTION__, max_attempts, wait_seconds);
+    
+    for (int i = 0; i < max_attempts; ++i) {
+        bool locked = false;
+        if (rrd_upload_check_lock(&locked) == 0 && !locked) {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock cleared after %d attempt(s)\n", __FUNCTION__, i + 1);
+            return 0; // lock gone
+        }
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Lock still present, attempt %d/%d, sleeping %ds...\n", 
+                __FUNCTION__, i + 1, max_attempts, wait_seconds);
+        sleep(wait_seconds);
+    }
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Lock timeout after %d attempts\n", __FUNCTION__, max_attempts);
+    return -1; // still locked
+}
+
+
+// All log upload is now handled via dcm-agent's uploadstblogs_run API.
+
+// Cleanup files after upload (matching shell script line 139 and 143)
+int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir) {
+    int ret = 0;
+    
+    // Remove archive file
+    if (archive_path) {
+        ret = remove(archive_path);
+        if (ret == 0) {
+            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Removed archive: %s\n", __FUNCTION__, archive_path);
+        } else {
+            RDK_LOG(RDK_LOG_WARN, LOG_REMDEBUG, "%s: Failed to remove archive: %s (errno: %d)\n", 
+                    __FUNCTION__, archive_path, errno);
+        }
+    }
+    
+    // Remove source directory (matching shell script rm -rf $RRD_LOG_PATH)
+    if (source_dir) {
+        rrd_upload_cleanup_source_dir(source_dir);
+    }
+    
+    return (ret == 0 || !archive_path) ? 0 : -1;
+}
+
+// Recursively remove source directory
+int rrd_upload_cleanup_source_dir(const char *dir_path) {
+    if (!dir_path) return -1;
+    
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Removing source directory: %s\n", __FUNCTION__, dir_path);
+    
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "rm -rf %s", dir_path);
+    
+    int ret = system(cmd);
+    if (ret == 0) {
+        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Successfully removed source directory: %s\n", 
+                __FUNCTION__, dir_path);
+        return 0;
+    } else {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to remove source directory: %s (ret: %d)\n", 
+                __FUNCTION__, dir_path, ret);
+        return -1;
+    }
 }
