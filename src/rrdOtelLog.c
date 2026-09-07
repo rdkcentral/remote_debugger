@@ -17,6 +17,11 @@
  * limitations under the License.
 */
 
+#include "rrdCommon.h"
+#include <stdio.h>
+#include <stdarg.h>
+
+
 void rrd_otel_log_write(const char *module, const char *format, ...)
 {
      char message[512];
