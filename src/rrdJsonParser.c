@@ -668,6 +668,10 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         buff->jsonPath = NULL;
         free(buff->suffix); // free suffix
         buff->suffix = NULL;
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
         return;
     }
 
@@ -692,6 +696,10 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         buff->jsonPath = NULL;
         free(buff->suffix); // free suffix
         buff->suffix = NULL;
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for checkIssueNodeInfo\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
         return;
     }
     else
