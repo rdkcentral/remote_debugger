@@ -32,7 +32,7 @@ void rrd_otel_log_write(const char *module, const char *format, ...)
      vsnprintf(message, sizeof(message), format, args);
      va_end(args);
 
-     log_file = fopen("/opt/logs/remote_debugger_otel.log", "a");
+     log_file = fopen("/opt/logs/rdk_otel_tracer.log", "a");
      if (log_file == NULL)
      {
           return;
