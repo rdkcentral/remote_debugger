@@ -494,9 +494,9 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
             sbuf->appendMode = true;
         }	
-        RRDMsgDeliver(msqid, sbuf);
+		/* coverity[pass_by_address] */RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
-        /* coverity[leaked_storage] */
+		/* coverity[leaked_storage] - ownership transfers to consumer via message queue */
     }
 }
 
