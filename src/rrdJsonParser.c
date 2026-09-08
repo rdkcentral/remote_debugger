@@ -555,6 +555,10 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     if(issuestdata == NULL)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Memory Allocation Failure \n",__FUNCTION__,__LINE__);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for invokeSanityandCommandExec\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
 	return false;
     }
     issuestdata->rfcvalue = NULL;
