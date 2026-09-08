@@ -36,6 +36,10 @@ int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Entry\n", __FUNCTION__);
     if (!mac_addr || size < 13) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid MAC buffer or size (need at least 13 bytes)\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_mac_address\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -44,6 +48,10 @@ int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
     size_t copied = GetEstbMac(mac_with_colons, sizeof(mac_with_colons));
     if (copied == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get MAC address\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_mac_address\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -76,6 +84,10 @@ int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Entry\n", __FUNCTION__);
     if (!timestamp || size < 20) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid timestamp buffer or size\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_timestamp\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     memset(timestamp, 0, size);
@@ -83,6 +95,10 @@ int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
     struct tm *tm_info = localtime(&now);
     if (!tm_info) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get local time\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_timestamp\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     char ampm[3] = "AM";
