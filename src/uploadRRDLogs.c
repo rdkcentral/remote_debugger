@@ -39,16 +39,16 @@
 
 int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
 {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_upload_orchestrate");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_upload_orchestrate\n", __FUNCTION__);
+#endif
     // Validate input parameters
     if (!upload_dir || !issue_type) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid parameters\n", __FUNCTION__);
         return 1;
     }
     
-#ifdef ENABLE_OTEL
-    rdk_otlp_start_child_span("RRD_ctx", "rrd_upload_orchestrate");
-    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_upload_orchestrate\n", __FUNCTION__);
-#endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Executing binary to upload Debug info of ISSUETYPE=%s\n", __FUNCTION__, issue_type);
 
     // 2. Initialize logging subsystem
@@ -59,6 +59,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     rrd_config_t config;
     if (rrd_config_load(&config) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to load configuration.\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 3;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Configuration loaded\n", __FUNCTION__);
@@ -68,10 +72,18 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     char timestamp[32] = {0};
     if (rrd_sysinfo_get_mac_address(mac_addr, sizeof(mac_addr)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get MAC address.\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 4;
     }
     if (rrd_sysinfo_get_timestamp(timestamp, sizeof(timestamp)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get timestamp.\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 5;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: MAC: %s, Timestamp: %s\n", __FUNCTION__, mac_addr, timestamp);
@@ -80,10 +92,18 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Checking %s size and contents\n", __FUNCTION__, upload_dir);
     if (rrd_logproc_validate_source(upload_dir) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid or empty upload directory: %s\n", __FUNCTION__, upload_dir);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 6;
     }
     if (rrd_logproc_prepare_logs(upload_dir, issue_type) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to prepare logs in %s\n", __FUNCTION__, upload_dir);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 7;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Log directory validated and prepared\n", __FUNCTION__);
@@ -92,6 +112,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     char issue_type_sanitized[64] = {0};
     if (rrd_logproc_convert_issue_type(issue_type, issue_type_sanitized, sizeof(issue_type_sanitized)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to sanitize issue type\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 8;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Issue type sanitized: %s\n", __FUNCTION__, issue_type_sanitized);
@@ -108,6 +132,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     char archive_filename[256] = {0};
     if (rrd_archive_generate_filename(mac_addr, issue_type_sanitized, timestamp, archive_filename, sizeof(archive_filename)) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to generate archive filename\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 9;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Archive filename: %s\n", __FUNCTION__, archive_filename);
@@ -117,6 +145,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Creating %s tarfile from Debug Commands output\n", __FUNCTION__, archive_filename);
     if (rrd_archive_create(upload_dir, rrd_log_dir, archive_filename) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to create archive %s\n", __FUNCTION__, archive_filename);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 10;
     }
 
@@ -131,6 +163,10 @@ int rrd_upload_orchestrate(const char *upload_dir, const char *issue_type)
         snprintf(archive_fullpath, sizeof(archive_fullpath), "%s%s", rrd_log_dir, archive_filename);
         rrd_archive_cleanup(archive_fullpath);
         rrd_upload_cleanup_source_dir(upload_dir);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_upload_orchestrate\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return 11;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: RRD %s Debug Information Report upload Success\n", __FUNCTION__, issue_type_sanitized);
