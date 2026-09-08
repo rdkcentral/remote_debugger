@@ -470,6 +470,10 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for processIssueTypeInStaticProfile\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
         return;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse And Read Success... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
