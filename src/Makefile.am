@@ -25,4 +25,8 @@ remotedebugger_LDFLAGS = $(AM_LDFLAGS) $(CJSON_LDFLAGS) $(CJSON_LIBS) -fno-commo
 if IARMBUS_ENABLE
 remotedebugger_LDFLAGS += -luploadstblogs 
 remotedebugger_LDADD = -lfwutils -lz -luploadstblogs
+if OTEL_SUPPORT
+remotedebugger_CFLAGS += "-DENABLE_OTEL"
+remotedebugger_LDADD += -lrdk_otlp
+endif
 endif

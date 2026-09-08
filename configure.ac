@@ -85,5 +85,16 @@ AC_ARG_ENABLE([iarmbusSupport],
 esac],[iarmbusSupport=false])
 AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 
+# OpenTelemetry Support
+AC_ARG_ENABLE([otel],
+    AS_HELP_STRING([--enable-otel], [Enable OpenTelemetry instrumentation support (default is no)]),
+    [case "${enableval}" in
+      yes) otelSupport=true ;;
+      no)  otelSupport=false ;;
+      *) AC_MSG_ERROR([bad value ${enableval} for --enable-otel]) ;;
+    esac],
+    [otelSupport=false])
+AM_CONDITIONAL([OTEL_SUPPORT], [test x$otelSupport = xtrue])
+
 AC_SUBST(GTEST_ENABLE_FLAG)
 AC_OUTPUT

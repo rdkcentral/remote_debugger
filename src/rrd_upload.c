@@ -20,6 +20,9 @@
 
 #include "rrd_upload.h"
 #include "rrdCommon.h"
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +61,11 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
     
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Starting upload - server: %s, protocol: %s, file: %s\n", 
             __FUNCTION__, log_server, protocol, archive_filename);
+    
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_upload_execute");
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "%s: [OTEL] Started child span for rrd_upload_execute\n", __FUNCTION__);
+#endif
     
     // 1. Check for upload lock (matching shell script line 67)
     bool locked = false;
@@ -98,6 +106,10 @@ int rrd_upload_execute(const char *log_server, const char *protocol, const char 
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Upload completed successfully\n", __FUNCTION__);
     
+#ifdef ENABLE_OTEL
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "%s: [OTEL] Stopping child span for rrd_upload_execute\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 
