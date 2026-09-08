@@ -32,15 +32,19 @@
 
 // Validate source directory: must exist, be a directory, and not empty
 int rrd_logproc_validate_source(const char *source_dir) {
-    if (!source_dir) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source directory\n", __FUNCTION__);
-        return -1;
-    }
-    
 #ifdef ENABLE_OTEL
     rdk_otlp_start_child_span("RRD_ctx", "rrd_logproc_validate_source");
     RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_logproc_validate_source\n", __FUNCTION__);
 #endif
+    if (!source_dir) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source directory\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
+        return -1;
+    }
+    
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Validating source: %s\n", __FUNCTION__, source_dir);
     
     /* Open directory directly to avoid TOCTOU (Time of Check Time of Use) race condition */
@@ -48,6 +52,10 @@ int rrd_logproc_validate_source(const char *source_dir) {
     if (!d) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot open directory: %s (errno: %d)\n", 
                 __FUNCTION__, source_dir, errno);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -2;
     }
     
@@ -62,6 +70,10 @@ int rrd_logproc_validate_source(const char *source_dir) {
     if (!found) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory is empty: %s\n", __FUNCTION__, source_dir);
         closedir(d);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -3;
     }
     
@@ -87,10 +99,18 @@ int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
     // Validate parameters
     if (!source_dir) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     if (!issue_type) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL issue_type\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -99,6 +119,10 @@ int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
     if (valid != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Source validation failed with code: %d\n", 
                 __FUNCTION__, valid);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return valid;
     }
     
@@ -114,28 +138,45 @@ int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
 
 // Convert issue type to uppercase and sanitize (alnum/underscore only)
 int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size) {
-    if (!input) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL input\n", __FUNCTION__);
-        return -1;
-    }
-    if (!output) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL output buffer\n", __FUNCTION__);
-        return -1;
-    }
-    if (size == 0) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Zero buffer size\n", __FUNCTION__);
-        return -1;
-    }
-    
 #ifdef ENABLE_OTEL
     rdk_otlp_start_child_span("RRD_ctx", "rrd_logproc_convert_issue_type");
     RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
 #endif
+    if (!input) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL input\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
+        return -1;
+    }
+    if (!output) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL output buffer\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
+        return -1;
+    }
+    if (size == 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Zero buffer size\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
+        return -1;
+    }
+    
+
     
     size_t len = strlen(input);
     if (len >= size) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Buffer too small (need: %zu, have: %zu)\n", 
                 __FUNCTION__, len + 1, size);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;  // Buffer too small
     }
     
