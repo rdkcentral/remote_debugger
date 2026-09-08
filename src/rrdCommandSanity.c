@@ -157,6 +157,10 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          if (sanitystr)
          {
              RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
              return 1;
          }
          else
@@ -172,6 +176,10 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
         if (result != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Removing special charater failed!!! \n",__FUNCTION__,__LINE__);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RDK_LOG(RDK_LOG_DEBUG, "LOG.RDK.OTEL", "[%s:%d]: [OTEL] Stopping child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
             return 1;
         }
     }
