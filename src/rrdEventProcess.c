@@ -342,6 +342,11 @@ static void processIssueType(data_buf *rbuf)
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
 	    //CID-336989: Resource leak
+                if (pIssueNode->Node != NULL)
+                    free(pIssueNode->Node);
+                if (pIssueNode->subNode != NULL)
+                    free(pIssueNode->subNode);
+                free(pIssueNode);
         }
         else
         {
