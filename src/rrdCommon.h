@@ -56,7 +56,7 @@ extern "C"
 
 #if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
 void rrd_otel_log_write(const char *module, const char *format, ...);
-#define LOG_OTEL LOG.RDK.OTEL
+#define "LOG_OTEL LOG.RDK.OTEL"
 
 #define RRD_OTEL_LOG(level, module, format, ...) do { \
      (void)(level); \
