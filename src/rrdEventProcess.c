@@ -163,6 +163,11 @@ void processIssueTypeEvent(data_buf *rbuf)
 		cmdMap = NULL;
 	    }
         }
+        else if (cmdMap)
+        {
+            free(cmdMap);
+            cmdMap = NULL;
+        }
     }
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
