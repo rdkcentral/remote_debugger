@@ -396,11 +396,19 @@ int rrd_archive_generate_filename(const char *mac, const char *issue_type, const
 #endif
     if (!mac || !issue_type || !timestamp || !filename || size < 128) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Invalid parameters\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_archive_generate_filename");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Started child span for rrd_archive_generate_filename\n", __FUNCTION__);
+#endif
         return -1;
     }
     int ret = snprintf(filename, size, "%s_%s_%s_RRD_DEBUG_LOGS.tgz", mac, issue_type, timestamp);
     if (ret < 0 || (size_t)ret >= size) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Filename truncated\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_archive_generate_filename");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s] [OTEL] Started child span for rrd_archive_generate_filename\n", __FUNCTION__);
+#endif
         return -1;
     }
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s] Generated filename: %s\n", __FUNCTION__, filename);
