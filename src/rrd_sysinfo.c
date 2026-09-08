@@ -19,6 +19,9 @@
  */
 
 #include "rrd_sysinfo.h"
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 
 /* Use repository logging macro */
@@ -26,9 +29,17 @@
 
 
 int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_sysinfo_get_mac_address");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_sysinfo_get_mac_address\n", __FUNCTION__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Entry\n", __FUNCTION__);
     if (!mac_addr || size < 13) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid MAC buffer or size (need at least 13 bytes)\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_mac_address\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -37,6 +48,10 @@ int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
     size_t copied = GetEstbMac(mac_with_colons, sizeof(mac_with_colons));
     if (copied == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get MAC address\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_mac_address\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -52,15 +67,27 @@ int rrd_sysinfo_get_mac_address(char *mac_addr, size_t size) {
     
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: MAC address obtained: %s\n", __FUNCTION__, mac_addr);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Exit\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_mac_address\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 
 
 
 int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_sysinfo_get_timestamp");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_sysinfo_get_timestamp\n", __FUNCTION__);
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Entry\n", __FUNCTION__);
     if (!timestamp || size < 20) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid timestamp buffer or size\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_timestamp\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     memset(timestamp, 0, size);
@@ -68,6 +95,10 @@ int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
     struct tm *tm_info = localtime(&now);
     if (!tm_info) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to get local time\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_timestamp\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     char ampm[3] = "AM";
@@ -91,6 +122,10 @@ int rrd_sysinfo_get_timestamp(char *timestamp, size_t size) {
     timestamp[size - 1] = '\0';
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Timestamp generated: %s\n", __FUNCTION__, timestamp);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Exit\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_sysinfo_get_timestamp\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 

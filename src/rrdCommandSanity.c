@@ -19,6 +19,9 @@
 
 #include "rrdCommandSanity.h"
 #include <ctype.h>
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 /*
  * @function updateBackgroundCmd
@@ -124,6 +127,10 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     char *checkcmd = NULL;
     char *sanitystr = NULL;
 
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "isCommandsValid");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+#endif
     sanitycmd = cJSON_Print(sanitylist); // Print sanity commands data from the Json object sanitylist
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands List: %s \n",__FUNCTION__,__LINE__,sanitycmd);
     cJSON_free(sanitycmd); // free sanity commands data
@@ -150,6 +157,10 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
          if (sanitystr)
          {
              RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "isCommandsValid");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+#endif
              return 1;
          }
          else
@@ -165,9 +176,17 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
         if (result != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Removing special charater failed!!! \n",__FUNCTION__,__LINE__);
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    rdk_otlp_start_child_span("RRD_ctx", "isCommandsValid");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Started child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+#endif
             return 1;
         }
     }
 
+#if defined(ENABLE_OTEL) && !defined(GTEST_ENABLE)
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "[%s:%d]: [OTEL] Stopping child span for isCommandsValid\n", __FUNCTION__, __LINE__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }

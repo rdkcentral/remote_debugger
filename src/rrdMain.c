@@ -23,7 +23,9 @@
 #include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
-
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 devicePropertiesData devPropData;
 
@@ -38,7 +40,6 @@ void *RRDEventThreadFunc(void *arg)
 {
     data_buf *rbuf;
     msgRRDHdr msgHdr;
-
     while (1)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69/RBUS Events... \n", __FUNCTION__, __LINE__);
@@ -145,11 +146,20 @@ int main(int argc, char *argv[])
 #endif
     /* Initialize Cache */
     initCache();
+#ifdef ENABLE_OTEL
+	rdk_otlp_init("RRD", "1.0.0");
+    rdk_otlp_logs_init();
+    RRD_OTEL_LOG(RDK_LOG_INFO, LOG_OTEL, "[%s:%d]: [OTEL] Tracer and logs initialized\n", __FUNCTION__, __LINE__);
+#endif
 
     /* Check RRD Enable RFC */
     bool isEnabled = isRRDEnabled();
     if(!isEnabled) {
         RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]:RFC is disabled, stopping remote-debugger\n", __FUNCTION__, __LINE__);
+#ifdef ENABLE_OTEL
+		rdk_otlp_force_flush();
+		rdk_otlp_shutdown();
+#endif
         exit(0);
     }
     
@@ -171,6 +181,10 @@ int main(int argc, char *argv[])
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopping RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
     RRD_unsubscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopped RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
+#ifdef ENABLE_OTEL
+	rdk_otlp_force_flush();
+	rdk_otlp_shutdown();
+#endif
 
     return 0;
 }

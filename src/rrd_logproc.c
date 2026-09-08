@@ -19,6 +19,9 @@
 
 #include "rrd_logproc.h"
 #include "rrdCommon.h"
+#ifdef ENABLE_OTEL
+#include "rdk_otlp_instrumentation.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -29,8 +32,16 @@
 
 // Validate source directory: must exist, be a directory, and not empty
 int rrd_logproc_validate_source(const char *source_dir) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_logproc_validate_source");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_logproc_validate_source\n", __FUNCTION__);
+#endif
     if (!source_dir) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source directory\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -41,6 +52,10 @@ int rrd_logproc_validate_source(const char *source_dir) {
     if (!d) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot open directory: %s (errno: %d)\n", 
                 __FUNCTION__, source_dir, errno);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -2;
     }
     
@@ -55,27 +70,47 @@ int rrd_logproc_validate_source(const char *source_dir) {
     if (!found) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Directory is empty: %s\n", __FUNCTION__, source_dir);
         closedir(d);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -3;
     }
     
     closedir(d);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Source directory validated successfully: %s\n", 
             __FUNCTION__, source_dir);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_validate_source\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 
 // Prepare logs for archiving: could filter, copy, or compress logs as needed
 int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_logproc_prepare_logs");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+#endif
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Entry - source: %s, issue_type: %s\n", 
             __FUNCTION__, source_dir ? source_dir : "NULL", issue_type ? issue_type : "NULL");
     
     // Validate parameters
     if (!source_dir) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL source_dir\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     if (!issue_type) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL issue_type\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     
@@ -84,34 +119,64 @@ int rrd_logproc_prepare_logs(const char *source_dir, const char *issue_type) {
     if (valid != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Source validation failed with code: %d\n", 
                 __FUNCTION__, valid);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return valid;
     }
     
     // In a real system, could filter logs by issue_type, copy to temp dir, etc.
     (void)issue_type;
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Logs prepared successfully\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_prepare_logs\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 
 // Convert issue type to uppercase and sanitize (alnum/underscore only)
 int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size) {
+#ifdef ENABLE_OTEL
+    rdk_otlp_start_child_span("RRD_ctx", "rrd_logproc_convert_issue_type");
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Started child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+#endif
     if (!input) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL input\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     if (!output) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: NULL output buffer\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
     if (size == 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Zero buffer size\n", __FUNCTION__);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;
     }
+    
+
     
     size_t len = strlen(input);
     if (len >= size) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Buffer too small (need: %zu, have: %zu)\n", 
                 __FUNCTION__, len + 1, size);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
         return -1;  // Buffer too small
     }
     
@@ -128,6 +193,10 @@ int rrd_logproc_convert_issue_type(const char *input, char *output, size_t size)
     output[j] = 0;
     
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Converted '%s' to '%s'\n", __FUNCTION__, input, output);
+#ifdef ENABLE_OTEL
+    RRD_OTEL_LOG(RDK_LOG_DEBUG, LOG_OTEL, "%s: [OTEL] Stopping child span for rrd_logproc_convert_issue_type\n", __FUNCTION__);
+    rdk_otlp_finish_child_span();
+#endif
     return 0;
 }
 
