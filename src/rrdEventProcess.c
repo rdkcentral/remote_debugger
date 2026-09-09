@@ -350,10 +350,21 @@ static void processIssueType(data_buf *rbuf)
 		RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Checking Issue from Static... \n", __FUNCTION__, __LINE__);
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
+			if(pIssueNode->Node)
+			{
                 free(pIssueNode->Node);
-                free(pIssueNode->subNode);
-                free(pIssueNode);
+			    pIssueNode->Node = NULL;
+			}
+			if(pIssueNode->subNode)
+			{   
+				free(pIssueNode->subNode);
+			    pIssueNode->subNode = NULL;
+			}
+			if(pIssueNode)
+			{
+				free(pIssueNode);
                 pIssueNode = NULL;
+			}
         }
         else
         {
