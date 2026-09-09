@@ -112,7 +112,7 @@ void processIssueTypeEvent(data_buf *rbuf)
                     dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
-                        if(cmdBuff->inDynamic && rbuf->jsonPath)
+                    if(cmdBuff->inDynamic && rbuf->jsonPath)
                     {
                             cmdBuff->jsonPath = strdup(rbuf->jsonPath);
                             if (cmdBuff->jsonPath == NULL)
