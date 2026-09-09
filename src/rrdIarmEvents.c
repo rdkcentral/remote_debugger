@@ -375,6 +375,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Owner Name found %s, use IARM_BUS_RDMMGR_NAME!!! \n", __FUNCTION__, __LINE__, owner);
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+    /* coverity[leaked_storage] - ownership of sendbuf transfers to consumer thread via msgsnd message queue */
 }
 
 /*
