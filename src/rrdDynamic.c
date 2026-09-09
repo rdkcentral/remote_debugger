@@ -88,7 +88,6 @@ void RRDProcessDeepSleepAwakeEvents(data_buf *rbuf)
                 /*Free Recieved Buffer and Dynamic Json Path Pointer*/
                 free(dynJSONPath);
                 free(rbuf->mdata);
-                rbuf->mdata = NULL;
             }
             else
             {
