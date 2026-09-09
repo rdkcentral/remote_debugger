@@ -342,6 +342,9 @@ static void processIssueType(data_buf *rbuf)
                 processIssueTypeInStaticProfile(rbuf, pIssueNode);
             }
 	    //CID-336989: Resource leak
+                /* coverity[leaked_storage] - pIssueNode and its members (Node, subNode) are passed to
+                   processIssueTypeInDynamicProfile/processIssueTypeInStaticProfile/checkIssueNodeInfo;
+                   callee ownership of these members is ambiguous without cross-file analysis */
         }
         else
         {
