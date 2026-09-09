@@ -352,7 +352,6 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
                     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
                     RRDMsgDeliver(msqid, sendbuf);
                     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
-                    /* coverity[leaked_storage] */
                 }
                 else
                 {
@@ -375,6 +374,7 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Owner Name found %s, use IARM_BUS_RDMMGR_NAME!!! \n", __FUNCTION__, __LINE__, owner);
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+        /* coverity[leaked_storage] - sendbuf ownership transfers to consumer thread via msgsnd message queue in RRDMsgDeliver */
 }
 
 /*
