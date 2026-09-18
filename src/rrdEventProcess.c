@@ -20,6 +20,7 @@
 #include "rrdRunCmdThread.h"
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
+#include "rrdInterface.h"
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
@@ -45,6 +46,7 @@ void processWebCfgTypeEvent(data_buf *rbuf)
     {
         decodeWebCfgData(rbuf->mdata);
         free(rbuf->mdata);
+        rbuf->mdata = NULL;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
@@ -110,9 +112,21 @@ void processIssueTypeEvent(data_buf *rbuf)
                     dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
                     cmdBuff->inDynamic = rbuf->inDynamic;
-                    if(cmdBuff->inDynamic)
+                        if(cmdBuff->inDynamic && rbuf->jsonPath)
                     {
-                        cmdBuff->jsonPath = rbuf->jsonPath;
+                            cmdBuff->jsonPath = strdup(rbuf->jsonPath);
+                            if (cmdBuff->jsonPath == NULL)
+                            {
+                               RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for dynamic JSON path... \n", __FUNCTION__, __LINE__);
+                               RRD_data_buff_deAlloc(cmdBuff);
+                               cmdBuff = NULL;
+                                    if (cmdMap[index])
+                                    {
+                                        free(cmdMap[index]);
+                                        cmdMap[index] = NULL;
+                                    }
+                               continue;
+                            }
                     }
 		    cmdBuff->appendMode = rbuf->appendMode;
                     cmdBuff->mdata = (char *)calloc(1, dataMsgLen);
@@ -135,16 +149,11 @@ void processIssueTypeEvent(data_buf *rbuf)
                     {
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
                     }
-		    if(cmdBuff)
-		    {
-                    if (cmdBuff->suffix)
-                    {
-                        free(cmdBuff->suffix);
-                        cmdBuff->suffix = NULL;
-                    }
-                        free(cmdBuff);
-			cmdBuff = NULL;
-		    }
+            if(cmdBuff)
+            {
+                        RRD_data_buff_deAlloc(cmdBuff);
+        cmdBuff = NULL;
+            }
                 }
                 else
                 {
