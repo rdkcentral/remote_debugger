@@ -350,6 +350,7 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     char *pkg_inst_path = (char *)malloc(strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1);
     if( pkg_inst_path == NULL)
     {
+        free(pkg_name);
         return;
     }
     snprintf(pkg_inst_path, strlen(RRD_TMP_DIR) + strlen(pkg_name) + 1, "%s%s", RRD_TMP_DIR, pkg_name);
@@ -400,7 +401,6 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
     	RRDMsgDeliver(msqid, sendbuf);
 	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sendbuf->mdata, strlen(sendbuf->mdata), sendbuf->mtype, sendbuf->appendMode);
-	/* coverity[leaked_storage] */
 	remove_item(cache);
     }
     else
@@ -496,7 +496,6 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         }	
         RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
-        /* coverity[leaked_storage] */
     }
 }
 
