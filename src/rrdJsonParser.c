@@ -507,10 +507,16 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         category = cJSON_GetObjectItem(jsoncfg, issuestructNode->Node);
         type = cJSON_GetObjectItem(category, issuestructNode->subNode);
     }
-    free(issuestructNode->Node); // free main node
-    issuestructNode->Node = NULL;
-    free(issuestructNode->subNode); // free sub node
-    issuestructNode->subNode = NULL;
+	if(issuestructNode && issuestructNode->Node)
+	{
+        free(issuestructNode->Node); // free main node
+        issuestructNode->Node = NULL;
+	}
+	if(issuestructNode && issuestructNode->subNode)
+	{
+        free(issuestructNode->subNode); // free sub node
+        issuestructNode->subNode = NULL;
+	}
     issuestdata = (issueData *) malloc(sizeof(issueData));
     if(issuestdata == NULL)
     {
@@ -659,10 +665,16 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 if (buff->appendMode)
                 {
                     execstatus = executeCommands(appendprofiledata);
-                    free(issuestructNode->Node); // free main node
-                    issuestructNode->Node = NULL;
-                    free(issuestructNode->subNode); // free sub node
-                    issuestructNode->subNode = NULL;
+                    if(issuestructNode && issuestructNode->Node)
+	                {
+                        free(issuestructNode->Node); // free main node
+                        issuestructNode->Node = NULL;
+	                }
+	                if(issuestructNode && issuestructNode->subNode)
+	                {
+                        free(issuestructNode->subNode); // free sub node
+                        issuestructNode->subNode = NULL;
+	                }
                 }
                 else
                 {
