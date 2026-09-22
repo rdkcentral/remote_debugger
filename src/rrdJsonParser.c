@@ -855,9 +855,11 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
     issueCategoryCount = cJSON_GetArraySize(rootNode);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Printing RootNode name %s \n", __FUNCTION__, __LINE__, rootNodeName);
-    free(issuestructNode->Node); // Deep Sleep String not required.
-    issuestructNode->Node = NULL;
-
+	if(issuestructNode && issuestructNode->Node)
+	{
+        free(issuestructNode->Node); // free main node
+        issuestructNode->Node = NULL;
+	}
     if (issueCategoryCount)
     {
         cJSON *issueCategoryNode[issueCategoryCount];
