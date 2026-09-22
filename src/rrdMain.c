@@ -23,7 +23,18 @@
 #include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
-
+#ifdef USECOV
+#include <signal.h>
+#include <stdlib.h>
+extern void __gcov_dump(void);
+/* Flush gcov counters on SIGTERM so lcov captures L2 exercise data. */
+static void rrd_gcov_sigterm_handler(int sig)
+{
+    (void)sig;
+    __gcov_dump();
+    _exit(0);
+}
+#endif
 
 devicePropertiesData devPropData;
 
@@ -139,6 +150,9 @@ int main(int argc, char *argv[])
     pthread_t RRDTR69ThreadID;
 
     rdk_logger_init(DEBUG_INI_FILE);
+#ifdef USECOV
+    signal(SIGTERM, rrd_gcov_sigterm_handler);
+#endif
 #if !defined(GTEST_ENABLE)
     /* Store Device Info.*/
     RRDStoreDeviceInfo(&devPropData);
