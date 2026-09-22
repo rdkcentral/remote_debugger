@@ -507,16 +507,10 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         category = cJSON_GetObjectItem(jsoncfg, issuestructNode->Node);
         type = cJSON_GetObjectItem(category, issuestructNode->subNode);
     }
-	if(issuestructNode && issuestructNode->Node)
-	{
-        free(issuestructNode->Node); // free main node
-        issuestructNode->Node = NULL;
-	}
-	if(issuestructNode && issuestructNode->subNode)
-	{
-        free(issuestructNode->subNode); // free sub node
-        issuestructNode->subNode = NULL;
-	}
+    free(issuestructNode->Node); // free main node
+    issuestructNode->Node = NULL;
+    free(issuestructNode->subNode); // free sub node
+    issuestructNode->subNode = NULL;
     issuestdata = (issueData *) malloc(sizeof(issueData));
     if(issuestdata == NULL)
     {
@@ -665,16 +659,10 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 if (buff->appendMode)
                 {
                     execstatus = executeCommands(appendprofiledata);
-                    if(issuestructNode && issuestructNode->Node)
-	                {
-                        free(issuestructNode->Node); // free main node
-                        issuestructNode->Node = NULL;
-	                }
-	                if(issuestructNode && issuestructNode->subNode)
-	                {
-                        free(issuestructNode->subNode); // free sub node
-                        issuestructNode->subNode = NULL;
-	                }
+                    free(issuestructNode->Node); // free main node
+                    issuestructNode->Node = NULL;
+                    free(issuestructNode->subNode); // free sub node
+                    issuestructNode->subNode = NULL;
                 }
                 else
                 {
@@ -855,11 +843,9 @@ bool processAllDeepSleepAwkMetricsCommands(cJSON *jsoncfg, issueNodeData *issues
     issueCategoryCount = cJSON_GetArraySize(rootNode);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Printing RootNode name %s \n", __FUNCTION__, __LINE__, rootNodeName);
-	if(issuestructNode && issuestructNode->Node)
-	{
-        free(issuestructNode->Node); // free main node
-        issuestructNode->Node = NULL;
-	}
+    free(issuestructNode->Node); // Deep Sleep String not required.
+    issuestructNode->Node = NULL;
+
     if (issueCategoryCount)
     {
         cJSON *issueCategoryNode[issueCategoryCount];
