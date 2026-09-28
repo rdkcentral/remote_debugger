@@ -68,19 +68,7 @@ void *RRDEventThreadFunc(void *arg)
         switch (rbuf->mtype)
         {
         case EVENT_MSG:
-#ifdef ENABLE_RDK_OTLP
-            if (rbuf->traceparent[0] != '\0')
-            {
-                rdk_otlp_start_child_from_traceparent(rbuf->traceparent, "remotedebugger.issue_type_processing");
-            }
-#endif
             processIssueTypeEvent(rbuf);
-#ifdef ENABLE_RDK_OTLP
-            if (rbuf->traceparent[0] != '\0')
-            {
-                rdk_otlp_finish_child_span();
-            }
-#endif
             break;
         case EVENT_WEBCFG_MSG:
             processWebCfgTypeEvent(rbuf);
