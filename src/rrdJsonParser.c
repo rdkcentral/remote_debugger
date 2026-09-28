@@ -21,6 +21,9 @@
 #include "rrdRunCmdThread.h"
 #include "rrdExecuteScript.h"
 #include "rrdCommandSanity.h"
+#ifdef ENABLE_RDK_OTLP
+#include <rdk_otlp_instrumentation.h>
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
@@ -607,6 +610,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     char outdir[BUF_LEN_256] =  {'\0'};
     time_t ctime;
     struct tm *ltime;
+#ifdef ENABLE_RDK_OTLP
+    if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+    {
+        rdk_otlp_start_child_from_traceparent(buff->traceparent, "remotedebugger.command_execution");
+    }
+#endif
     rfcbuf = strdup(buff->mdata);
 
     if (rfcbuf == NULL)
@@ -618,6 +627,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         buff->jsonPath = NULL;
         free(buff->suffix); // free suffix
         buff->suffix = NULL;
+    #ifdef ENABLE_RDK_OTLP
+        if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+        {
+            rdk_otlp_finish_child_span();
+        }
+    #endif
         return;
     }
 
@@ -642,6 +657,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         buff->jsonPath = NULL;
         free(buff->suffix); // free suffix
         buff->suffix = NULL;
+    #ifdef ENABLE_RDK_OTLP
+        if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+        {
+            rdk_otlp_finish_child_span();
+        }
+    #endif
         return;
     }
     else
@@ -731,6 +752,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             buff->suffix = NULL;
 	}
     }
+#ifdef ENABLE_RDK_OTLP
+    if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+    {
+        rdk_otlp_finish_child_span();
+    }
+#endif
 }
 
 /*
