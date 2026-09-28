@@ -524,12 +524,6 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     freeParsedJson(jsonParsed);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-#ifdef ENABLE_RDK_OTLP
-    if (rbuf->traceparent[0] != '\0')
-    {
-        rdk_otlp_finish_child_span();
-    }
-#endif
     return;
 }
 
