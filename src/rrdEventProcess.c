@@ -437,9 +437,6 @@ static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIss
                 // Issue found in Dynamic Prof JSON
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, rbuf->jsonPath);
                 checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
-                freeParsedJson(jsonParsed);
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-                return;
             }
         }
         freeParsedJson(jsonParsed);
@@ -733,9 +730,6 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
             free(dynJSONPath);
             checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
-            freeParsedJson(jsonParsed);
-            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-            return;
         }
         else
         {
