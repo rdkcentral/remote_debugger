@@ -761,6 +761,7 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(buff->suffix); // free suffix
             buff->suffix = NULL;
 	}
+	}
 }
 
 /*
