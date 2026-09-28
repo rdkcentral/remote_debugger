@@ -2714,13 +2714,15 @@ TEST_F(RRDMsgDeliverTest, TestMessageDelivery)
 
 TEST_F(RRDMsgDeliverTest, TestMessageDeliveryFailure)
 {
-    data_buf sbuf;
-    sbuf.mtype = EVENT_MSG;
-    sbuf.mdata = "mdata";
-    sbuf.inDynamic = true;
-    sbuf.dsEvent = RRD_DEEPSLEEP_INVALID_DEFAULT;
-
-    EXPECT_EXIT(RRDMsgDeliver(-1, &sbuf), ::testing::ExitedWithCode(1), ".*");
+    EXPECT_EXIT({
+        data_buf *sbuf = static_cast<data_buf *>(malloc(sizeof(data_buf)));
+        ASSERT_NE(sbuf, nullptr);
+        RRD_data_buff_init(sbuf, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
+        sbuf->mdata = strdup("mdata");
+        ASSERT_NE(sbuf->mdata, nullptr);
+        sbuf->inDynamic = true;
+        RRDMsgDeliver(-1, sbuf);
+    }, ::testing::ExitedWithCode(1), ".*");
 }
 
 /* --------------- Test pushIssueTypesToMsgQueue() from rrdIarm --------------- */

@@ -363,6 +363,22 @@ static void processIssueType(data_buf *rbuf)
     }
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+	
+	if(pIssueNode && pIssueNode->Node)
+	{
+	    free(pIssueNode->Node);
+		pIssueNode->Node = NULL;
+	}
+	if(pIssueNode && pIssueNode->subNode)
+	{
+        free(pIssueNode->subNode);
+		pIssueNode->subNode = NULL;
+	}
+    if(pIssueNode)
+	{
+	    free(pIssueNode);
+        pIssueNode = NULL;
+	}
     return;
 }
 

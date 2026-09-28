@@ -251,6 +251,13 @@ void RRDMsgDeliver(int msgqid, data_buf *sbuf)
 {
     msgRRDHdr msgHdr;
     size_t msgLen = -1;
+
+    if (!sbuf)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: NULL data buffer passed to message queue deliver\n", __FUNCTION__, __LINE__);
+        return;
+    }
+
     msgHdr.type = RRD_EVENT_MSG_REQUEST;
     msgHdr.mbody = (void *)sbuf;
     msgLen = sizeof(msgHdr.mbody);
@@ -258,6 +265,7 @@ void RRDMsgDeliver(int msgqid, data_buf *sbuf)
     if (msgsnd(msgqid, (void *)&msgHdr, msgLen, 0) < 0)
     {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Message Sending failed with ID=%d MSG=%s Size=%d Type=%u MbufSize=%d !!! \n", __FUNCTION__, __LINE__, msgqid, sbuf->mdata, sizeof(sbuf->mdata), sbuf->mtype, msgLen);
+        RRD_data_buff_deAlloc(sbuf);
         exit(1);
     }
 }
@@ -496,7 +504,6 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
         }	
         RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
-        /* coverity[leaked_storage] */
     }
 }
 
