@@ -21,6 +21,9 @@
 #include "rrdJsonParser.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
+#ifdef ENABLE_RDK_OTLP
+#include <rdk_otlp_instrumentation.h>
+#endif
 
 #define COMMAND_DELIM ';'
 #define RRD_TMP_DIR "/tmp/"
@@ -110,6 +113,9 @@ void processIssueTypeEvent(data_buf *rbuf)
                     }
                     dataMsgLen = strlen(base) + 1;
                     RRD_data_buff_init(cmdBuff, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT); /* Setting Deafult Values*/
+#ifdef ENABLE_RDK_OTLP
+                    strncpy(cmdBuff->traceparent, rbuf->traceparent, sizeof(cmdBuff->traceparent) - 1);
+#endif
                     cmdBuff->inDynamic = rbuf->inDynamic;
                     if(cmdBuff->inDynamic && rbuf->jsonPath)
                     {
@@ -415,6 +421,9 @@ static void processIssueTypeInDynamicProfile(data_buf *rbuf, issueNodeData *pIss
                 // Issue found in Dynamic Prof JSON
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, rbuf->jsonPath);
                 checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
+                freeParsedJson(jsonParsed);
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+                return;
             }
         }
         freeParsedJson(jsonParsed);
@@ -438,6 +447,12 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     cJSON *jsonParsed = NULL;
     bool isStaticIssue = false;
 
+#ifdef ENABLE_RDK_OTLP
+    if (rbuf->traceparent[0] != '\0')
+    {
+        rdk_otlp_start_child_from_traceparent(rbuf->traceparent, "remotedebugger.static_profile_resolution");
+    }
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Checking Static Profile... \n", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
@@ -451,6 +466,13 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     if (jsonParsed == NULL)
     { // Static Profile JSON Parsing or Read Fail
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Static Profile Parse/Read failed... %s\n", __FUNCTION__, __LINE__, RRD_JSON_FILE);
+    #ifdef ENABLE_RDK_OTLP
+        if (rbuf->traceparent[0] != '\0')
+        {
+            rdk_otlp_finish_child_span();
+        }
+        rbuf->traceparent[0] = '\0';
+    #endif
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
         return;
@@ -464,18 +486,43 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
 	// CID 336988: Double free (USE_AFTER_FREE)
 	if(rbuf)
 	{
+#ifdef ENABLE_RDK_OTLP
+        if (rbuf->traceparent[0] != '\0')
+        {
+            rdk_otlp_finish_child_span();
+        }
+#endif
 	    checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
+        freeParsedJson(jsonParsed);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+        return;
 	}
     }
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
+    #ifdef ENABLE_RDK_OTLP
+        if (rbuf->traceparent[0] != '\0')
+        {
+            rdk_otlp_finish_child_span();
+        }
+        rbuf->traceparent[0] = '\0';
+    #endif
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
+        freeParsedJson(jsonParsed);
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+        return;
     }
 
     freeParsedJson(jsonParsed);
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+#ifdef ENABLE_RDK_OTLP
+    if (rbuf->traceparent[0] != '\0')
+    {
+        rdk_otlp_finish_child_span();
+    }
+#endif
     return;
 }
 
@@ -486,7 +533,6 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
     char *dynJSONPath = NULL;
     int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0;
     bool isDynamicIssue = false;
-
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
     rrdjsonlen = strlen(RRD_JSON_FILE);
@@ -596,7 +642,6 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
     int rrdjsonlen = 0, persistentAppslen = 0, prefixlen = 0, suffixlen = 0;
     bool isDynamicIssue = false;
 
-
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
     rrdjsonlen = strlen(RRD_JSON_FILE);
@@ -672,6 +717,9 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
             free(dynJSONPath);
             checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL);
+            freeParsedJson(jsonParsed);
+            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
+            return;
         }
         else
         {
