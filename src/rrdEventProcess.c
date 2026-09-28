@@ -506,9 +506,6 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         }
 #endif
 	    checkIssueNodeInfo(pIssueNode, jsonParsed, rbuf, false, NULL); // sanity Check and Get Command List
-        freeParsedJson(jsonParsed);
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-        return;
 	}
     }
     else
@@ -522,9 +519,6 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
         rbuf->traceparent[0] = '\0';
     #endif
         processIssueTypeInInstalledPackage(rbuf, pIssueNode);
-        freeParsedJson(jsonParsed);
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
-        return;
     }
 
     freeParsedJson(jsonParsed);
