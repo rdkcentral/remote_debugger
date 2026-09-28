@@ -457,13 +457,28 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         {
             rdk_otlp_start_child_from_traceparent(traceparent, "remotedebugger.rbus_callback");
         }
-#endif
-        pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
-#ifdef ENABLE_RDK_OTLP
         if (traceparent[0] != '\0')
         {
             rdk_otlp_finish_child_span();
         }
+        data_buf *sbuf = (data_buf *)malloc(sizeof(data_buf));
+        if (sbuf)
+        {
+            RRD_data_buff_init(sbuf, EVENT_MSG, RRD_DEEPSLEEP_INVALID_DEFAULT);
+            sbuf->mdata = dataMsg;
+            strncpy(sbuf->traceparent, traceparent, sizeof(sbuf->traceparent) - 1);
+            if (checkAppendRequest(sbuf->mdata))
+            {
+                sbuf->appendMode = true;
+            }
+            RRDMsgDeliver(msqid, sbuf);
+        }
+        else
+        {
+            free(dataMsg);
+        }
+    #else
+        pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
 #endif
         /* coverity[leaked_storage] */
     }
@@ -510,26 +525,13 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
     {
         RRD_data_buff_init(sbuf, sndtype, RRD_DEEPSLEEP_INVALID_DEFAULT);
         sbuf->mdata = issueTypeList;
-#ifdef ENABLE_RDK_OTLP
-        if (sndtype == EVENT_MSG)
-        {
-            char traceparent[RRD_TRACE_CONTEXT_MAX] = {0};
-            char tracestate[RRD_TRACE_CONTEXT_MAX] = {0};
-
-            if (rbusHandle_GetTraceContextAsString(rrdRbusHandle, traceparent, sizeof(traceparent), tracestate, sizeof(tracestate)) == RBUS_ERROR_SUCCESS)
-            {
-                strncpy(sbuf->traceparent, traceparent, sizeof(sbuf->traceparent) - 1);
-            }
-        }
-#endif
         if (checkAppendRequest(sbuf->mdata))
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:Received command apppend request for the issue \n", __FUNCTION__, __LINE__);
             sbuf->appendMode = true;
-        }	
+        }
         RRDMsgDeliver(msqid, sbuf);
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: SUCCESS: Message sending Done, ID=%d MSG=%s Size=%d Type=%u AppendMode=%d! \n", __FUNCTION__, __LINE__, msqid, sbuf->mdata, strlen(sbuf->mdata), sbuf->mtype, sbuf->appendMode);
-        /* coverity[leaked_storage] */
     }
 }
 
