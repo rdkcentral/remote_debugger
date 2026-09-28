@@ -433,6 +433,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
 #endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
 
+	(void)(handle);
     (void)(subscription);
 
     rbusValue_t value = rbusObject_GetValue(event->data, "value");
