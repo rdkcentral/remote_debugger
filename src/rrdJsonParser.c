@@ -610,12 +610,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     char outdir[BUF_LEN_256] =  {'\0'};
     time_t ctime;
     struct tm *ltime;
-#ifdef ENABLE_RDK_OTLP
-    if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
-    {
-        rdk_otlp_start_child_from_traceparent(buff->traceparent, "remotedebugger.command_execution");
-    }
-#endif
     rfcbuf = strdup(buff->mdata);
 
     if (rfcbuf == NULL)
@@ -627,12 +621,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         buff->jsonPath = NULL;
         free(buff->suffix); // free suffix
         buff->suffix = NULL;
-    #ifdef ENABLE_RDK_OTLP
-        if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
-        {
-            rdk_otlp_finish_child_span();
-        }
-    #endif
         return;
     }
 
@@ -657,12 +645,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         buff->jsonPath = NULL;
         free(buff->suffix); // free suffix
         buff->suffix = NULL;
-    #ifdef ENABLE_RDK_OTLP
-        if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
-        {
-            rdk_otlp_finish_child_span();
-        }
-    #endif
         return;
     }
     else
@@ -670,6 +652,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Change directory %s\n",__FUNCTION__,__LINE__,outdir);
         if(chdir(outdir) == 0) /* Change Directory Success */
 	{
+#ifdef ENABLE_RDK_OTLP
+            if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+            {
+                rdk_otlp_start_child_from_traceparent(buff->traceparent, "remotedebugger.command_preparation_and_execution");
+            }
+#endif
             if (issuestructNode->subNode != NULL)
             {
                 // Execute the command for received Issue Type of the Issue Category
@@ -694,6 +682,12 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             {
                 execstatus = processAllDebugCommand(jsoncfg, issuestructNode, rfcbuf);
             }
+#ifdef ENABLE_RDK_OTLP
+            if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+            {
+                rdk_otlp_finish_child_span();
+            }
+#endif
 
             // Invoke Upload Script to perform S3 Log upload
             if (!execstatus)
@@ -721,7 +715,19 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
                 }
                 else
                 {
+#ifdef ENABLE_RDK_OTLP
+                    if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+                    {
+                        rdk_otlp_start_child_from_traceparent(buff->traceparent, "remotedebugger.report_upload");
+                    }
+#endif
                     status = uploadDebugoutput(outdir, tarName);
+#ifdef ENABLE_RDK_OTLP
+                    if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
+                    {
+                        rdk_otlp_finish_child_span();
+                    }
+#endif
                 }
                 if(status != 0)
                 {
@@ -751,13 +757,6 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             free(buff->suffix); // free suffix
             buff->suffix = NULL;
 	}
-    }
-#ifdef ENABLE_RDK_OTLP
-    if (buff->traceparent[0] != '\0' && !buff->inDynamic && !buff->appendMode)
-    {
-        rdk_otlp_finish_child_span();
-    }
-#endif
 }
 
 /*
