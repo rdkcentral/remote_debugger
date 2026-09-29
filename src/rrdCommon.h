@@ -68,6 +68,9 @@ extern "C"
 
 #define BUF_LEN_128  128
 #define APPEND_SUFFIX "_apnd"
+#ifdef ENABLE_RDK_OTLP
+#define RRD_TRACE_CONTEXT_MAX 512
+#endif
 
 /* Enum for Messages Queue*/
 typedef enum {
@@ -99,6 +102,9 @@ typedef struct mbuffer {
      bool                appendMode;
      deepsleep_event_et  dsEvent;
      char *suffix; // Holds the suffix split from issue type string, if any
+#ifdef ENABLE_RDK_OTLP
+     char                traceparent[RRD_TRACE_CONTEXT_MAX];
+#endif
 } data_buf;
 
 /*Structure for Message Header*/
