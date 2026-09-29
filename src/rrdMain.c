@@ -23,7 +23,21 @@
 #include "rrdDynamic.h"
 #include "rrdEventProcess.h"
 #include "rrdInterface.h"
-
+#ifdef ENABLE_RDK_OTLP
+#include <rdk_otlp_instrumentation.h>
+#endif
+#ifdef USECOV
+#include <signal.h>
+#include <stdlib.h>
+extern void __gcov_dump(void);
+/* Flush gcov counters on SIGTERM so lcov captures L2 exercise data. */
+static void rrd_gcov_sigterm_handler(int sig)
+{
+    (void)sig;
+    __gcov_dump();
+    _exit(0);
+}
+#endif
 
 devicePropertiesData devPropData;
 
@@ -139,6 +153,12 @@ int main(int argc, char *argv[])
     pthread_t RRDTR69ThreadID;
 
     rdk_logger_init(DEBUG_INI_FILE);
+#ifdef ENABLE_RDK_OTLP
+    rdk_otlp_init("remotedebugger", "1.0");
+#endif
+#ifdef USECOV
+    signal(SIGTERM, rrd_gcov_sigterm_handler);
+#endif
 #if !defined(GTEST_ENABLE)
     /* Store Device Info.*/
     RRDStoreDeviceInfo(&devPropData);
@@ -171,6 +191,9 @@ int main(int argc, char *argv[])
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopping RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
     RRD_unsubscribe();
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]:Stopped RDK Remote Debugger Daemon \n",__FUNCTION__,__LINE__);
+#ifdef ENABLE_RDK_OTLP
+    rdk_otlp_shutdown();
+#endif
 
     return 0;
 }

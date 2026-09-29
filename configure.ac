@@ -85,5 +85,21 @@ AC_ARG_ENABLE([iarmbusSupport],
 esac],[iarmbusSupport=false])
 AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 
+AC_ARG_ENABLE([rdk-otlp],
+        AS_HELP_STRING([--enable-rdk-otlp],[enable RDK OpenTelemetry instrumentation (default is no)]),
+        [
+          case "${enableval}" in
+           yes) RDK_OTLP_ENABLE=true
+                RDK_OTLP_CFLAGS="-DENABLE_RDK_OTLP"
+                RDK_OTLP_LDFLAGS="-lrdk_otlp" ;;
+           no) RDK_OTLP_ENABLE=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-rdk-otlp]) ;;
+          esac
+        ],
+        [RDK_OTLP_ENABLE=false])
+AM_CONDITIONAL([RDK_OTLP_ENABLE], [test x$RDK_OTLP_ENABLE = xtrue])
+
 AC_SUBST(GTEST_ENABLE_FLAG)
+AC_SUBST(RDK_OTLP_CFLAGS)
+AC_SUBST(RDK_OTLP_LDFLAGS)
 AC_OUTPUT
