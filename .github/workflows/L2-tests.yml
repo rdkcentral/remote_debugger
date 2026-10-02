@@ -2,9 +2,9 @@ name: L2 Integration Tests
 
 on:
   pull_request:
-    branches: [ develop ]
+    branches: [ develop, feature/dev ]
   push:
-    branches: [ develop ]
+    branches: [ develop, feature/dev ]
 
 permissions:
   contents: write
@@ -97,12 +97,12 @@ jobs:
 
       - name: Copy lcov tracefile from container
         id: copy_tracefile
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         continue-on-error: true
         run: docker cp native-platform:/tmp/l2_coverage/coverage.info /tmp/coverage.info
 
       - name: Generate L2_Coverage.md
-        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
+        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.copy_tracefile.outcome == 'success'
         run: |
           python3 remote_debugger/test/functional-tests/generate_l2_coverage_report.py \
             --tracefile    /tmp/coverage.info \
@@ -111,7 +111,7 @@ jobs:
             --output       remote_debugger/test/functional-tests/L2_Coverage.md
 
       - name: Commit L2_Coverage.md
-        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
+        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.copy_tracefile.outcome == 'success'
         run: |
           cd remote_debugger
           git config user.name  "github-actions[bot]"
