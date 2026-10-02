@@ -42,6 +42,7 @@ static void freeParsedJson(cJSON *jsonParsed);
  * @param data_buf *rbuf - Buffer containing event data and metadata.
  * @return void
  */
+#ifndef DISABLE_WEBCONFIG
 void processWebCfgTypeEvent(data_buf *rbuf)
 {
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
@@ -53,6 +54,7 @@ void processWebCfgTypeEvent(data_buf *rbuf)
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
 }
+#endif
 
 /*
  * @function processIssueTypeEvent

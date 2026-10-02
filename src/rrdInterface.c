@@ -28,7 +28,9 @@
 #include <rdk_otlp_instrumentation.h>
 #endif
 #if !defined(GTEST_ENABLE)
+#ifndef DISABLE_WEBCONFIG
 #include "webconfig_framework.h"
+#endif
 
 extern int msqid;
 #else
@@ -36,7 +38,9 @@ int msqid = 0;
 key_t key = 1234;
 #endif
 #define RRD_TMP_DIR "/tmp/"
+#ifndef DISABLE_WEBCONFIG
 uint32_t gWebCfgBloBVersion = 0;
+#endif
 rbusHandle_t    rrdRbusHandle;
 
 // File-local storage for profile category
@@ -148,14 +152,17 @@ int RRD_subscribe()
     subscriptions[0].handler  = _remoteDebuggerEventHandler;
     subscriptions[0].userData = NULL;
 
+#ifndef DISABLE_WEBCONFIG
     subscriptions[1].eventName = RRD_WEBCFG_ISSUE_EVENT;
     subscriptions[1].filter = NULL;
     subscriptions[1].duration = 0;
     subscriptions[1].handler  = _remoteDebuggerWebCfgDataEventHandler;
     subscriptions[1].userData = NULL;
+#endif
 
 #ifdef IARMBUS_SUPPORT
 #ifdef USE_L2_SUPPORT
+#ifndef DISABLE_WEBCONFIG
    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
    subscriptions[2].filter = NULL;
    subscriptions[2].duration = 0;
@@ -163,15 +170,36 @@ int RRD_subscribe()
    subscriptions[2].userData = NULL;
    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
 #else
-   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+    subscriptions[1].eventName = RDM_DOWNLOAD_EVENT;
+    subscriptions[1].filter = NULL;
+    subscriptions[1].duration = 0;
+    subscriptions[1].handler  = _rdmDownloadEventHandler;
+    subscriptions[1].userData = NULL;
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
 #endif
 #else
+#ifndef DISABLE_WEBCONFIG
+   ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+#else
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 1, 60);
+#endif
+#endif
+#else
+#ifndef DISABLE_WEBCONFIG
    subscriptions[2].eventName = RDM_DOWNLOAD_EVENT;
    subscriptions[2].filter = NULL;
    subscriptions[2].duration = 0;
    subscriptions[2].handler  = _rdmDownloadEventHandler;
    subscriptions[2].userData = NULL;
    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 3, 60);
+#else
+    subscriptions[1].eventName = RDM_DOWNLOAD_EVENT;
+    subscriptions[1].filter = NULL;
+    subscriptions[1].duration = 0;
+    subscriptions[1].handler  = _rdmDownloadEventHandler;
+    subscriptions[1].userData = NULL;
+    ret = rbusEvent_SubscribeEx(rrdRbusHandle, subscriptions, 2, 60);
+#endif
 #endif
 #endif
     if(ret != 0)
@@ -201,7 +229,9 @@ int RRD_subscribe()
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: RBUS profile data elements registered\n", __FUNCTION__, __LINE__);
     }
 
+#ifndef DISABLE_WEBCONFIG
     webconfigFrameworkInit();
+#endif
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting.. \n", __FUNCTION__, __LINE__);
     return ret;
 }
@@ -226,6 +256,7 @@ bool checkAppendRequest(char *issueRequest)
     return false;
 }
 
+#ifndef DISABLE_WEBCONFIG
 void webconfigFrameworkInit()
 {
     char *sub_doc = "remotedebugger";
@@ -249,6 +280,7 @@ int setBlobVersion(char* subdoc,uint32_t version)
         gWebCfgBloBVersion = version;
         return 0;
 }
+#endif
 
 void RRDMsgDeliver(int msgqid, data_buf *sbuf)
 {
@@ -495,6 +527,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
 }
 
+#ifndef DISABLE_WEBCONFIG
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
     char *inString = NULL;
@@ -520,6 +553,7 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
 }
+#endif
 #endif
 void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
 {

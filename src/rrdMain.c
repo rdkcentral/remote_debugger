@@ -71,7 +71,11 @@ void *RRDEventThreadFunc(void *arg)
             processIssueTypeEvent(rbuf);
             break;
         case EVENT_WEBCFG_MSG:
+#ifndef DISABLE_WEBCONFIG
             processWebCfgTypeEvent(rbuf);
+#else
+            RRD_data_buff_deAlloc(rbuf);
+#endif
             break;
         case DEEPSLEEP_EVENT_MSG:
 #ifdef IARMBUS_SUPPORT
