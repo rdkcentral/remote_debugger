@@ -85,6 +85,14 @@ AC_ARG_ENABLE([iarmbusSupport],
 esac],[iarmbusSupport=false])
 AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 
+case "$CPPFLAGS" in
+  *-DDISABLE_WEBCONFIG*) disableWebconfig=true ;;
+  *) disableWebconfig=false ;;
+esac
+
+AM_CONDITIONAL([DISABLE_WEBCONFIG],
+               [test "x$disableWebconfig" = "xtrue"])
+
 AC_ARG_ENABLE([rdk-otlp],
         AS_HELP_STRING([--enable-rdk-otlp],[enable RDK OpenTelemetry instrumentation (default is no)]),
         [

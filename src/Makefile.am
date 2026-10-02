@@ -14,7 +14,12 @@ remotedebuggerinclude_HEADERS = rrdCommon.h rrdInterface.h \
 
 remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdThread.c rrdCommandSanity.c rrdDynamic.c rrdExecuteScript.c rrdMsgPackDecoder.c rrdInterface.c 
 remotedebugger_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} $(CJSON_CFLAGS)
+
+if DISABLE_WEBCONFIG
+AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lrbus -lsecure_wrapper "
+else
 AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper "
+endif
 
 if RDK_OTLP_ENABLE
 remotedebugger_CFLAGS += $(RDK_OTLP_CFLAGS)
