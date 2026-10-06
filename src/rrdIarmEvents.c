@@ -38,7 +38,7 @@ static void* getPwrCtrlInterface(void *arg)
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Entry  \r\n \n", __FUNCTION__, __LINE__);
 
     /*TODO: remove this sleep after fix METROL-1045*/
-    sleep(5);//added sleep wait for the WPEframework active. 
+    sleep(5);//added sleep wait for the Thunder active. 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: start PowerController_Init().. \n", __FUNCTION__, __LINE__);
     PowerController_Init();
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: completed PowerController_Init().. \n", __FUNCTION__, __LINE__);
