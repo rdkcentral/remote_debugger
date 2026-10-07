@@ -2,9 +2,9 @@ name: L2 Integration Tests
 
 on:
   pull_request:
-    branches: [ develop, feature/dev ]
+    branches: [ develop ]
   push:
-    branches: [ develop, feature/dev ]
+    branches: [ develop ]
 
 permissions:
   contents: write
