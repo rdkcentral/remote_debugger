@@ -156,7 +156,9 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         rbusValue_t value;
 	    rbusValue_Init(&value);
         rbusValue_SetString(value,"root");
+#ifndef DISABLE_WEBCONFIG
         rc = rbus_set(rrdRbusHandle, RRD_WEBCFG_FORCE_SYNC, value, NULL);
+#endif
 #ifndef USE_L2_SUPPORT
 	if (rc != RBUS_ERROR_SUCCESS)
         {
