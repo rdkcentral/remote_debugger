@@ -111,7 +111,7 @@ jobs:
             --output       remote_debugger/test/functional-tests/L2_Coverage.md
 
       - name: Commit L2_Coverage.md
-        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.copy_tracefile.outcome == 'success'
+        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
         run: |
           cd remote_debugger
           git config user.name  "github-actions[bot]"
