@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-08-14  
+**Generated:** 2026-10-02  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -16,9 +16,9 @@
 | Test files (pytest) | 23 |
 | Test functions (`test_*`) | 118 |
 | Feature → Test mapped pairs | 19 / 22 (+4 orphan tests) |
-| **Line coverage (lcov)** | **49.4%** (1487 of 3012 lines) |
-| **Branch coverage (lcov)** | **36.8%** (503 of 1365 branches) |
-| **Function coverage (lcov)** | **60.3%** (76 of 126 functions) |
+| **Line coverage (lcov)** | **49.7%** (1508 of 3034 lines) |
+| **Branch coverage (lcov)** | **37.3%** (515 of 1381 branches) |
+| **Function coverage (lcov)** | **61.1%** (77 of 126 functions) |
 
 ---
 
@@ -73,9 +73,9 @@
 | Module | Lines | Functions | Branches | Coverage Bar |
 |---|:---:|:---:|:---:|---|
 | `rrdMain.c` | 60.3% (38/63) | 100.0% (4/4) | 42.9% (6/14) | `████████████░░░░░░░░` |
-| `rrdInterface.c` | 42.4% (181/427) | 59.1% (13/22) | 33.3% (56/168) | `████████░░░░░░░░░░░░` |
-| `rrdEventProcess.c` | 69.3% (232/335) | 81.8% (9/11) | 48.6% (68/140) | `██████████████░░░░░░` |
-| `rrdJsonParser.c` | 81.6% (400/490) | 86.7% (13/15) | 66.0% (128/194) | `████████████████░░░░` |
+| `rrdInterface.c` | 44.0% (189/430) | 63.6% (14/22) | 36.5% (62/170) | `█████████░░░░░░░░░░░` |
+| `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | 48.1% (74/154) | `██████████████░░░░░░` |
+| `rrdJsonParser.c` | 81.8% (405/495) | 86.7% (13/15) | 66.0% (128/194) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | 34.5% (20/58) | `███████████░░░░░░░░░` |
 | `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | 71.9% (23/32) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | 24.6% (14/57) | `████████░░░░░░░░░░░░` |
