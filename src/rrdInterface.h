@@ -37,6 +37,9 @@ extern "C"
 #endif
 #endif
 
+#include "rdk_otlp_instrumentation.h"
+#define TRACE_MAX 512
+
 #define RDK_REMOTE_DEBUGGER_NAME "REMOTE_DEBUGGER"
 #define REMOTE_DEBUGGER_RBUS_HANDLE_NAME "rdkRrdRbus"
 #define RRD_WEBCFG_FORCE_SYNC "Device.X_RDK_WebConfig.ForceSync"
