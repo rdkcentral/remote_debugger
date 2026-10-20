@@ -87,13 +87,13 @@ AM_CONDITIONAL([IARMBUS_ENABLE], [test x$iarmbusSupport = xtrue])
 
 # WebConfig Support
 AC_ARG_ENABLE([webconfig],
-[  --enable-webconfig    Turn on webconfig support (default is yes)],
+[AS_HELP_STRING([--disable-webconfig], [disable WebConfig support])],
 [case "${enableval}" in
   yes) webconfigSupport=true ;;
   no)  webconfigSupport=false ;;
-  *) AC_MSG_ERROR([bad value ${enableval} for --enable-webconfig]) ;;
+  *)   AC_MSG_ERROR([bad value ${enableval} for --enable-webconfig]) ;;
 esac],[webconfigSupport=true])
-AM_CONDITIONAL([WEBCONFIG_ENABLE], [test x$webconfigSupport = xtrue])
+AM_CONDITIONAL([DISABLE_WEBCONFIG],[test "x$webconfigSupport" = "xfalse"])
 
 AC_ARG_ENABLE([rdk-otlp],
         AS_HELP_STRING([--enable-rdk-otlp],[enable RDK OpenTelemetry instrumentation (default is no)]),
