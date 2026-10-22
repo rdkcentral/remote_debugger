@@ -72,7 +72,7 @@ char *replaceRRDLocation(char* commandStr, char* dirLocation)
     deflen = strlen(DEFAULT_DIR);
     dirlen = strlen(dirLocation);
 
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be replaced: %s \n",__FUNCTION__,__LINE__,commandStr);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be replaced here: %s \n",__FUNCTION__,__LINE__,commandStr);
     iterptr = commandStr;
     while (NULL != (matchptr = strstr(iterptr, DEFAULT_DIR)))
     {
