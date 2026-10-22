@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Generate an L1 unit-test coverage report from lcov and Google Test XML."""
+"""Generate an L1 unit-test coverage report from lcov and Google Test JSON."""
 
 import argparse
 import datetime
+import json
 import os
-import xml.etree.ElementTree as ET
 
 
 def parse_tracefile(tracefile, source_dir):
@@ -54,17 +54,17 @@ def parse_tracefile(tracefile, source_dir):
     return records
 
 
-def parse_gtest_xml(xml_path):
-    root = ET.parse(xml_path).getroot()
-    suites = []
-    for suite in root.findall('.//testsuite'):
-        suites.append({
-            'name': suite.get('name', 'unnamed'),
-            'tests': int(suite.get('tests', 0)),
-            'failures': int(suite.get('failures', 0)),
-            'disabled': int(suite.get('disabled', 0)),
-            'skipped': int(suite.get('skipped', 0)),
-        })
+def parse_gtest_json(json_path):
+    with open(json_path, encoding='utf-8') as results_file:
+        root = json.load(results_file)
+
+    suites = [{
+        'name': suite.get('name', 'unnamed'),
+        'tests': int(suite.get('tests', 0)),
+        'failures': int(suite.get('failures', 0)),
+        'disabled': int(suite.get('disabled', 0)),
+        'skipped': int(suite.get('skipped', 0)),
+    } for suite in root.get('testsuites', [])]
 
     return {
         'suites': suites,
@@ -168,7 +168,7 @@ def render_report(records, test_results):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tracefile', '--lcov-file', dest='tracefile', required=True)
-    parser.add_argument('--gtest-xml', required=True)
+    parser.add_argument('--gtest-json', required=True)
     parser.add_argument('--source-dir', required=True)
     parser.add_argument('--output', required=True)
     args = parser.parse_args()
@@ -176,7 +176,7 @@ def main():
     records = parse_tracefile(args.tracefile, args.source_dir)
     if not records:
         raise SystemExit(f'No RRD C source coverage records found in {args.tracefile}')
-    test_results = parse_gtest_xml(args.gtest_xml)
+    test_results = parse_gtest_json(args.gtest_json)
     output_dir = os.path.dirname(os.path.abspath(args.output))
     os.makedirs(output_dir, exist_ok=True)
     with open(args.output, 'w', encoding='utf-8') as report_file:
