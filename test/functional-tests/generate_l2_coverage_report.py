@@ -57,8 +57,6 @@ def parse_tracefile(path):
         'lines_det':    f"{tot('lh')} of {tot('lf')} lines",
         'funcs_pct':    _pct(tot('fnh'), tot('fnf')),
         'funcs_det':    f"{tot('fnh')} of {tot('fnf')} functions",
-        'branches_pct': _pct(tot('brh'), tot('brf')),
-        'branches_det': f"{tot('brh')} of {tot('brf')} branches",
     }
     return files, summary
 
@@ -300,7 +298,6 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         f'| Feature → Test mapped pairs | {mapped} / {total_features}'
         + (f' (+{len(orphan_tests)} orphan test{"s" if len(orphan_tests) != 1 else ""})' if orphan_tests else '') + ' |',
         f'| **Line coverage (lcov)** | **{summary["lines_pct"]}** ({summary["lines_det"]}) |',
-        f'| **Branch coverage (lcov)** | **{summary["branches_pct"]}** ({summary["branches_det"]}) |',
         f'| **Function coverage (lcov)** | **{summary["funcs_pct"]}** ({summary["funcs_det"]}) |',
         '',
     ]
@@ -361,8 +358,8 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         '',
         '## 3. Source Module Coverage (lcov)',
         '',
-        '| Module | Lines | Functions | Branches | Coverage Bar |',
-        '|---|:---:|:---:|:---:|---|',
+        '| Module | Lines | Functions | Coverage Bar |',
+        '|---|:---:|:---:|---|',
     ]
     src_modules = [
         'rrdMain.c', 'rrdInterface.c', 'rrdEventProcess.c', 'rrdJsonParser.c',
@@ -481,7 +478,6 @@ def main():
 
     print(f'Written: {args.output}')
     print(f'  lines={summary["lines_pct"]}  '
-          f'branches={summary["branches_pct"]}  '
           f'functions={summary["funcs_pct"]}')
 
 
