@@ -25,12 +25,12 @@ jobs:
 
       - name: Run unit tests with coverage flags enabled
         run: |
-          GTEST_OUTPUT=xml:/tmp/l1_gtest_results.xml sh run_ut.sh --enable-cov
+          sh run_ut.sh --enable-cov
       - name: Generate L1_Coverage.md
         run: |
           python3 test/functional-tests/generate_l1_coverage_report.py \
             --lcov-file src/unittest/coverage.info \
-            --gtest-xml /tmp/l1_gtest_results.xml \
+            --gtest-json /tmp/Gtest_Report/rdkRemoteDebugger_gtest_report.json \
             --source-dir src \
             --output test/functional-tests/L1_Coverage.md
       - name: Caculate the code coverage summary
