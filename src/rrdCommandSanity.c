@@ -125,7 +125,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     char *sanitystr = NULL;
 
     sanitycmd = cJSON_Print(sanitylist); // Print sanity commands data from the Json object sanitylist
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands List: %s \n",__FUNCTION__,__LINE__,sanitycmd);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands Lists: %s \n",__FUNCTION__,__LINE__,sanitycmd);
     cJSON_free(sanitycmd); // free sanity commands data
     sitems = cJSON_GetArraySize(sanitylist);
     for (i = 0 ; i < sitems; i++)
