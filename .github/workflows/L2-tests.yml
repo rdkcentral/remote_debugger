@@ -106,6 +106,7 @@ jobs:
         run: |
           python3 remote_debugger/test/functional-tests/generate_l2_coverage_report.py \
             --tracefile    /tmp/coverage.info \
+            --src-dir      remote_debugger/src \
             --features-dir remote_debugger/test/functional-tests/features \
             --tests-dir    remote_debugger/test/functional-tests/tests \
             --output       remote_debugger/test/functional-tests/L2_Coverage.md
