@@ -40,7 +40,8 @@ jobs:
           cd -
         
       - name: Update the coverage report to Pull request using actions
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
         uses: actions/github-script@v4
         with:
           script: |
