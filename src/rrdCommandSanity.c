@@ -72,7 +72,7 @@ char *replaceRRDLocation(char* commandStr, char* dirLocation)
     deflen = strlen(DEFAULT_DIR);
     dirlen = strlen(dirLocation);
 
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be replaced: %s \n",__FUNCTION__,__LINE__,commandStr);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be replacedddd here: %s \n",__FUNCTION__,__LINE__,commandStr);
     iterptr = commandStr;
     while (NULL != (matchptr = strstr(iterptr, DEFAULT_DIR)))
     {
@@ -100,7 +100,7 @@ char *replaceRRDLocation(char* commandStr, char* dirLocation)
         }
         strcpy(tempptr, iterptr);
     }
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be executed: %s \n",__FUNCTION__,__LINE__,data);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be exssecuted: %s \n",__FUNCTION__,__LINE__,data);
     free(commandStr); // free old command received with MACRO
     commandStr = (char *) data; // Update new command to the argument
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Copying updated command to argument: %s \n",__FUNCTION__,__LINE__,commandStr);
@@ -125,7 +125,7 @@ int isCommandsValid(char *issuecmd,cJSON *sanitylist)
     char *sanitystr = NULL;
 
     sanitycmd = cJSON_Print(sanitylist); // Print sanity commands data from the Json object sanitylist
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands List: %s \n",__FUNCTION__,__LINE__,sanitycmd);
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading sSanity Commands Lists: %s \n",__FUNCTION__,__LINE__,sanitycmd);
     cJSON_free(sanitycmd); // free sanity commands data
     sitems = cJSON_GetArraySize(sanitylist);
     for (i = 0 ; i < sitems; i++)
