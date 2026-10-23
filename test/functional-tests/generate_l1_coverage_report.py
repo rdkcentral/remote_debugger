@@ -8,10 +8,8 @@ import os
 
 
 def parse_tracefile(tracefile, source_dir):
-    source_names = {
-        name for name in os.listdir(source_dir)
-        if name.endswith('.c') and os.path.isfile(os.path.join(source_dir, name))
-    }
+    source_dir = os.path.abspath(source_dir)
+    root = os.path.dirname(source_dir)
     records = {}
     current = None
 
@@ -19,20 +17,21 @@ def parse_tracefile(tracefile, source_dir):
         for raw_line in coverage_file:
             line = raw_line.rstrip('\n')
             if line.startswith('SF:'):
-                source_name = os.path.basename(line[3:])
+                rel_path = os.path.relpath(os.path.abspath(line[3:]), root).replace(os.sep, '/')
                 current = {
-                    'name': source_name,
+                    'name': os.path.basename(rel_path),
+                    'path': rel_path,
+                    'dir': os.path.dirname(rel_path),
                     'lines_hit': 0,
                     'lines_found': 0,
                     'functions_hit': 0,
                     'functions_found': 0,
-                    'branches_hit': 0,
-                    'branches_found': 0,
                     'functions': {},
                 }
             elif line == 'end_of_record' and current:
-                if current['name'] in source_names:
-                    records[current['name']] = current
+                if (not current['path'].startswith('..')
+                        and os.path.isfile(os.path.join(root, current['path']))):
+                    records[current['path']] = current
                 current = None
             elif current:
                 if line.startswith('LH:'):
@@ -43,10 +42,6 @@ def parse_tracefile(tracefile, source_dir):
                     current['functions_hit'] = int(line[4:])
                 elif line.startswith('FNF:'):
                     current['functions_found'] = int(line[4:])
-                elif line.startswith('BRH:'):
-                    current['branches_hit'] = int(line[4:])
-                elif line.startswith('BRF:'):
-                    current['branches_found'] = int(line[4:])
                 elif line.startswith('FNDA:'):
                     count, name = line[5:].split(',', 1)
                     current['functions'][name] = int(count)
@@ -79,18 +74,71 @@ def percentage(hit, found):
     return 'N/A' if not found else f'{hit * 100 / found:.1f}%'
 
 
-def render_report(records, test_results):
-    totals = {
-        key: sum(record[key] for record in records.values())
-        for key in ('lines_hit', 'lines_found', 'functions_hit', 'functions_found',
-                    'branches_hit', 'branches_found')
-    }
+METRICS = ('lines_hit', 'lines_found', 'functions_hit', 'functions_found')
+
+
+def sum_metrics(items):
+    return {key: sum(item[key] for item in items) for key in METRICS}
+
+
+def cell(hit, found):
+    return f'{percentage(hit, found)} ({hit}/{found})'
+
+
+def render_directory_section(records):
+    by_dir = {}
+    for record in records.values():
+        by_dir.setdefault(record['dir'], []).append(record)
+
+    report = [
+        '## Coverage by Directory',
+        '',
+        'Expand a directory to see its per-file coverage.',
+        '',
+        '| Directory | Lines | Functions |',
+        '|---|:---:|:---:|',
+    ]
+    for directory in sorted(by_dir):
+        total = sum_metrics(by_dir[directory])
+        report.append(
+            f'| `{directory}` | {cell(total["lines_hit"], total["lines_found"])} '
+            f'| {cell(total["functions_hit"], total["functions_found"])} |'
+        )
+    report.append('')
+
+    for directory in sorted(by_dir):
+        files = sorted(by_dir[directory], key=lambda record: record['name'])
+        total = sum_metrics(files)
+        report.extend([
+            '<details>',
+            f'<summary><code>{directory}</code> &mdash; lines '
+            f'{percentage(total["lines_hit"], total["lines_found"])}, functions '
+            f'{percentage(total["functions_hit"], total["functions_found"])} '
+            f'({len(files)} files)</summary>',
+            '',
+            '| File | Lines | Functions |',
+            '|---|:---:|:---:|',
+        ])
+        for record in files:
+            report.append(
+                f'| `{record["name"]}` '
+                f'| {cell(record["lines_hit"], record["lines_found"])} '
+                f'| {cell(record["functions_hit"], record["functions_found"])} |'
+            )
+        report.extend(['', '</details>', ''])
+    return report
+
+
+def render_report(records, test_results, source_rel):
+    src_records = {path: rec for path, rec in records.items() if rec['dir'] == source_rel}
+    totals = sum_metrics(records.values())
     report = [
         '# Remote Debugger L1 Unit-Test Coverage',
         '',
         f'**Generated:** {datetime.date.today().isoformat()}  ',
         '**Coverage source:** lcov/gcov from the L1 Google Test run  ',
-        '**Scope:** RRD C source files compiled into `remotedebugger_gtest`',
+        '**Scope:** All instrumented files in the lcov report (RRD sources plus unit-test code and mocks); '
+        'the summary matches the overall lcov totals',
         '',
         '## Coverage Summary',
         '',
@@ -98,7 +146,6 @@ def render_report(records, test_results):
         '|---|:---:|:---:|',
         f'| Lines | **{percentage(totals["lines_hit"], totals["lines_found"])}** | {totals["lines_hit"]} / {totals["lines_found"]} |',
         f'| Functions | **{percentage(totals["functions_hit"], totals["functions_found"])}** | {totals["functions_hit"]} / {totals["functions_found"]} |',
-        f'| Branches | **{percentage(totals["branches_hit"], totals["branches_found"])}** | {totals["branches_hit"]} / {totals["branches_found"]} |',
         '',
         '## L1 Test Results',
         '',
@@ -112,23 +159,20 @@ def render_report(records, test_results):
         '',
         '## Per-Module Coverage',
         '',
-        '| Source module | Lines | Functions | Branches |',
-        '|---|:---:|:---:|:---:|',
+        '| Source module | Lines | Functions |',
+        '|---|:---:|:---:|',
     ]
 
-    for name in sorted(records):
-        record = records[name]
+    for path in sorted(src_records):
+        record = src_records[path]
         report.append(
-            f'| `{name}` '
-            f'| {percentage(record["lines_hit"], record["lines_found"])} '
-            f'({record["lines_hit"]}/{record["lines_found"]}) '
-            f'| {percentage(record["functions_hit"], record["functions_found"])} '
-            f'({record["functions_hit"]}/{record["functions_found"]}) '
-            f'| {percentage(record["branches_hit"], record["branches_found"])} '
-            f'({record["branches_hit"]}/{record["branches_found"]}) |'
+            f'| `{record["name"]}` '
+            f'| {cell(record["lines_hit"], record["lines_found"])} '
+            f'| {cell(record["functions_hit"], record["functions_found"])} |'
         )
 
-    report.extend(['', '## Test Suites', '', '| Suite | Tests | Failures | Disabled | Skipped |',
+    report.extend(['', *render_directory_section(records)])
+    report.extend(['## Test Suites', '', '| Suite | Tests | Failures | Disabled | Skipped |',
                     '|---|---:|---:|---:|---:|'])
     for suite in test_results['suites']:
         report.append(
@@ -138,7 +182,7 @@ def render_report(records, test_results):
 
     uncovered = [
         (record['name'], name)
-        for record in records.values()
+        for record in src_records.values()
         for name, count in record['functions'].items()
         if count == 0
     ]
@@ -180,7 +224,8 @@ def main():
     output_dir = os.path.dirname(os.path.abspath(args.output))
     os.makedirs(output_dir, exist_ok=True)
     with open(args.output, 'w', encoding='utf-8') as report_file:
-        report_file.write(render_report(records, test_results))
+        report_file.write(render_report(
+            records, test_results, os.path.basename(os.path.abspath(args.source_dir))))
     print(f'Generated {args.output} from {len(records)} RRD C source files')
 
 
