@@ -2,15 +2,14 @@
 
 **Generated:** 2026-10-23  
 **Coverage source:** lcov/gcov from the L1 Google Test run  
-**Scope:** RRD C source files compiled into `remotedebugger_gtest`
+**Scope:** All instrumented files in the lcov report (RRD sources plus unit-test code and mocks); the summary matches the overall lcov totals
 
 ## Coverage Summary
 
 | Metric | Coverage | Hit / total |
 |---|:---:|:---:|
-| Lines | **68.2%** | 1947 / 2856 |
-| Functions | **92.7%** | 114 / 123 |
-| Branches | **N/A** | 0 / 0 |
+| Lines | **84.0%** | 5276 / 6280 |
+| Functions | **97.3%** | 1623 / 1668 |
 
 ## L1 Test Results
 
@@ -24,24 +23,77 @@
 
 ## Per-Module Coverage
 
-| Source module | Lines | Functions | Branches |
-|---|:---:|:---:|:---:|
-| `rrdCommandSanity.c` | 94.9% (74/78) | 100.0% (3/3) | N/A (0/0) |
-| `rrdDynamic.c` | 85.2% (127/149) | 100.0% (5/5) | N/A (0/0) |
-| `rrdEventProcess.c` | 60.6% (218/360) | 90.9% (10/11) | N/A (0/0) |
-| `rrdExecuteScript.c` | 100.0% (15/15) | 100.0% (2/2) | N/A (0/0) |
-| `rrdIarmEvents.c` | 88.2% (120/136) | 100.0% (4/4) | N/A (0/0) |
-| `rrdInterface.c` | 72.4% (207/286) | 94.7% (18/19) | N/A (0/0) |
-| `rrdJsonParser.c` | 55.4% (277/500) | 86.7% (13/15) | N/A (0/0) |
-| `rrdMain.c` | 50.0% (23/46) | 33.3% (1/3) | N/A (0/0) |
-| `rrdMsgPackDecoder.c` | 71.7% (198/276) | 100.0% (15/15) | N/A (0/0) |
-| `rrdRunCmdThread.c` | 79.9% (163/204) | 100.0% (10/10) | N/A (0/0) |
-| `rrd_archive.c` | 65.9% (166/252) | 100.0% (11/11) | N/A (0/0) |
-| `rrd_config.c` | 47.5% (105/221) | 77.8% (7/9) | N/A (0/0) |
-| `rrd_logproc.c` | 86.3% (63/73) | 100.0% (4/4) | N/A (0/0) |
-| `rrd_sysinfo.c` | 79.8% (87/109) | 100.0% (6/6) | N/A (0/0) |
-| `rrd_upload.c` | 67.8% (61/90) | 80.0% (4/5) | N/A (0/0) |
-| `uploadRRDLogs.c` | 70.5% (43/61) | 100.0% (1/1) | N/A (0/0) |
+| Source module | Lines | Functions |
+|---|:---:|:---:|
+| `rrdCommandSanity.c` | 94.9% (74/78) | 100.0% (3/3) |
+| `rrdDynamic.c` | 85.2% (127/149) | 100.0% (5/5) |
+| `rrdEventProcess.c` | 60.6% (218/360) | 90.9% (10/11) |
+| `rrdExecuteScript.c` | 100.0% (15/15) | 100.0% (2/2) |
+| `rrdIarmEvents.c` | 88.2% (120/136) | 100.0% (4/4) |
+| `rrdInterface.c` | 72.4% (207/286) | 94.7% (18/19) |
+| `rrdJsonParser.c` | 55.4% (277/500) | 86.7% (13/15) |
+| `rrdMain.c` | 50.0% (23/46) | 33.3% (1/3) |
+| `rrdMsgPackDecoder.c` | 71.7% (198/276) | 100.0% (15/15) |
+| `rrdRunCmdThread.c` | 79.9% (163/204) | 100.0% (10/10) |
+| `rrd_archive.c` | 65.9% (166/252) | 100.0% (11/11) |
+| `rrd_config.c` | 47.5% (105/221) | 77.8% (7/9) |
+| `rrd_logproc.c` | 86.3% (63/73) | 100.0% (4/4) |
+| `rrd_sysinfo.c` | 79.8% (87/109) | 100.0% (6/6) |
+| `rrd_upload.c` | 67.8% (61/90) | 80.0% (4/5) |
+| `uploadRRDLogs.c` | 70.5% (43/61) | 100.0% (1/1) |
+
+## Coverage by Directory
+
+Expand a directory to see its per-file coverage.
+
+| Directory | Lines | Functions |
+|---|:---:|:---:|
+| `src` | 68.2% (1947/2856) | 92.7% (114/123) |
+| `src/unittest` | 99.8% (3223/3228) | 100.0% (1448/1448) |
+| `src/unittest/mocks` | 54.1% (106/196) | 62.9% (61/97) |
+
+<details>
+<summary><code>src</code> &mdash; lines 68.2%, functions 92.7% (16 files)</summary>
+
+| File | Lines | Functions |
+|---|:---:|:---:|
+| `rrdCommandSanity.c` | 94.9% (74/78) | 100.0% (3/3) |
+| `rrdDynamic.c` | 85.2% (127/149) | 100.0% (5/5) |
+| `rrdEventProcess.c` | 60.6% (218/360) | 90.9% (10/11) |
+| `rrdExecuteScript.c` | 100.0% (15/15) | 100.0% (2/2) |
+| `rrdIarmEvents.c` | 88.2% (120/136) | 100.0% (4/4) |
+| `rrdInterface.c` | 72.4% (207/286) | 94.7% (18/19) |
+| `rrdJsonParser.c` | 55.4% (277/500) | 86.7% (13/15) |
+| `rrdMain.c` | 50.0% (23/46) | 33.3% (1/3) |
+| `rrdMsgPackDecoder.c` | 71.7% (198/276) | 100.0% (15/15) |
+| `rrdRunCmdThread.c` | 79.9% (163/204) | 100.0% (10/10) |
+| `rrd_archive.c` | 65.9% (166/252) | 100.0% (11/11) |
+| `rrd_config.c` | 47.5% (105/221) | 77.8% (7/9) |
+| `rrd_logproc.c` | 86.3% (63/73) | 100.0% (4/4) |
+| `rrd_sysinfo.c` | 79.8% (87/109) | 100.0% (6/6) |
+| `rrd_upload.c` | 67.8% (61/90) | 80.0% (4/5) |
+| `uploadRRDLogs.c` | 70.5% (43/61) | 100.0% (1/1) |
+
+</details>
+
+<details>
+<summary><code>src/unittest</code> &mdash; lines 99.8%, functions 100.0% (1 files)</summary>
+
+| File | Lines | Functions |
+|---|:---:|:---:|
+| `rrdUnitTestRunner.cpp` | 99.8% (3223/3228) | 100.0% (1448/1448) |
+
+</details>
+
+<details>
+<summary><code>src/unittest/mocks</code> &mdash; lines 54.1%, functions 62.9% (2 files)</summary>
+
+| File | Lines | Functions |
+|---|:---:|:---:|
+| `Client_Mock.cpp` | 55.5% (86/155) | 58.1% (25/43) |
+| `Client_Mock.h` | 48.8% (20/41) | 66.7% (36/54) |
+
+</details>
 
 ## Test Suites
 
