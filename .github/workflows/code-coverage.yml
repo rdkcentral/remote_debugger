@@ -2,7 +2,13 @@ name: Code Coverage
 
 on:
   pull_request:
-    branches: [ main, develop]
+    branches: [ main, develop, feature/l1conv ]
+  push:
+    branches: [ develop, feature/l1conv ]
+
+permissions:
+  contents: write
+  issues: write
 
 jobs:
   execute-unit-code-coverage-report-on-release:
@@ -14,10 +20,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run unit tests with coverage flags enabled
         run: |
           sh run_ut.sh --enable-cov
+      - name: Generate L1_Coverage.md
+        run: |
+          python3 test/functional-tests/generate_l1_coverage_report.py \
+            --lcov-file src/unittest/coverage.info \
+            --gtest-json /tmp/Gtest_Report/rdkRemoteDebugger_gtest_report.json \
+            --source-dir src \
+            --output test/functional-tests/L1_Coverage.md
       - name: Caculate the code coverage summary
         run: |
           cd ./src/unittest
@@ -25,6 +40,8 @@ jobs:
           cd -
         
       - name: Update the coverage report to Pull request using actions
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
         uses: actions/github-script@v4
         with:
           script: |
@@ -52,3 +69,17 @@ jobs:
         with:
           name: coverage-report
           path: /tmp/coverage_report
+      - name: Upload L1_Coverage.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: L1_Coverage
+          path: test/functional-tests/L1_Coverage.md
+      - name: Commit L1_Coverage.md
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add test/functional-tests/L1_Coverage.md
+          git diff --cached --quiet || git commit -m "ci: regenerate L1_Coverage.md [skip ci]"
+          git push origin "HEAD:${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}"
