@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-23  
+**Generated:** 2026-10-26  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -30,6 +30,13 @@ Test files disabled (commented out): 0
 
 Estimated current L2 functional coverage: 59.4%
 Target L2 functional coverage: ~100%
+
+Requested testcases: 33
+Fully covered testcases: 10
+Partially covered testcases: 13
+Uncovered testcases: 10
+Testcase coverage (full only): 30.3%
+Testcase coverage (full + partial evidence): 69.7%
 ```
 
 > Functional coverage = functions called at least once during the L2 run (lcov `FNDA` > 0)
@@ -106,6 +113,46 @@ Target L2 functional coverage: ~100%
 | `rrd_append_dynamic_profile_static_not_found.feature` | 4 | **Missing test file** |
 | `rrd_dynamic_profile_node_length_exceeded.feature` | 4 | **Missing test file** |
 | `rrd_dynamic_profile_subcategory_report.feature` | 5 | **Missing test file** |
+
+### 2.5 RRD Testcase Coverage
+
+> Status is an evidence review, not inferred from filename matching. A linked test is not marked covered unless its assertions verify the requested behavior.
+
+| # | RRD testcase | Coverage status | Feature files | Test files | Coverage notes |
+|:---:|---|:---:|---|---|---|
+| 1 | Static Profile Debug Report | COVERED | `rrd_static_profile_report.feature` | `test_rrd_static_profile_report.py` | Static IssueType parsing, command execution, output, and upload invocation are asserted. |
+| 2 | Enable the RRD via TR-181 | COVERED | `rrd_start_control.feature` | `test_rrd_start_control.py` | Enable parameter is queried and daemon startup is verified. |
+| 3 | Disable the RRD via TR-181 | COVERED | `rrd_start_control.feature` | `test_rrd_start_control.py` | Disabled parameter behavior and daemon stop are verified. |
+| 4 | Enable RRD via RFC and persist after reboot | GAP | — | — | No reboot-persistence scenario was found. |
+| 5 | Validate RRD Debug Report update using RBUS and TR-181 commands | COVERED | `rrd_static_profile_report.feature` | `test_rrd_static_profile_report.py` | The test sets IssueType with rbuscli and checks event delivery and report output. |
+| 6 | Report upload after running the requested Issue command | COVERED | `rrd_debug_report_upload.feature` | `test_rrd_debug_report_upload.py` | The test checks tarball creation and download from the mockxconf upload endpoint. |
+| 7 | Dynamic Profile Debug Report | COVERED | `rrd_dynamic_profile_report.feature` | `test_rrd_dynamic_profile_report.py` | Dynamic profile lookup, command execution, and report upload flow are exercised. |
+| 8 | Append static commands from the dynamic profile for the same IssueType | COVERED | `rrd_append_report.feature` | `test_rrd_append_report.py` | The test checks the merged static and dynamic command path. |
+| 9 | Deep-sleep Profile Debug Report including WebConfig/IARM events | PARTIAL | `rrd_deepsleep_static_report.feature` | `test_rrd_deepsleep_static_report.py` | The DEEPSLEEP profile report is tested; the WebConfig/IARM event path is not directly verified. |
+| 10 | Set/Get category-level query from the static JSON profile | PARTIAL | — | `test_rrd_profile_data.py` | The test sets a category and checks command success, but does not assert the returned category contents. |
+| 11 | Set/Get all data from the static JSON profile | PARTIAL | — | `test_rrd_profile_data.py` | The test requests all data but validates only the response type when output is non-empty. |
+| 12 | Support Issue Debug Report requests with UUID | GAP | — | — | No UUID-bearing request scenario or assertion was found. |
+| 13 | Support Issue Debug Report requests without UUID | GAP | — | — | No explicit UUID-absent request scenario was found. |
+| 14 | Use the request UUID for report upload after command execution | GAP | — | — | No assertion connects a request UUID to the upload operation. |
+| 15 | Confirm report upload to the S3 portal | PARTIAL | `rrd_debug_report_upload.feature` | `test_rrd_debug_report_upload.py` | Upload and download are verified against mockxconf, not the S3 portal. |
+| 16 | Match the request UUID with the uploaded report tarball | GAP | — | — | The tarball is checked for existence/download, but its UUID is not compared with the request. |
+| 17 | Execute a valid static IssueType debug command | COVERED | `rrd_static_profile_report.feature` | `test_rrd_static_profile_report.py` | The static profile test checks command validation, output creation, and service execution. |
+| 18 | Verify all static IssueTypes | PARTIAL | `rrd_static_profile_report.feature`, `rrd_static_profile_category_report.feature` | `test_rrd_static_profile_report.py`, `test_rrd_static_profile_category_report.py` | Representative static IssueTypes are exercised; exhaustive profile coverage is not shown. |
+| 19 | Attempt to execute a forbidden command | COVERED | `rrd_harmful_command_static_report.feature` | `test_rrd_harmful_command_static_report.py` | The harmful-command test checks that command execution is aborted and upload skipped. |
+| 20 | Send a malformed or empty command | PARTIAL | `rrd_empty_issuetype_event.feature` | `test_rrd_empty_issuetype_event.py` | An empty IssueType is tested; malformed command input is not explicitly covered. |
+| 21 | Download a dynamic debug profile via RDM | PARTIAL | `rrd_dynamic_profile_missing_report.feature` | `test_rrd_dynamic_profile_missing_report.py` | The missing-profile path requests an RDM download; successful package delivery and installation are not verified. |
+| 22 | Trigger a non-existent or misspelled IssueType | PARTIAL | `rrd_dynamic_profile_missing_report.feature` | `test_rrd_dynamic_profile_missing_report.py` | Missing static/dynamic IssueType behavior is exercised, but misspellings are not isolated as a case. |
+| 23 | Validate log/tarball creation and upload | COVERED | `rrd_debug_report_upload.feature` | `test_rrd_debug_report_upload.py` | The feature and test check report archive creation, upload to mockxconf, and download. |
+| 24 | Simulate S3 failure and check retry/logging | GAP | — | — | No S3 failure/retry scenario was found. |
+| 25 | Try running sensitive system commands | PARTIAL | `rrd_harmful_command_static_report.feature` | `test_rrd_harmful_command_static_report.py` | Harmful-command rejection is tested, but the requested sensitive-command set is not enumerated. |
+| 26 | Send a debug command while in deep sleep | PARTIAL | `rrd_deepsleep_static_report.feature` | `test_rrd_deepsleep_static_report.py` | DEEPSLEEP report processing is tested, but command timing during actual sleep is not asserted. |
+| 27 | Validate resume on wake | GAP | — | — | No resume-on-wake assertion was found. |
+| 28 | Flood remote debugger with commands (stress test) | GAP | — | — | No command-flood or stress test was found. |
+| 29 | Delete/corrupt configuration and simulate network loss | PARTIAL | `rrd_corrupted_static_profile_report.feature` | `test_rrd_corrupted_static_profile_report.py` | Corrupted static JSON is tested; network-loss behavior is not. |
+| 30 | Run debugger alongside other system daemons | GAP | — | — | No multi-daemon coexistence test was found. |
+| 31 | Firmware upgrade and disk stress | GAP | — | — | No firmware-upgrade or disk-stress scenario was found. |
+| 32 | Set/Get with a misspelled category | PARTIAL | — | `test_rrd_profile_data.py` | A non-existent category is tried, but the test does not assert the resulting profile contents. |
+| 33 | Set/Get with an empty category | PARTIAL | — | `test_rrd_profile_data.py` | An empty category is tried, but the test does not assert the resulting profile contents. |
 
 ---
 
