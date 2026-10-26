@@ -110,6 +110,7 @@ jobs:
             --src-dir      remote_debugger/src \
             --features-dir remote_debugger/test/functional-tests/features \
             --tests-dir    remote_debugger/test/functional-tests/tests \
+            --testcase-list remote_debugger/test/functional-tests/TestCase_Coverage.md \
             --output       remote_debugger/test/functional-tests/L2_Coverage.md
 
       - name: Commit L2_Coverage.md
