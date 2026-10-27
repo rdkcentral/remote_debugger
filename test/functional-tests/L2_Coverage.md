@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-23  
+**Generated:** 2026-10-27  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -42,7 +42,7 @@ Target L2 functional coverage: ~100%
 | Test files (pytest) | 23 |
 | Test functions (`test_*`) | 118 |
 | Feature → Test mapped pairs | 19 / 22 (+4 orphan tests) |
-| **Line coverage (lcov)** | **49.7%** (1508 of 3034 lines) |
+| **Line coverage (lcov)** | **49.7%** (1509 of 3035 lines) |
 | **Function coverage (lcov)** | **59.4%** (76 of 128 functions) |
 
 ---
@@ -118,7 +118,7 @@ Target L2 functional coverage: ~100%
 | `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 81.8% (405/495) | 86.7% (13/15) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
-| `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
+| `rrdCommandSanity.c` | 93.2% (68/73) | 100.0% (3/3) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
 | `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
 | `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
