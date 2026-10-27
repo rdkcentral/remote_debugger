@@ -4,7 +4,8 @@ Generate test/functional-tests/L2_Coverage.md.
 
 Inputs
 ------
-  --tracefile   lcov .info file produced by run_l2.sh
+  --tracefile     lcov .info file produced by run_l2.sh
+  --src-dir       directory containing the remotedebugger .c sources
   --features-dir  directory containing .feature files
   --tests-dir     directory containing test_*.py files
   --output        path for the generated markdown file
@@ -13,6 +14,7 @@ Usage
 -----
   python3 generate_l2_coverage_report.py \
       --tracefile    /tmp/l2_coverage/coverage.info \
+      --src-dir      src \
       --features-dir test/functional-tests/features \
       --tests-dir    test/functional-tests/tests \
       --output       test/functional-tests/L2_Coverage.md
@@ -22,7 +24,6 @@ import argparse
 import datetime
 import os
 import re
-import sys
 
 
 # ---------------------------------------------------------------------------
@@ -39,7 +40,7 @@ def parse_tracefile(path):
             if line.startswith('SF:'):
                 name = os.path.basename(line[3:])
                 cur = {'name': name, 'lh': 0, 'lf': 0,
-                       'fnh': 0, 'fnf': 0, 'brh': 0, 'brf': 0}
+                       'fnh': 0, 'fnf': 0, 'hit': set()}
             elif line == 'end_of_record' and cur:
                 files[cur['name']] = cur
                 cur = None
@@ -48,17 +49,15 @@ def parse_tracefile(path):
                 elif line.startswith('LF:'):  cur['lf']  = int(line[3:])
                 elif line.startswith('FNH:'): cur['fnh'] = int(line[4:])
                 elif line.startswith('FNF:'): cur['fnf'] = int(line[4:])
-                elif line.startswith('BRH:'): cur['brh'] = int(line[4:])
-                elif line.startswith('BRF:'): cur['brf'] = int(line[4:])
+                elif line.startswith('FNDA:'):
+                    count, _, fname = line[5:].partition(',')
+                    if int(count) > 0:
+                        cur['hit'].add(fname)
 
     def tot(key): return sum(v[key] for v in files.values())
     summary = {
         'lines_pct':    _pct(tot('lh'), tot('lf')),
         'lines_det':    f"{tot('lh')} of {tot('lf')} lines",
-        'funcs_pct':    _pct(tot('fnh'), tot('fnf')),
-        'funcs_det':    f"{tot('fnh')} of {tot('fnf')} functions",
-        'branches_pct': _pct(tot('brh'), tot('brf')),
-        'branches_det': f"{tot('brh')} of {tot('brf')} branches",
     }
     return files, summary
 
@@ -74,6 +73,73 @@ def _bar(hit, found, width=20):
         return '░' * width
     filled = round(hit / found * width)
     return '█' * filled + '░' * (width - filled)
+
+
+# ---------------------------------------------------------------------------
+# source function scanner
+# ---------------------------------------------------------------------------
+
+_C_KEYWORDS = {'if', 'while', 'for', 'switch', 'else', 'return', 'sizeof', 'do'}
+
+
+def _strip_c(code):
+    out, i, n = [], 0, len(code)
+    while i < n:
+        c = code[i]
+        if code.startswith('//', i):
+            j = code.find('\n', i)
+            i = n if j < 0 else j
+        elif code.startswith('/*', i):
+            j = code.find('*/', i + 2)
+            i = n if j < 0 else j + 2
+            out.append(' ')
+        elif c in '"\'':
+            j = i + 1
+            while j < n and code[j] != c:
+                j += 2 if code[j] == '\\' else 1
+            i = j + 1
+            out.append('""')
+        else:
+            out.append(c)
+            i += 1
+    return ''.join(out)
+
+
+def _c_function_names(path):
+    """Names of function definitions at brace depth 0; every #if branch counts."""
+    with open(path, errors='replace') as fh:
+        text = _strip_c(fh.read())
+    names, depth, buf = set(), 0, ''
+    for line in text.split('\n'):
+        if line.strip().startswith('#'):
+            continue
+        for ch in line:
+            if ch == '{':
+                if depth == 0:
+                    m = re.search(r'([A-Za-z_]\w*)\s*\([^;{}]*\)\s*$', buf)
+                    if m and m.group(1) not in _C_KEYWORDS:
+                        names.add(m.group(1))
+                    buf = ''
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    buf = ''
+            elif depth == 0:
+                buf = '' if ch == ';' else buf + ch
+        if depth == 0:
+            buf += ' '
+    return names
+
+
+def scan_source_functions(src_dir):
+    """Return {c_file: set(function names)} for every .c file directly in src_dir."""
+    result = {}
+    for fn in sorted(os.listdir(src_dir)):
+        p = os.path.join(src_dir, fn)
+        if fn.endswith('.c') and os.path.isfile(p):
+            result[fn] = _c_function_names(p)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +180,28 @@ def _count_test_funcs(path):
             if re.match(r'^def test_', line):
                 count += 1
     return count
+
+
+def scan_disabled_tests(tests_dir):
+    """Return (disabled_function_count, disabled_file_count).
+
+    A test is disabled when its def is commented out or carries a skip marker;
+    a file is disabled when it has no active test functions left.
+    """
+    funcs = files = 0
+    for fn in sorted(os.listdir(tests_dir)):
+        if not (fn.startswith('test_') and fn.endswith('.py')):
+            continue
+        with open(os.path.join(tests_dir, fn), errors='replace') as fh:
+            text = fh.read()
+        active = len(re.findall(r'^def test_', text, re.M))
+        skipped = len(re.findall(
+            r'^@pytest\.mark\.skip[^\n]*\n(?:@[^\n]*\n)*def test_', text, re.M))
+        commented = len(re.findall(r'^\s*#\s*def test_', text, re.M))
+        funcs += skipped + commented
+        if active - skipped == 0 and (commented or skipped or active == 0):
+            files += 1
+    return funcs, files
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +265,15 @@ _RECOMMENDATIONS = """\
 | 14 | Output file write errors | `rrdRunCmdThread.c` |
 | 15 | Invalid deep sleep event type | `rrdDynamic.c` |
 """
+
+
+def count_priorities(recommendations):
+    """Return (high, medium, low) row counts from the P1/P2/P3 recommendation tables."""
+    counts = []
+    for part in re.split(r'^### Priority \d', recommendations, flags=re.M)[1:4]:
+        counts.append(len(re.findall(r'^\|\s*\d+\s*\|', part, re.M)))
+    return tuple(counts)
+
 
 _BEHAVIOR_DETAIL = """\
 ## 4. Per-Behavior Coverage Detail
@@ -257,20 +354,43 @@ _BEHAVIOR_DETAIL = """\
 | C API archive creation + cleanup | NO |
 | Concurrent upload lock | NO |
 | Archive CPU throttle | NO |
+
+### 4.7 Profile Data SET/GET (RBUS)
+
+| Behavior | Covered |
+|---|:---:|
+| `setProfileData` / `getProfileData` via RBUS | PARTIAL (no feature file) |
+| Profile category load error | NO |
+| Profile file write error | NO |
 """
+
+_SRC_MODULES = [
+    'rrdMain.c', 'rrdInterface.c', 'rrdEventProcess.c', 'rrdJsonParser.c',
+    'rrdRunCmdThread.c', 'rrdCommandSanity.c', 'rrdDynamic.c',
+    'rrdExecuteScript.c', 'rrdMsgPackDecoder.c',
+    'rrd_config.c', 'rrd_sysinfo.c', 'rrd_logproc.c',
+    'rrd_archive.c', 'rrd_upload.c', 'rrdIarmEvents.c', 'uploadRRDLogs.c',
+]
 
 
 # ---------------------------------------------------------------------------
 # markdown builder
 # ---------------------------------------------------------------------------
 
-def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
+def generate(pairs, orphan_feats, orphan_tests, features, files, summary, today,
+             src_funcs, disabled_funcs, disabled_files):
     total_scenarios  = sum(p[1] for p in pairs)
     total_test_funcs = sum(p[3] for p in pairs) + sum(orphan_tests.values())
     total_features   = len(pairs)
     total_tests      = len(pairs) - len(orphan_feats) + len(orphan_tests)
     mapped           = sum(1 for p in pairs if p[2])
     gap_pairs        = [p for p in pairs if p[2] and p[3] < p[1]]
+
+    # A source function is covered when lcov recorded at least one call to it.
+    fn_total = sum(len(v) for v in src_funcs.values())
+    fn_hit   = sum(len(src_funcs[m] & files[m]['hit']) for m in src_funcs if m in files)
+    fn_miss  = fn_total - fn_hit
+    high, medium, low = count_priorities(_RECOMMENDATIONS)
 
     lines = []
 
@@ -291,6 +411,32 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
     lines += [
         '## 1. Executive Summary',
         '',
+        '**L2 Test Summary**',
+        '',
+        '```',
+        f'Total functions found in the module: {fn_total}',
+        f'Functions covered by L2 tests (hit): {fn_hit}',
+        f'Functions with no L2 coverage: {fn_miss}',
+        '',
+        f'Active L2 test functions: {total_test_funcs}',
+        f'Disabled L2 test functions: {disabled_funcs}',
+        f'Active feature scenarios: {total_scenarios}',
+        f'Proposed new test scenarios: {high + medium + low}',
+        '',
+        f'High priority: {high}',
+        f'Medium priority: {medium}',
+        f'Low priority: {low}',
+        '',
+        f'Test files active: {total_tests - disabled_files}',
+        f'Test files disabled (commented out): {disabled_files}',
+        '',
+        f'Estimated current L2 functional coverage: {_pct(fn_hit, fn_total)}',
+        'Target L2 functional coverage: ~100%',
+        '```',
+        '',
+        '> Functional coverage = functions called at least once during the L2 run (lcov `FNDA` > 0)',
+        '> divided by all function definitions in `src/*.c`, including those compiled out by `#if`.',
+        '',
         '| Metric | Value |',
         '|---|:---:|',
         f'| Feature files | {total_features} |',
@@ -298,10 +444,10 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         f'| Test files (pytest) | {total_tests} |',
         f'| Test functions (`test_*`) | {total_test_funcs} |',
         f'| Feature → Test mapped pairs | {mapped} / {total_features}'
-        + (f' (+{len(orphan_tests)} orphan test{"s" if len(orphan_tests) != 1 else ""})' if orphan_tests else '') + ' |',
+        + (f' (+{len(orphan_tests)} orphan test{"s" if len(orphan_tests) != 1 else ""})'
+           if orphan_tests else '') + ' |',
         f'| **Line coverage (lcov)** | **{summary["lines_pct"]}** ({summary["lines_det"]}) |',
-        f'| **Branch coverage (lcov)** | **{summary["branches_pct"]}** ({summary["branches_det"]}) |',
-        f'| **Function coverage (lcov)** | **{summary["funcs_pct"]}** ({summary["funcs_det"]}) |',
+        f'| **Function coverage (lcov)** | **{_pct(fn_hit, fn_total)}** ({fn_hit} of {fn_total} functions) |',
         '',
     ]
 
@@ -313,7 +459,7 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         '',
         '### 2.1 Mapped Pairs',
         '',
-        '| # | Feature File | Scenarios | Test File | Tests | Gap |',
+        '| # | Feature File | Scenarios | Test File | Tests | Status |',
         '|:---:|---|:---:|---|:---:|:---:|',
     ]
     idx = 1
@@ -321,8 +467,8 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         if test is None:
             continue
         delta = tfuncs - scen
-        gap = '—' if delta >= 0 else f'**{abs(delta)} missing**'
-        lines.append(f'| {idx} | `{feat}` | {scen} | `{test}` | {tfuncs} | {gap} |')
+        status = 'PASS' if delta >= 0 else f'**GAP** ({abs(delta)} missing)'
+        lines.append(f'| {idx} | `{feat}` | {scen} | `{test}` | {tfuncs} | {status} |')
         idx += 1
 
     total_scen_mapped  = sum(p[1] for p in pairs if p[2])
@@ -332,9 +478,23 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         '',
     ]
 
+    over_pairs = [p for p in pairs if p[2] and p[3] > p[1]]
+    if over_pairs:
+        lines += [
+            '### 2.2 Tests Exceeding Scenario Count',
+            '',
+            '> Extra functions handle setup/teardown split more granularly than feature scenarios.',
+            '',
+            '| Feature File | Scenarios | Test File | Tests | Extra |',
+            '|---|:---:|---|:---:|:---:|',
+        ]
+        for feat, scen, test, tfuncs in over_pairs:
+            lines.append(f'| `{feat}` | {scen} | `{test}` | {tfuncs} | +{tfuncs - scen} |')
+        lines.append('')
+
     if orphan_tests:
         lines += [
-            '### 2.2 Orphan Tests (test exists, no feature file)',
+            '### 2.3 Orphan Tests (test exists, no feature file)',
             '',
             '| Test File | Tests | Note |',
             '|---|:---:|---|',
@@ -345,14 +505,13 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
 
     if orphan_feats:
         lines += [
-            '### 2.3 Orphan Features (feature exists, no test file)',
+            '### 2.4 Orphan Features (feature exists, no test file)',
             '',
             '| Feature File | Scenarios | Note |',
             '|---|:---:|---|',
         ]
         for ff in orphan_feats:
-            sc = features[ff]
-            lines.append(f'| `{ff}` | {sc} | **Missing test file** |')
+            lines.append(f'| `{ff}` | {features[ff]} | **Missing test file** |')
         lines.append('')
 
     # ── per-module lcov coverage ───────────────────────────────────────────────
@@ -361,31 +520,23 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         '',
         '## 3. Source Module Coverage (lcov)',
         '',
-        '| Module | Lines | Functions | Branches | Coverage Bar |',
-        '|---|:---:|:---:|:---:|---|',
+        '| Module | Lines | Functions | Coverage Bar |',
+        '|---|:---:|:---:|---|',
     ]
-    src_modules = [
-        'rrdMain.c', 'rrdInterface.c', 'rrdEventProcess.c', 'rrdJsonParser.c',
-        'rrdRunCmdThread.c', 'rrdCommandSanity.c', 'rrdDynamic.c',
-        'rrdExecuteScript.c', 'rrdMsgPackDecoder.c',
-        'rrd_config.c', 'rrd_sysinfo.c', 'rrd_logproc.c',
-        'rrd_archive.c', 'rrd_upload.c', 'rrdIarmEvents.c', 'uploadRRDLogs.c',
-    ]
-    for mod in src_modules:
+    for mod in _SRC_MODULES:
         if mod in files:
             d = files[mod]
-            lp = _pct(d['lh'], d['lf'])
-            fp = _pct(d['fnh'], d['fnf'])
-            bp = _pct(d['brh'], d['brf'])
-            bar = _bar(d['lh'], d['lf'])
+            if mod in src_funcs:
+                f_tot, f_hit = len(src_funcs[mod]), len(src_funcs[mod] & d['hit'])
+            else:
+                f_tot, f_hit = d['fnf'], d['fnh']
             lines.append(
-                f'| `{mod}` | {lp} ({d["lh"]}/{d["lf"]}) '
-                f'| {fp} ({d["fnh"]}/{d["fnf"]}) '
-                f'| {bp} ({d["brh"]}/{d["brf"]}) '
-                f'| `{bar}` |'
+                f'| `{mod}` | {_pct(d["lh"], d["lf"])} ({d["lh"]}/{d["lf"]}) '
+                f'| {_pct(f_hit, f_tot)} ({f_hit}/{f_tot}) '
+                f'| `{_bar(d["lh"], d["lf"])}` |'
             )
         else:
-            lines.append(f'| `{mod}` | — | — | — | no data |')
+            lines.append(f'| `{mod}` | — | — | no data |')
     lines.append('')
 
     # ── per-behavior detail (static) ──────────────────────────────────────────
@@ -421,11 +572,32 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
     # ── recommendations (static) ─────────────────────────────────────────────
     lines += ['---', '', _RECOMMENDATIONS, '']
 
+    # ── test infrastructure notes ────────────────────────────────────────────
+    lines += [
+        '---',
+        '',
+        '## 7. Test Infrastructure Notes',
+        '',
+        '| Interface | Tool | Used By |',
+        '|---|---|---|',
+        '| RBUS event trigger | `rbuscli set` | All event-based tests |',
+        '| RBUS profile data | `rbuscli set/get` | `test_rrd_profile_data.py` |',
+        '| Log scraping | `grep_rrdlogs()` in `helper_functions.py` | All tests |',
+        '| Process control | `pidof`, `kill`, `nohup` | Setup / teardown |',
+        '| Mock upload server | Mock xconf server | `test_rrd_debug_report_upload.py` |',
+        '| Mock upload script | `uploadSTBLogs.sh` | Upload tests |',
+        '',
+        '- **Runner:** `pytest`, sequential per file',
+        '- **Shared state:** tests within a file depend on prior test side effects',
+        '- **Coverage run:** `kill_rrd()` sends `SIGTERM` when `RRD_COVERAGE_MODE` is set so gcov flushes',
+        '',
+    ]
+
     # ── appendix ──────────────────────────────────────────────────────────────
     lines += [
         '---',
         '',
-        '## 7. Appendix: File Inventory',
+        '## 8. Appendix: File Inventory',
         '',
         '### Feature Files',
         '',
@@ -443,8 +615,7 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
         '| # | File | Tests |',
         '|:---:|---|:---:|',
     ]
-    all_tests = [(p[2], p[3]) for p in pairs if p[2]]
-    all_tests += list(orphan_tests.items())
+    all_tests = [(p[2], p[3]) for p in pairs if p[2]] + list(orphan_tests.items())
     all_tests.sort()
     for i, (tf, cnt) in enumerate(all_tests, 1):
         lines.append(f'| {i} | `{tf}` | {cnt} |')
@@ -461,28 +632,27 @@ def generate(pairs, orphan_feats, orphan_tests, files, summary, today):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--tracefile',    required=True)
+    ap.add_argument('--src-dir',      required=True)
     ap.add_argument('--features-dir', required=True)
     ap.add_argument('--tests-dir',    required=True)
     ap.add_argument('--output',       required=True)
     args = ap.parse_args()
 
-    global features  # used in build_mapping closure for orphan label
     features = scan_features(args.features_dir)
     tests    = scan_tests(args.tests_dir)
     cov_files, summary = parse_tracefile(args.tracefile)
     pairs, orphan_feats, orphan_tests = build_mapping(features, tests)
     today = datetime.date.today().strftime('%Y-%m-%d')
 
-    md = generate(pairs, orphan_feats, orphan_tests, cov_files, summary, today)
+    md = generate(pairs, orphan_feats, orphan_tests, features, cov_files, summary, today,
+                  scan_source_functions(args.src_dir),
+                  *scan_disabled_tests(args.tests_dir))
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    with open(args.output, 'w') as fh:
+    with open(args.output, 'w', encoding='utf-8') as fh:
         fh.write(md)
 
     print(f'Written: {args.output}')
-    print(f'  lines={summary["lines_pct"]}  '
-          f'branches={summary["branches_pct"]}  '
-          f'functions={summary["funcs_pct"]}')
 
 
 if __name__ == '__main__':
