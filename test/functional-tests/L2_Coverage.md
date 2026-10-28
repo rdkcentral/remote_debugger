@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-23  
+**Generated:** 2026-10-28  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -11,39 +11,27 @@
 
 **L2 Test Summary**
 
-```
-Total functions found in the module: 128
-Functions covered by L2 tests (hit): 76
-Functions with no L2 coverage: 52
-
-Active L2 test functions: 118
-Disabled L2 test functions: 0
-Active feature scenarios: 103
-Proposed new test scenarios: 15
-
-High priority: 3
-Medium priority: 5
-Low priority: 7
-
-Test files active: 23
-Test files disabled (commented out): 0
-
-Estimated current L2 functional coverage: 59.4%
-Target L2 functional coverage: ~100%
-```
-
-> Functional coverage = functions called at least once during the L2 run (lcov `FNDA` > 0)
-> divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
-
 | Metric | Value |
 |---|:---:|
 | Feature files | 22 |
 | Feature scenarios | 103 |
-| Test files (pytest) | 23 |
+| Pytest files | 23 |
 | Test functions (`test_*`) | 118 |
-| Feature → Test mapped pairs | 19 / 22 (+4 orphan tests) |
-| **Line coverage (lcov)** | **49.7%** (1508 of 3034 lines) |
-| **Function coverage (lcov)** | **59.4%** (76 of 128 functions) |
+| Mapped feature/test pairs | 19 / 22 |
+| Unmatched test files | 4 |
+| Line coverage (lcov) | 49.7% (1508 of 3034 lines) |
+
+**L2 Test Coverage**
+
+| Metric | Value |
+|---|:---:|
+| Source functions found | 128 |
+| Functions hit | 76 |
+| Functions not hit | 52 |
+| Function coverage | 59.4% |
+
+> Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
+> divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
 
 ---
 
