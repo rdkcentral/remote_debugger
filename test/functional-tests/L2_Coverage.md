@@ -28,7 +28,8 @@
 | Source functions found | 128 |
 | Functions hit | 76 |
 | Functions not hit | 52 |
-| Function coverage | 59.4% |
+| Current functional coverage | 59.4% |
+| Target L2 functional coverage | ~100% |
 
 > Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
 > divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
