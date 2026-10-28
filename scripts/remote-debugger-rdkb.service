@@ -19,8 +19,7 @@
 [Unit]
 Description=Start RDK Remote Debugger after PAM and Wifi Init
 Documentation= man:systemd.path
-[Path]
-PathChanged=/tmp/wifi_initialized
-Unit=remote-debugger.service
+After=PsmSsp.service
+ExecStartPre=/bin/sh -c '(/usr/ccsp/utopiaInitCheck.sh)'
 [Install]
 WantedBy=multi-user.target
