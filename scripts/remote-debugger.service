@@ -20,12 +20,12 @@
 [Unit]
 Description=RDK Remote Debugger
 
-After=tr69hostif.service
+After=tr69hostif.service PsmSsp.service
 Requires=tr69hostif.service
 
 [Service]
 Type=simple
-ExecStartPre=-/bin/sh -c '/bin/mkdir -p /tmp/rrd'
+ExecStartPre=-/bin/sh -c '/bin/mkdir -p /tmp/rrd' /bin/sh -c '(/usr/ccsp/utopiaInitCheck.sh)'
 ExecStart=/usr/bin/remotedebugger
 
 [Install]
