@@ -579,6 +579,7 @@ void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype)
 }
 
 /*Function: RRD_unsubscribe
+
  *Details: This helps to perform Bus disconnect/terminate and unregister event handler.
  *Input: NULL
  *Output: 0 for success and non-zero for failure
@@ -599,10 +600,33 @@ int RRD_unsubscribe()
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: SUCCESS: IARM_Bus Unsubscribe done!\n", __FUNCTION__, __LINE__);
 #endif
 #if !defined(GTEST_ENABLE)
+#ifdef IARMBUS_SUPPORT
+#ifdef USE_L2_SUPPORT
+#ifndef DISABLE_WEBCONFIG
     ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
+#else
+    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 2);
+#endif
+#else
+#ifndef DISABLE_WEBCONFIG
+    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 2);
+#else
+    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 1);
+#endif
+#endif
+#else
+#ifndef DISABLE_WEBCONFIG
+    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 3);
+#else
+    ret = rbusEvent_UnsubscribeEx(rrdRbusHandle, subscriptions, 2);
+#endif
+#endif
+
     if (ret != 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n", __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n",
+                __FUNCTION__, __LINE__);
         return ret;
     }
 
