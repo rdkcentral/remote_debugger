@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-28  
+**Generated:** 2026-10-30  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -19,7 +19,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1508 of 3034 lines) |
+| Line coverage (lcov) | 49.7% (1507 of 3034 lines) |
 
 **L2 Test Coverage**
 
@@ -112,7 +112,7 @@
 | `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
 | `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
 | `rrd_config.c` | 42.8% (95/222) | 66.7% (6/9) | `█████████░░░░░░░░░░░` |
-| `rrd_sysinfo.c` | 32.1% (36/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
+| `rrd_sysinfo.c` | 31.2% (35/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
 | `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
 | `rrd_upload.c` | 40.7% (37/91) | 60.0% (3/5) | `████████░░░░░░░░░░░░` |
