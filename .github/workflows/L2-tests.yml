@@ -19,11 +19,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code rfc code
+      - name: Checkout code remotedebugger code
         uses: actions/checkout@v4
         with:
           path: remote_debugger
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
@@ -97,21 +98,25 @@ jobs:
 
       - name: Copy lcov tracefile from container
         id: copy_tracefile
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
         continue-on-error: true
         run: docker cp native-platform:/tmp/l2_coverage/coverage.info /tmp/coverage.info
 
       - name: Generate L2_Coverage.md
-        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
+        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.copy_tracefile.outcome == 'success'
         run: |
           python3 remote_debugger/test/functional-tests/generate_l2_coverage_report.py \
             --tracefile    /tmp/coverage.info \
+            --src-dir      remote_debugger/src \
             --features-dir remote_debugger/test/functional-tests/features \
             --tests-dir    remote_debugger/test/functional-tests/tests \
             --output       remote_debugger/test/functional-tests/L2_Coverage.md
 
       - name: Commit L2_Coverage.md
-        if: github.event_name == 'push' && steps.copy_tracefile.outcome == 'success'
+        if: >-
+          steps.copy_tracefile.outcome == 'success' &&
+          (github.event_name == 'push' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           cd remote_debugger
           git config user.name  "github-actions[bot]"
