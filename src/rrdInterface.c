@@ -624,9 +624,7 @@ int RRD_unsubscribe()
 
     if (ret != 0)
     {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-                "[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n",
-                __FUNCTION__, __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,"[%s:%d]: RBUS Unsubscribe EventHandler for RRD failed!!! \n",__FUNCTION__, __LINE__);
         return ret;
     }
 
