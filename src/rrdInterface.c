@@ -262,7 +262,7 @@ void RRDMsgDeliver(int msgqid, data_buf *sbuf)
     }
 
     msgHdr.type = RRD_EVENT_MSG_REQUEST;
-    msgHdr.mbody = (void *)sbuf;
+    msgHdr.mbody = sbuf;
     msgLen = sizeof(msgHdr.mbody);
 
     if (msgsnd(msgqid, (void *)&msgHdr, msgLen, 0) < 0)
