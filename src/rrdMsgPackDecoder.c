@@ -23,6 +23,8 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <time.h>
+#include <limits.h>
+#include <stdint.h>
 #include "rrdMsgPackDecoder.h"
 #include "rrdCommon.h"
 
@@ -298,18 +300,29 @@ const char *remotedebuggerdoc_strerror(int errnum)
  * @param msgpack_object_array *arr - The msgpack array containing the issue types.
  * @return int - The required size of the issue type string.
  */
-int getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
+size_t getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
 {
-    int index = 0, size = 0;
+    size_t index;
+    size_t size = 0;
+
     for(index = 0; index < arr->size; index++)
     {
-        if(arr->ptr[index].type == MSGPACK_OBJECT_STR)
-        {
+        if(arr->ptr[index].type == MSGPACK_OBJECT_STR) {
+            if (SIZE_MAX - size < arr->ptr[index].via.str.size) {
+                return 0;
+            }
+
             size += arr->ptr[index].via.str.size;
         }
     }
-    return (size + arr->size + 1); /* Need to add Number of Required "," between each string*/
+
+    if (SIZE_MAX - size < ((size_t)arr->size + 1)) {
+        return 0;
+    }
+
+    return size + (size_t)arr->size + 1;
 }
+
 
 /*
  * @function process_remotedebuggerparams
@@ -336,6 +349,10 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
             {
                 arr = &p->val.via.array;
                 resultLen = getReqTotalSizeOfIssueTypesStr(arr);
+				if (resultLen == 0) {
+                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid issue type size calculation\n", __FUNCTION__, __LINE__);
+                     return -1;
+                }
                 RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%d \n", __FUNCTION__, __LINE__,resultLen);
                 rrdParam->length = resultLen;
 		rrdParam->commandList = (char *)calloc(resultLen + 1, sizeof(char));
