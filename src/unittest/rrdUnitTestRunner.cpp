@@ -3296,6 +3296,34 @@ TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
     EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
 }
 
+TEST(GetReqTotalSizeOfIssueTypesStrTest, OverflowReturnsZero)
+{
+    msgpack_object obj;
+    msgpack_object_array arr;
+
+    obj.type = MSGPACK_OBJECT_STR;
+    obj.via.str.size = SIZE_MAX;
+
+    arr.size = 1;
+    arr.ptr = &obj;
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 0);
+}
+
+TEST(GetReqTotalSizeOfIssueTypesStrTest, FinalAdditionOverflowReturnsZero)
+{
+    msgpack_object obj;
+    msgpack_object_array arr;
+
+    obj.type = MSGPACK_OBJECT_STR;
+    obj.via.str.size = SIZE_MAX - 1;
+
+    arr.size = 2;
+    arr.ptr = &obj;
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 0);
+}
+
 TEST(FinderTest, KeyMatchButTypeMismatchReturnsNull)
 {
     msgpack_object_map map;
