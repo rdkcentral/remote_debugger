@@ -46,29 +46,14 @@ msgpack_object *__finder(const char *name,
     {
         if (MSGPACK_OBJECT_STR == map->ptr[i].key.type)
         {
-            if (expect_type == map->ptr[i].val.type)
+            if ((expect_type == map->ptr[i].val.type) &&
+                (0 == match(&(map->ptr[i]), name)))
             {
-                if (0 == match(&(map->ptr[i]), name))
-                {
-                    return &map->ptr[i].val;
-                }
-            }
-            else if (MSGPACK_OBJECT_STR == map->ptr[i].val.type)
-            {
-                if (0 == strncmp(map->ptr[i].key.via.str.ptr, name, strlen(name)))
-                {
-                    return &map->ptr[i].val;
-                }
-            }
-            else
-            {
-                if (0 == strncmp(map->ptr[i].key.via.str.ptr, name, strlen(name)))
-                {
-                    return &map->ptr[i].val;
-                }
+                return &map->ptr[i].val;
             }
         }
     }
+
     errno = MISSING_ENTRY;
     return NULL;
 }
