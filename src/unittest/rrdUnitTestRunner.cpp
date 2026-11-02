@@ -3276,10 +3276,8 @@ TEST(FinderTest, KeyTypeStrValTypeStrMatch)
     map.size = 1;
     map.ptr = &kv;
     msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
-
-    ASSERT_NE(result, nullptr);
-    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
-    EXPECT_STREQ(result->via.str.ptr, "value");
+ 
+    EXPECT_EQ(result, nullptr);  
 }
 
 TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
@@ -3296,6 +3294,53 @@ TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 
     ASSERT_NE(result, nullptr);
     EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
+}
+
+TEST(FinderTest, KeyMatchButTypeMismatchReturnsNull)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "name";
+    kv.key.via.str.size = strlen("name");
+
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.str.ptr = "value";
+    kv.val.via.str.size = strlen("value");
+
+    map.size = 1;
+    map.ptr = &kv;
+
+    msgpack_object *result =
+        __finder("name", MSGPACK_OBJECT_ARRAY, &map);
+
+    EXPECT_EQ(result, nullptr);
+}
+
+TEST(FinderTest, MultipleEntriesFindCorrectTypedObject)
+{
+    msgpack_object_kv kv[2];
+    msgpack_object_map map;
+
+    kv[0].key.type = MSGPACK_OBJECT_STR;
+    kv[0].key.via.str.ptr = "Commands";
+    kv[0].key.via.str.size = strlen("Commands");
+    kv[0].val.type = MSGPACK_OBJECT_STR;
+
+    kv[1].key.type = MSGPACK_OBJECT_STR;
+    kv[1].key.via.str.ptr = "Profiles";
+    kv[1].key.via.str.size = strlen("Profiles");
+    kv[1].val.type = MSGPACK_OBJECT_ARRAY;
+
+    map.size = 2;
+    map.ptr = kv;
+
+    msgpack_object *result =
+        __finder("Profiles", MSGPACK_OBJECT_ARRAY, &map);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->type, MSGPACK_OBJECT_ARRAY);
 }
 
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
