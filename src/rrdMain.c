@@ -57,12 +57,12 @@ void *RRDEventThreadFunc(void *arg)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]:Waiting for for TR69/RBUS Events... \n", __FUNCTION__, __LINE__);
 
-        if (msgrcv(msqid, (void *)&msgHdr, sizeof(void *), 0, 0) < 0)
+        if (msgrcv(msqid, &msgHdr, sizeof(msgHdr.mbody), 0, 0) < 0)
         {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]:Message Reception failed for Message Queue Id:[%d]!!! \n", __FUNCTION__, __LINE__, msqid);
             break;
         }
-        rbuf = (data_buf *)msgHdr.mbody;
+        rbuf = msgHdr.mbody;
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]:SUCCESS: Message Reception Done for ID=%d MSG=%s TYPE=%u... \n", __FUNCTION__, __LINE__, msqid, rbuf->mdata, rbuf->mtype);
 
         switch (rbuf->mtype)
