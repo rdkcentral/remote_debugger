@@ -26,6 +26,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.head_ref || github.ref }}
 
+      - name: Check out shared L2 coverage tooling
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/docker-device-mgt-service-test'
+          path: docker-device-mgt-service-test
+
       - name: Check out dependent repostiories
         uses: actions/checkout@v4
         with:
@@ -105,7 +111,8 @@ jobs:
       - name: Generate L2_Coverage.md
         if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.copy_tracefile.outcome == 'success'
         run: |
-          python3 remote_debugger/test/functional-tests/generate_l2_coverage_report.py \
+          python3 docker-device-mgt-service-test/generate_l2_coverage_report.py \
+            --component    "Remote Debugger" \
             --tracefile    /tmp/coverage.info \
             --src-dir      remote_debugger/src \
             --features-dir remote_debugger/test/functional-tests/features \
