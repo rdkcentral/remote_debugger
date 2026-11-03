@@ -122,10 +122,16 @@ void *helper_convert(const void *buf, size_t len,
                 }
                 else if (NULL != wrapper && 0 != strcmp(wrapper, "parameters"))
                 {
-                    inner = __finder(wrapper, expect_type, &msg.data.via.map);
-                    subdoc_name = __finder("subdoc_name", expect_type, &msg.data.via.map);
-                    version = __finder("version", expect_type, &msg.data.via.map);
-                    transaction_id = __finder("transaction_id", expect_type, &msg.data.via.map);
+                   inner = __finder(wrapper, MSGPACK_OBJECT_MAP, &msg.data.via.map);
+                   subdoc_name = __finder("subdoc_name", MSGPACK_OBJECT_STR, &msg.data.via.map);
+                   version = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
+                   transaction_id = __finder("transaction_id", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
+
+					if (!inner || !subdoc_name || !version || !transaction_id) {
+                          RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Required objects missing\n", __FUNCTION__, __LINE__);
+                          errno = INVALID_FIRST_ELEMENT;
+                    }
+
                     if (((NULL != inner) && (0 == (process)(p, 4, inner, subdoc_name, version, transaction_id))) ||
                         ((true == optional) && (NULL == inner)))
                     {
@@ -398,6 +404,11 @@ int process_remotedebuggerdoc(remotedebuggerdoc_t *ld, int num, ...)
     msgpack_object *obj3 = va_arg(valist, msgpack_object *);
     ld->transaction_id = (uint16_t)obj3->via.u64;
     va_end(valist); // End of variable argument loop
+
+	if (!obj || !obj1 || !obj2 || !obj3) {
+       va_end(valist);
+       return -1;
+    }
 
     ld->entries_count = 1;
     ld->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));
