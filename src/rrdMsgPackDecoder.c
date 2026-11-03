@@ -336,7 +336,7 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
             {
                 arr = &p->val.via.array;
                 resultLen = getReqTotalSizeOfIssueTypesStr(arr);
-				if (resultLen == 0) {
+                if (resultLen == 0 || resultLen > INT_MAX) {
                      RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid issue type size calculation\n", __FUNCTION__, __LINE__);
                      return -1;
                 }
