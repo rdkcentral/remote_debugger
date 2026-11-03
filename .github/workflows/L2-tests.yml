@@ -114,6 +114,7 @@ jobs:
         run: |
           python3 docker-device-mgt-service-test/generate_l2_coverage_report.py \
             --component    "Remote Debugger" \
+            --report-details remote_debugger/test/functional-tests/l2_coverage_details.json \
             --tracefile    /tmp/coverage.info \
             --src-dir      remote_debugger/src \
             --features-dir remote_debugger/test/functional-tests/features \
