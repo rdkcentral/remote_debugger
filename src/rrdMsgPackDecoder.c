@@ -122,8 +122,8 @@ void *helper_convert(const void *buf, size_t len,
                 }
                 else if (NULL != wrapper && 0 != strcmp(wrapper, "parameters"))
                 {
-                   inner = __finder(wrapper, MSGPACK_OBJECT_MAP, &msg.data.via.map);
-                   subdoc_name = __finder("subdoc_name", MSGPACK_OBJECT_STR, &msg.data.via.map);
+                   inner = __finder(wrapper, expect_type, &msg.data.via.map);
+                   subdoc_name = __finder("subdoc_name",MSGPACK_OBJECT_STR, &msg.data.via.map);
                    version = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
                    transaction_id = __finder("transaction_id", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
 
@@ -387,23 +387,30 @@ int process_remotedebuggerdoc(remotedebuggerdoc_t *ld, int num, ...)
     va_start(valist, num); // start of variable argument loop
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
-    msgpack_object *obj = va_arg(valist, msgpack_object *); // each usage of va_arg fn argument iterates by one time
+    msgpack_object *obj  = va_arg(valist, msgpack_object *);
+    msgpack_object *obj1 = va_arg(valist, msgpack_object *);
+    msgpack_object *obj2 = va_arg(valist, msgpack_object *);
+    msgpack_object *obj3 = va_arg(valist, msgpack_object *);
+
+    if (!obj || !obj1 || !obj2 || !obj3)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                "[%s:%d]: Invalid msgpack objects\n",
+                __FUNCTION__, __LINE__);
+        va_end(valist);
+        return -1;
+    }
+
     msgpack_object_map *mapobj = &obj->via.map;
 
-    msgpack_object *obj1 = va_arg(valist, msgpack_object *);
-    ld->subdoc_name = strndup(obj1->via.str.ptr, obj1->via.str.size);
-
-    msgpack_object *obj2 = va_arg(valist, msgpack_object *);
+    ld->subdoc_name = strndup(obj1->via.str.ptr,
+                              obj1->via.str.size);
     ld->version = (uint32_t)obj2->via.u64;
-
-    msgpack_object *obj3 = va_arg(valist, msgpack_object *);
     ld->transaction_id = (uint16_t)obj3->via.u64;
-    va_end(valist); // End of variable argument loop
 
-	if (!obj || !obj1 || !obj2 || !obj3) {
-       va_end(valist);
-       return -1;
-    }
+    va_end(valist);
+
+	
 
     ld->entries_count = 1;
     ld->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));
