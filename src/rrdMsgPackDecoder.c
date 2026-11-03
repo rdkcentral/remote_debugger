@@ -127,11 +127,6 @@ void *helper_convert(const void *buf, size_t len,
                    version = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
                    transaction_id = __finder("transaction_id", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
 
-					if (!inner || !subdoc_name || !version || !transaction_id) {
-                          RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Required objects missing\n", __FUNCTION__, __LINE__);
-                          errno = INVALID_FIRST_ELEMENT;
-                    }
-
                     if (((NULL != inner) && (0 == (process)(p, 4, inner, subdoc_name, version, transaction_id))) ||
                         ((true == optional) && (NULL == inner)))
                     {
