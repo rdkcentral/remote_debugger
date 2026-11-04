@@ -319,7 +319,8 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
 {
     int left = map->size;
     uint8_t objects_left = 1;
-    int index = 0, resultLen = 0;
+    int index = 0;
+	size_t resultLen = 0;
     msgpack_object_kv *p = NULL;
     msgpack_object_array *arr = NULL;
     p = map->ptr;
@@ -333,7 +334,11 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
             {
                 arr = &p->val.via.array;
                 resultLen = getReqTotalSizeOfIssueTypesStr(arr);
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%d \n", __FUNCTION__, __LINE__,resultLen);
+				if (resultLen == 0) {
+                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid IssueType size\n", __FUNCTION__, __LINE__);
+                     return -1;
+                }
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%zu \n", __FUNCTION__, __LINE__,resultLen);
                 rrdParam->length = resultLen;
 		rrdParam->commandList = (char *)calloc(resultLen + 1, sizeof(char));
                 if(rrdParam->commandList != NULL)
