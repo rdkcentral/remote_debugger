@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-11-03  
+**Generated:** 2026-11-04  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
