@@ -3304,6 +3304,29 @@ TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
     EXPECT_EQ(errno, MISSING_ENTRY);
 }
 
+TEST(FinderTest, PrefixKeyShouldNotMatchFullName)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "v";
+    kv.key.via.str.size = 1;
+
+    kv.val.type = MSGPACK_OBJECT_POSITIVE_INTEGER;
+
+    map.size = 1;
+    map.ptr = &kv;
+
+    msgpack_object *result =
+        __finder("version",
+                 MSGPACK_OBJECT_POSITIVE_INTEGER,
+                 &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
+
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
 TEST(GetMsgpackUnpackStatusTest, DecodedbufIsNullAndSizeIsZero)
 {
