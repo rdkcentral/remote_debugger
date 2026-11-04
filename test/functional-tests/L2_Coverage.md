@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-28  
+**Generated:** 2026-11-04  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -8,18 +8,6 @@
 ---
 
 ## 1. Executive Summary
-
-**L2 Test Summary**
-
-| Metric | Value |
-|---|:---:|
-| Feature files | 22 |
-| Feature scenarios | 103 |
-| Pytest files | 23 |
-| Test functions (`test_*`) | 118 |
-| Mapped feature/test pairs | 19 / 22 |
-| Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1508 of 3034 lines) |
 
 **L2 Test Coverage**
 
@@ -33,6 +21,24 @@
 
 > Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
 > divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
+
+**L2 Test Summary**
+
+| Metric | Value |
+|---|:---:|
+| Feature files | 22 |
+| Feature scenarios | 103 |
+| Pytest files | 23 |
+| Test functions (`test_*`) | 118 |
+| Mapped feature/test pairs | 19 / 22 |
+| Unmatched test files | 4 |
+| Line coverage (lcov) | 49.7% (1508 of 3034 lines) |
+
+> Function definitions are discovered with a heuristic C source scan.
+> Disabled test functions (skip markers or commented definitions): 0;
+> files with no enabled test functions: 0.
+> Test counts include skipped definitions and are not pass/fail results. Skip counts are
+> estimates; conditional, class-level and module-level skips are not evaluated.
 
 ---
 
@@ -63,9 +69,13 @@
 | 19 | `test_rrd_static_profile_report_with_suffix_negative_case.feature` | 4 | `test_rrd_static_profile_report_with_suffix_negative_case.py` | 5 | PASS |
 | | **Totals** | **90** | | **95** | |
 
+> PASS means the test-definition count meets the scenario count, not that tests passed.
+> Matching uses the same relative directory and feature stem, with an optional
+> test_ prefix. Scenario Outline rows and parametrized cases are not expanded.
+
 ### 2.2 Tests Exceeding Scenario Count
 
-> Extra functions handle setup/teardown split more granularly than feature scenarios.
+> Extra functions can include setup/teardown split more granularly than feature scenarios.
 
 | Feature File | Scenarios | Test File | Tests | Extra |
 |---|:---:|---|:---:|:---:|
@@ -119,9 +129,14 @@
 | `rrdIarmEvents.c` | 8.6% (12/140) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
 | `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
 
+> Only trace records matched to source files in this module contribute to line coverage.
+> Ambiguous source paths are excluded; keep source-relative paths in the tracefile.
+
 ---
 
 ## 4. Per-Behavior Coverage Detail
+
+> Module-supplied assessment; not inferred from lcov or test counts.
 
 > Legend — **YES**: tested by an L2 scenario | **NO**: no test exists | **PARTIAL**: subset covered
 
@@ -208,7 +223,6 @@
 | Profile category load error | NO |
 | Profile file write error | NO |
 
-
 ---
 
 ## 5. Scenario-to-Test Gap Analysis
@@ -218,16 +232,20 @@
 | `rrd_c_api_upload.feature` | 21 | 5 | **16** |
 | `rrd_start_control.feature` | 2 | 1 | **1** |
 
-**Orphan tests** (no feature file — behavior is tested but not documented):
+**Orphan tests** (no feature file):
 
 - `test_rrd_append_dynamic_profile_static_notfound.py`
 - `test_rrd_dynamic_profile_rdm_node_length_exceeded.py`
 - `test_rrd_dynamic_subcategory_report.py`
 - `test_rrd_profile_data.py`
 
+> Unmatched features are listed in section 2.4; counts alone do not prove behavior coverage.
+
 ---
 
 ## 6. Gap Recommendations
+
+> Module-supplied recommendations; review when the implementation or tests change.
 
 ### Priority 1 — Must Fix
 
@@ -258,7 +276,6 @@
 | 13 | `systemd-run` / `journalctl` execution failures | `rrdRunCmdThread.c` |
 | 14 | Output file write errors | `rrdRunCmdThread.c` |
 | 15 | Invalid deep sleep event type | `rrdDynamic.c` |
-
 
 ---
 

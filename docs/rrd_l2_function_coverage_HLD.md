@@ -183,7 +183,12 @@ The L2 suite terminates the daemon by signal during teardown in coverage mode. W
 
 ### 5.5 Coverage Report Generation
 
-**Module:** `test/functional-tests/generate_l2_coverage_report.py` (as referenced by the workflow)
+**Module:** `generate_l2_coverage_report.py` in the shared
+`rdkcentral/docker-device-mgt-service-test` repository. The L2 workflow checks
+out that repository alongside `remote_debugger` and invokes the shared script
+with `--component "Remote Debugger"` and the module-owned
+`test/functional-tests/l2_coverage_details.json` details file. There is no
+module-local generator copy.
 
 **Purpose:** Convert the raw coverage trace and the feature/test inventory into a human-readable summary and actionable gap analysis.
 
@@ -199,9 +204,31 @@ The L2 suite terminates the daemon by signal during teardown in coverage mode. W
 - feature directory
 - test directory
 - source tree metadata
+- `test/functional-tests/l2_coverage_details.json` for display metadata, source
+   ordering, behavior assessments, recommendations, and infrastructure notes
 
 **Outputs:**
 - Markdown report with summary metrics, tables, and scenario coverage status
+
+For local use, check out both repositories into the same parent directory, using
+`feature/l2docupdate` for `docker-device-mgt-service-test` to match the PR workflow.
+Run from that parent directory after collecting the tracefile:
+
+```bash
+python3 docker-device-mgt-service-test/generate_l2_coverage_report.py \
+   --component "Remote Debugger" \
+   --report-details remote_debugger/test/functional-tests/l2_coverage_details.json \
+   --tracefile /tmp/coverage.info \
+   --src-dir remote_debugger/src \
+   --features-dir remote_debugger/test/functional-tests/features \
+   --tests-dir remote_debugger/test/functional-tests/tests \
+   --output remote_debugger/test/functional-tests/L2_Coverage.md
+```
+
+The shared generator uses Python's standard library. See the shared repository's
+README for reuse by other modules and report limitations.
+Update or remove the shared-tooling branch ref after these changes are available
+on that repository's default branch.
 
 ## 6. Functional Workflow
 
@@ -225,10 +252,10 @@ The L2 suite terminates the daemon by signal during teardown in coverage mode. W
 2. The Python report generator reads the trace file plus the feature/test directory metadata.
 3. A Markdown report is produced with sections like:
    - coverage overview
-   - direct and indirect coverage counts
+   - source function hit and miss counts
    - mapped vs unmapped features
    - orphan features and orphan tests
-   - gap analysis by behavior group
+   - scenario-to-test count gaps
 4. On push-based workflow execution, the report is committed to the branch for review.
 
 ## 7. Data and Interface Model
@@ -256,13 +283,23 @@ The generator reads both and builds mappings to support consistent coverage narr
 The generated report documents the following:
 
 - total source-function estimate
-- functions with direct L2 coverage
-- functions with indirect coverage
+- functions called at least once according to lcov
 - functions with no L2 coverage
-- active vs disabled tests
-- active feature scenarios and expected gaps
-- per-behavior coverage tables
-- feature/test gap summary by area such as static profile handling, dynamic profile handling, upload flow, and harmful command detection
+- test-definition counts and disabled-test estimates
+- feature scenario counts and expected count gaps
+- per-source-file line and function coverage
+- unmatched features/tests and scenario-to-test count gaps
+- excess tests, mapped-pair totals, source coverage bars, and full file inventories
+- module-supplied behavior tables, priority recommendations, and infrastructure notes
+
+The report retains all eight sections of the original `L2_Coverage.md`.
+Static per-behavior coverage claims, RRD-specific infrastructure notes, and
+hand-written priority recommendations are supplied by
+`test/functional-tests/l2_coverage_details.json`, not inferred by the shared
+script. The initial details preserve the existing report's assessments; module
+owners must review them when behavior or tests change. Measured totals, mapping
+tables, gaps, and inventories are recomputed on every run. Counts alone do not
+prove behavior coverage.
 
 ## 8. Error Handling and Boundary Conditions
 
