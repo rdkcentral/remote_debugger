@@ -123,8 +123,9 @@ void *helper_convert(const void *buf, size_t len,
                     subdoc_name = __finder("subdoc_name",MSGPACK_OBJECT_STR, &msg.data.via.map);
                     version = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
                     transaction_id = __finder("transaction_id", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
-                    if ((NULL != inner) && (NULL != subdoc_name) && (NULL != version) && (NULL != transaction_id) &&
-                         (0 == (process)(p, 4, inner, subdoc_name, version, transaction_id))) {
+                    if ((NULL != inner) &&
+                         (0 == (process)(p, 4, inner, subdoc_name, version, transaction_id))) ||
+					      ((true == optional) && (NULL == inner))) {
                             msgpack_unpacked_destroy(&msg);
                             errno = OK;
                             return p;
