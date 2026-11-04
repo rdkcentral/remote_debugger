@@ -49,6 +49,7 @@ void processWebCfgTypeEvent(data_buf *rbuf)
     {
         decodeWebCfgData(rbuf->mdata);
         free(rbuf->mdata);
+		rbuf->mdata = NULL;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
