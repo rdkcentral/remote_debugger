@@ -19,7 +19,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1508 of 3035 lines) |
+| Line coverage (lcov) | 49.6% (1508 of 3038 lines) |
 
 **L2 Test Coverage**
 
@@ -103,7 +103,7 @@
 | Module | Lines | Functions | Coverage Bar |
 |---|:---:|:---:|---|
 | `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
-| `rrdInterface.c` | 44.0% (189/430) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
+| `rrdInterface.c` | 43.6% (189/433) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
 | `rrdEventProcess.c` | 68.6% (240/350) | 81.8% (9/11) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 81.8% (405/495) | 86.7% (13/15) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
