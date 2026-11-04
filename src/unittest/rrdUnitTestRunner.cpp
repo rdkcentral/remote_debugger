@@ -3263,29 +3263,6 @@ TEST(FinderTest, KeyTypeStrExpectTypeMatch)
     EXPECT_STREQ(result->via.str.ptr, "value");
 }
 
-TEST(FinderTest, TypeMismatchReturnsNull)
-{
-    msgpack_object_map map;
-    msgpack_object_kv kv;
-
-    kv.key.type = MSGPACK_OBJECT_STR;
-    kv.key.via.str.ptr = "name";
-    kv.key.via.str.size = strlen("name");
-
-    kv.val.type = MSGPACK_OBJECT_STR;
-    kv.val.via.str.ptr = "value";
-    kv.val.via.str.size = strlen("value");
-
-    map.size = 1;
-    map.ptr = &kv;
-
-    msgpack_object *result =
-        __finder("name", MSGPACK_OBJECT_NIL, &map);
-
-    EXPECT_EQ(result, nullptr);
-    EXPECT_EQ(errno, MISSING_ENTRY);
-}
-
 TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 {
     msgpack_object_map map;
@@ -3578,6 +3555,40 @@ TEST(HelperConvertTest, MsgPackWrapperConditionFalseProcessSuccess)
 
     EXPECT_NE(result, nullptr);
     EXPECT_EQ(errno, 0);
+
+    msgpack_sbuffer_destroy(&sbuf);
+}
+
+TEST(HelperConvertTest, MissingRequiredFieldsReturnsNull)
+{
+    errno = 0;
+
+    msgpack_sbuffer sbuf;
+    msgpack_packer pk;
+
+    msgpack_sbuffer_init(&sbuf);
+    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+    msgpack_pack_map(&pk, 1);
+
+    msgpack_pack_str(&pk, 3);
+    msgpack_pack_str_body(&pk, "key", 3);
+
+    msgpack_pack_str(&pk, 5);
+    msgpack_pack_str_body(&pk, "value", 5);
+
+    void *result =
+        helper_convert(sbuf.data,
+                       sbuf.size,
+                       100,
+                       "key",
+                       MSGPACK_OBJECT_STR,
+                       false,
+                       mock_process_success,
+                       mock_destroy);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, INVALID_FIRST_ELEMENT);
 
     msgpack_sbuffer_destroy(&sbuf);
 }
