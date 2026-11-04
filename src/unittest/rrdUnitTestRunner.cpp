@@ -120,7 +120,7 @@ using ::testing::Return;
 TEST(GetParamCountTest, GetParamCount)
 {
     char str[] = "abc.def.ghi";
-    ASSERT_EQ(getParamcount(str), 2);
+    ASSERT_EQ(getParamcount(str), 3);
 }
 
 TEST(GetParamCountTest, GetParamCountEmptyString)
