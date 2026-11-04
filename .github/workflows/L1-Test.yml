@@ -20,6 +20,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          
+      - name: Bootstrap PR unit-test build
+        working-directory: src/unittest
+        run: autoreconf --force --install
 
       - name: Run unit tests
         run: |
@@ -40,6 +44,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: .l1-base
+
+      - name: Bootstrap base unit-test build
+        working-directory: .l1-base/src/unittest
+        run: autoreconf --force --install
 
       - name: Collect base L1 coverage using the same runner
         working-directory: .l1-base
