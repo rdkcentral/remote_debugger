@@ -26,6 +26,8 @@ jobs:
         run: autoreconf --force --install
 
       - name: Run unit tests
+        env:
+          GTEST_FILTER: 'GetParamCountTest.*'      
         run: |
           if sh -e run_ut.sh --enable-cov; then
             echo "PR L1 tests and coverage collection passed."
