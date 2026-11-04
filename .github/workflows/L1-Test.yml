@@ -17,11 +17,99 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          
+      - name: Bootstrap PR unit-test build
+        working-directory: src/unittest
+        run: autoreconf --force --install
 
       - name: Run unit tests
-        run: sh run_ut.sh
+        run: |
+          if sh -e run_ut.sh --enable-cov; then
+            echo "PR L1 tests and coverage collection passed."
+          else
+            status=$?
+            echo "::error title=L1 tests failed::PR L1 build, unit tests or coverage collection failed (exit $status). See the failing command and gtest results above."
+            exit "$status"
+          fi
 
       - name: Upload test results to automatic test result management system
         run: >
           gtest-json-result-push.py /tmp/Gtest_Report https://rdkeorchestrationservice.apps.cloud.comcast.net/rdke_orchestration_api/push_unit_test_results `pwd`
+
+      - name: Checkout base commit for L1 coverage comparison
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .l1-base
+
+      - name: Bootstrap base unit-test build
+        working-directory: .l1-base/src/unittest
+        run: autoreconf --force --install
+
+      - name: Collect base L1 coverage using the same runner
+        working-directory: .l1-base
+        run: |
+          if sh -e "$GITHUB_WORKSPACE/run_ut.sh" --enable-cov; then
+            echo "Base L1 coverage collected successfully."
+          else
+            status=$?
+            echo "::error title=L1 baseline failed::Base-commit build, tests or coverage collection failed (exit $status); coverage regression cannot be checked."
+            exit "$status"
+          fi
+
+      - name: Fail if L1 line coverage decreases
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            function readCoverage(file, label) {
+              try {
+                const text = fs.readFileSync(file, 'utf8').trim();
+                if (!text.endsWith('end_of_record')) throw new Error('Empty or incomplete tracefile');
+                const sources = new Set();
+                let hit = 0;
+                let found = 0;
+                for (const record of text.split('end_of_record')) {
+                  if (!record.trim()) continue;
+                  const source = record.match(/^SF:(.+)\r?$/m);
+                  const linesHit = record.match(/^LH:(\d+)\r?$/m);
+                  const linesFound = record.match(/^LF:(\d+)\r?$/m);
+                  if (!source || !linesHit || !linesFound) throw new Error('Missing SF/LH/LF counters');
+                  const name = source[1].trim();
+                  const recordHit = Number(linesHit[1]);
+                  const recordFound = Number(linesFound[1]);
+                  if (!name || sources.has(name) || recordHit > recordFound) {
+                    throw new Error('Duplicate source or inconsistent coverage counters');
+                  }
+                  sources.add(name);
+                  hit += recordHit;
+                  found += recordFound;
+                }
+                if (!Number.isSafeInteger(hit) || !Number.isSafeInteger(found) || found === 0) {
+                  throw new Error('No valid executable-line coverage');
+                }
+                return { hit, found };
+              } catch (error) {
+                throw new Error(`${label} coverage unavailable or invalid: ${error.message}`);
+              }
+            }
+            try {
+              const base = readCoverage('.l1-base/src/unittest/coverage.info', 'Base');
+              const head = readCoverage('src/unittest/coverage.info', 'PR');
+              const percentage = value => `${(100 * value.hit / value.found).toFixed(6)}%`;
+              const decreased = BigInt(head.hit) * BigInt(base.found) < BigInt(base.hit) * BigInt(head.found);
+              const message = `PR ${percentage(head)} (${head.hit}/${head.found} lines); base ${percentage(base)} (${base.hit}/${base.found} lines).`;
+              await core.summary.addHeading('L1 Coverage Comparison')
+                .addRaw(`${decreased ? 'FAIL: coverage decreased.' : 'PASS: no coverage decrease.'} ${message}`)
+                .write();
+              if (decreased) {
+                core.setFailed(`L1 line coverage decreased. ${message} No decrease is allowed; full-precision ratios are compared.`);
+              } else {
+                core.info(`L1 line coverage passed. ${message}`);
+              }
+            } catch (error) {
+              core.setFailed(error.message);
+            }
