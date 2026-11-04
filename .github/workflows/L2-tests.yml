@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/docker-device-mgt-service-test'
-          ref: 'develop'
+          ref: 'feature/l2docupdate'
           path: docker-device-mgt-service-test
 
       - name: Check out dependent repostiories
