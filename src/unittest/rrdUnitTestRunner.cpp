@@ -3562,6 +3562,7 @@ TEST(HelperConvertTest, MsgPackWrapperConditionFalseProcessFails)
 
 TEST(HelperConvertTest, MsgPackWrapperConditionFalseProcessSuccess)
 {
+    errno = 0;
     msgpack_sbuffer sbuf;
     msgpack_packer pk;
     msgpack_sbuffer_init(&sbuf);
