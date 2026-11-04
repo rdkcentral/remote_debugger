@@ -39,7 +39,7 @@ extern "C"
 typedef struct
 {
     char *commandList;
-    int length;    
+    size_t length;    
 } remotedebuggerparam_t;
 
 typedef struct {

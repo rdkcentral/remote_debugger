@@ -110,7 +110,7 @@ typedef struct mbuffer {
 /*Structure for Message Header*/
 typedef struct messageHeader {
     long  type;
-    void  *mbody;
+    data_buf  *mbody;
 } msgRRDHdr;
 
 /*Structure for Json Datar*/
