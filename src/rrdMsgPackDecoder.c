@@ -46,7 +46,9 @@ msgpack_object *__finder(const char *name,
     {
         if (MSGPACK_OBJECT_STR == map->ptr[i].key.type)
         {
-             if ((expect_type == map->ptr[i].val.type) && (0 == match(&(map->ptr[i]), name))) {
+             if ((expect_type == map->ptr[i].val.type) &&
+                 (map->ptr[i].key.via.str.size == strlen(name)) &&
+                 (0 == match(&(map->ptr[i]), name))) {
                     return &map->ptr[i].val;
                 }
         }
