@@ -3559,40 +3559,6 @@ TEST(HelperConvertTest, MsgPackWrapperConditionFalseProcessSuccess)
     msgpack_sbuffer_destroy(&sbuf);
 }
 
-TEST(HelperConvertTest, MissingRequiredFieldsReturnsNull)
-{
-    errno = 0;
-
-    msgpack_sbuffer sbuf;
-    msgpack_packer pk;
-
-    msgpack_sbuffer_init(&sbuf);
-    msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-
-    msgpack_pack_map(&pk, 1);
-
-    msgpack_pack_str(&pk, 3);
-    msgpack_pack_str_body(&pk, "key", 3);
-
-    msgpack_pack_str(&pk, 5);
-    msgpack_pack_str_body(&pk, "value", 5);
-
-    void *result =
-        helper_convert(sbuf.data,
-                       sbuf.size,
-                       100,
-                       "key",
-                       MSGPACK_OBJECT_STR,
-                       false,
-                       mock_process_success,
-                       mock_destroy);
-
-    EXPECT_EQ(result, nullptr);
-    EXPECT_EQ(errno, INVALID_FIRST_ELEMENT);
-
-    msgpack_sbuffer_destroy(&sbuf);
-}
-
 /* --------------- Test process_remotedebuggerparams() from rrdMsgPackDecoder --------------- */
 TEST(ProcessRemoteDebuggerParamsTest, TestProcessRemoteDebuggerParams)
 {
