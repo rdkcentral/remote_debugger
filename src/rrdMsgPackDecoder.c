@@ -294,17 +294,17 @@ size_t getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
     for(index = 0; index < arr->size; index++)
     {
         if(arr->ptr[index].type == MSGPACK_OBJECT_STR) {
-            if (SIZE_MAX - size < arr->ptr[index].via.str.size)
+            if (SIZE_MAX - size < arr->ptr[index].via.str.size) {
                 return 0;
-
+			}
             size += arr->ptr[index].via.str.size;
         }
     }
 
     /* add commas and terminating NULL */
-    if (SIZE_MAX - size < arr->size + 1)
+    if (SIZE_MAX - size < arr->size + 1) {
         return 0;
-
+	}
     return size + arr->size + 1;
 }
 
