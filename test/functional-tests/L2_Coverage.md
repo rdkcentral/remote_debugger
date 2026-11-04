@@ -17,10 +17,14 @@
 | Functions hit | 76 |
 | Functions not hit | 52 |
 | Current functional coverage | 59.4% |
+| Compiled-function coverage (lcov) | 61.1% (77/126 functions) |
 | Target L2 functional coverage | ~100% |
 
 > Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
 > divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
+
+> Compiled-function coverage (lcov) = sum of FNH / sum of FNF for matched module files.
+> This measures compiled functions recorded by lcov, excluding compiled-out definitions.
 
 **L2 Test Summary**
 
