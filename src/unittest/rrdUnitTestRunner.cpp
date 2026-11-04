@@ -3263,23 +3263,27 @@ TEST(FinderTest, KeyTypeStrExpectTypeMatch)
     EXPECT_STREQ(result->via.str.ptr, "value");
 }
 
-TEST(FinderTest, KeyTypeStrValTypeStrMatch)
+TEST(FinderTest, TypeMismatchReturnsNull)
 {
     msgpack_object_map map;
     msgpack_object_kv kv;
+
     kv.key.type = MSGPACK_OBJECT_STR;
     kv.key.via.str.ptr = "name";
     kv.key.via.str.size = strlen("name");
+
     kv.val.type = MSGPACK_OBJECT_STR;
     kv.val.via.str.ptr = "value";
     kv.val.via.str.size = strlen("value");
+
     map.size = 1;
     map.ptr = &kv;
-    msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
 
-    ASSERT_NE(result, nullptr);
-    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
-    EXPECT_STREQ(result->via.str.ptr, "value");
+    msgpack_object *result =
+        __finder("name", MSGPACK_OBJECT_NIL, &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
 }
 
 TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
@@ -3296,6 +3300,31 @@ TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 
     ASSERT_NE(result, nullptr);
     EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
+}
+
+TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "version";
+    kv.key.via.str.size = strlen("version");
+
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.str.ptr = "abc";
+    kv.val.via.str.size = strlen("abc");
+
+    map.size = 1;
+    map.ptr = &kv;
+
+    msgpack_object *result =
+        __finder("version",
+                 MSGPACK_OBJECT_POSITIVE_INTEGER,
+                 &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
 }
 
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
@@ -3399,6 +3428,34 @@ TEST(GetReqTotalSizeOfIssueTypesStrTest, ArraySizeFiveWithStringTypes)
     EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 1 + 5 + total_strlen);
 }
 
+TEST(GetReqTotalSizeOfIssueTypesStrTest, OverflowReturnsZero)
+{
+    msgpack_object obj_array[2];
+
+    obj_array[0].type = MSGPACK_OBJECT_STR;
+    obj_array[0].via.str.size = SIZE_MAX - 10;
+
+    obj_array[1].type = MSGPACK_OBJECT_STR;
+    obj_array[1].via.str.size = 20;
+
+    msgpack_object_array arr = {2, obj_array};
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 0U);
+}
+
+TEST(GetReqTotalSizeOfIssueTypesStrTest, FinalAdditionOverflowReturnsZero)
+{
+    msgpack_object obj_array[1];
+
+    obj_array[0].type = MSGPACK_OBJECT_STR;
+    obj_array[0].via.str.size = SIZE_MAX - 2;
+
+    msgpack_object_array arr;
+    arr.size = 2;
+    arr.ptr = obj_array;
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 0U);
+}
 /* --------------- Test FreeResources_RemoteDebugger() from rrdMsgPackDecoder --------------- */
 TEST(FreeResourcesRemoteDebuggerTest, NullPointerArgument)
 {
