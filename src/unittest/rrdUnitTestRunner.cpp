@@ -3414,9 +3414,18 @@ TEST(GetReqTotalSizeOfIssueTypesStrTest, DetectsSizeOverflow)
     obj_array[1].type = MSGPACK_OBJECT_STR;
     obj_array[1].via.str.size = 10;
 
+    printf("SIZE_MAX=%zu\n", (size_t)SIZE_MAX);
+    printf("obj0 size=%zu\n", (size_t)obj_array[0].via.str.size);
+    printf("obj1 size=%zu\n", (size_t)obj_array[1].via.str.size);
+    
     msgpack_object_array arr = {2, obj_array};
 
-    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 0);
+    size_t result = getReqTotalSizeOfIssueTypesStr(&arr);
+
+    printf("result=%zu\n", result);
+
+
+    EXPECT_EQ(result, 0u);
 }
 
 /* --------------- Test FreeResources_RemoteDebugger() from rrdMsgPackDecoder --------------- */
