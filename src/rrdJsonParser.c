@@ -487,7 +487,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Value of rfcvalue: %s command: %s time: %d\n",__FUNCTION__,__LINE__, issuestdata->rfcvalue,issuestdata->command,issuestdata->timeout);
         }
     }
-
+	}
     return issuestdata;
 }
 
