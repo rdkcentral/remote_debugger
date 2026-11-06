@@ -642,6 +642,8 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
             "[%s:%d]: Output path truncated\n",
             __FUNCTION__,
             __LINE__);
+		free(rfcbuf);
+        rfcbuf = NULL;
         return;
     }
     strftime (outdir + dlen, sizeof(outdir) - dlen, "%Y-%m-%d-%H-%M-%S", ltime);
