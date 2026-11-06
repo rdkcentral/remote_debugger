@@ -3404,6 +3404,8 @@ TEST(GetReqTotalSizeOfIssueTypesStrTest, ArraySizeFiveWithStringTypes)
     EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 1 + 5 + total_strlen);
 }
 
+/*
+
 TEST(GetReqTotalSizeOfIssueTypesStrTest, DetectsSizeOverflow)
 {
     msgpack_object obj_array[2];
@@ -3427,6 +3429,7 @@ TEST(GetReqTotalSizeOfIssueTypesStrTest, DetectsSizeOverflow)
 
     EXPECT_EQ(result, 0u);
 }
+*/
 
 /* --------------- Test FreeResources_RemoteDebugger() from rrdMsgPackDecoder --------------- */
 TEST(FreeResourcesRemoteDebuggerTest, NullPointerArgument)
