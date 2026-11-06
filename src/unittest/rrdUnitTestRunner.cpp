@@ -3404,6 +3404,21 @@ TEST(GetReqTotalSizeOfIssueTypesStrTest, ArraySizeFiveWithStringTypes)
     EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 1 + 5 + total_strlen);
 }
 
+TEST(GetReqTotalSizeOfIssueTypesStrTest, DetectsSizeOverflow)
+{
+    msgpack_object obj_array[2];
+
+    obj_array[0].type = MSGPACK_OBJECT_STR;
+    obj_array[0].via.str.size = SIZE_MAX - 1;
+
+    obj_array[1].type = MSGPACK_OBJECT_STR;
+    obj_array[1].via.str.size = 10;
+
+    msgpack_object_array arr = {2, obj_array};
+
+    EXPECT_EQ(getReqTotalSizeOfIssueTypesStr(&arr), 0);
+}
+
 /* --------------- Test FreeResources_RemoteDebugger() from rrdMsgPackDecoder --------------- */
 TEST(FreeResourcesRemoteDebuggerTest, NullPointerArgument)
 {
