@@ -115,48 +115,45 @@ char *replaceRRDLocation(char* commandStr, char* dirLocation)
  * @param char *issuecmd - The command string to be validated.
  * @param cJSON *sanitylist - JSON object containing the list of sanctioned commands.
  * @return int - Returns 0 if the command is valid, or 1 if the command is harmful or invalid.
- */
-int isCommandsValid(char *issuecmd,cJSON *sanitylist)
+*/
+static const char *g_blockedCommands[] =
 {
-    int i = 0,result = 0,sitems = 0;
-    cJSON *subcmd = NULL;
-    char *sanitycmd = NULL;
-    char *checkcmd = NULL;
-    char *sanitystr = NULL;
+    "rm -rf",
+    "kill",
+    "pkill",
+    "iptables",
+    "ip6tables",
+    NULL
+};
 
-    sanitycmd = cJSON_Print(sanitylist); // Print sanity commands data from the Json object sanitylist
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands List: %s \n",__FUNCTION__,__LINE__,sanitycmd);
-    cJSON_free(sanitycmd); // free sanity commands data
-    sitems = cJSON_GetArraySize(sanitylist);
-    for (i = 0 ; i < sitems; i++)
+int isCommandsValid(char *issuecmd)
+{
+  int i = 0, result = 0;
+  char *sanitystr = NULL;
+
+if(issuecmd == NULL)
     {
-         subcmd = cJSON_GetArrayItem(sanitylist, i);
-         checkcmd = cJSON_Print(subcmd); // Print each command from the sanity command array in Json
-         int len = strlen(checkcmd);
-         if (len >= 2 && checkcmd[0] == '"' && checkcmd[len - 1] == '"') 
-         {
-             checkcmd[len - 1] = '\0'; // Remove closing quote
-             checkcmd++;               // Move pointer forward to skip opening quote
-             len -= 2;            // Adjust length after removing quotes
-         }
-         // Trim trailing spaces
-         int j = len - 1;
-         while (j >= 0 && isspace(checkcmd[j])) {
-         checkcmd[j] = '\0';
-         j--;
-         }
-         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Checking for \"%s\" string in Issue commands... \n",__FUNCTION__,__LINE__,checkcmd);
-         sanitystr = strstr(issuecmd,checkcmd);
-         if (sanitystr)
-         {
-             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,sanitystr);
-             return 1;
-         }
-         else
-         {
-             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Found valid Commands, Execute... \n",__FUNCTION__,__LINE__);
-         }
+        return 1;
     }
+    
+for (i = 0; g_blockedCommands[i] != NULL; i++)
+{
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,
+            "[%s:%d]: Checking for \"%s\" string in Issue commands...\n",
+            __FUNCTION__,__LINE__,
+            g_blockedCommands[i]);
+
+    sanitystr = strstr(issuecmd, g_blockedCommands[i]);
+
+    if (sanitystr)
+    {
+        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,
+                "[%s:%d]: Found harmful commands: %s, Exiting!!!\n",
+                __FUNCTION__,__LINE__,
+                sanitystr);
+        return 1;
+    }
+}
 
     if(strstr(issuecmd,"&"))
     {
