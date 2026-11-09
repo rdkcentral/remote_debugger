@@ -622,14 +622,14 @@ protected:
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForValidCommand)
 {
-    int result = isCommandsValid("ls -l", sanitylist);
+    int result = isCommandsValid("ls -l");
     ASSERT_EQ(result, 0);
 }
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForBackgroundCommand)
 {
     char command[] = "ls -lh &;";
-    int result = isCommandsValid(command, sanitylist);
+    int result = isCommandsValid(command);
 
     ASSERT_EQ(result, 0);
     ASSERT_STREQ(command, "ls -lh & ");
