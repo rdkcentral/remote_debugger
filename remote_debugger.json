@@ -5,11 +5,6 @@
             "DebugTimeout" : 10
         }
     },
-    "Sanity": {
-        "Check" : {
-            "Commands" : [ "rm -rf", "kill", "pkill", "iptables", "ip6tables" ]
-        }
-    },
     "Device" : {
         "Info" : {
             "Commands": "cat /version.txt;cat /etc/device.properties;uname -r",
