@@ -511,7 +511,6 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
 	   }
       }
 	 }
-	}
     return issuestdata;
 }
 
@@ -663,7 +662,6 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             exresult = executeCommands(issuestdata);
             }
           }
-		 }
 	   }		
 	}
     return exresult;
