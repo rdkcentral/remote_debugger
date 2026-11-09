@@ -391,12 +391,8 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
 {
     int nitems = 0, j = 0, ret = 0;
     issueData *issuestdata = NULL;
-    cJSON *sanity = NULL;
-    cJSON *check = NULL;
-    cJSON *cmdlist = NULL;
     cJSON *category = NULL;
     cJSON *type = NULL;
-    char *checkval = NULL;
     cJSON *elem = NULL;
     char *tmpCommand = NULL;
 
@@ -446,13 +442,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     }
     else
     {
-        sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
-        check = cJSON_GetObjectItem(sanity, "Check");
-        checkval = cJSON_Print(check);  // Print list of sanity commands received
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
-        cmdlist = cJSON_GetObjectItem(check, "Commands");
-        cJSON_free(checkval); // free sanity command list
-        ret = isCommandsValid(issuestdata->command, cmdlist);
+        ret = isCommandsValid(issuestdata->command);
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
@@ -488,13 +478,9 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
 {
     int nitems = 0, j = 0, ret = 0;
     issueData *issuestdata = NULL;
-    cJSON *sanity = NULL;
-    cJSON *check = NULL;
-    cJSON *cmdlist = NULL;
     cJSON *root = NULL;
     cJSON *category = NULL;
     cJSON *type = NULL;
-    char *checkval = NULL;
     cJSON *elem = NULL;
     bool exresult = false;
     char *tmpCommand = NULL;
@@ -556,22 +542,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     }
     else
     {
-        sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
-        check = cJSON_GetObjectItem(sanity, "Check");
-        checkval = cJSON_Print(check);  // Print list of sanity commands received
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
-	if(checkval ==NULL)
-	{
-	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Entering checkval null case : \n",__FUNCTION__,__LINE__);
-            jsoncfg = readAndParseJSON(RRD_JSON_FILE);
-	    sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
-	    check = cJSON_GetObjectItem(sanity, "Check");
-            checkval = cJSON_Print(check);  // Print list of sanity commands received
-            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
-        }
-        cmdlist = cJSON_GetObjectItem(check, "Commands");
-        cJSON_free(checkval); // free sanity command list
-        ret = isCommandsValid(issuestdata->command, cmdlist);
+        ret = isCommandsValid(issuestdata->command);
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
