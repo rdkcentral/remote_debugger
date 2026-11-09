@@ -4359,6 +4359,21 @@ TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
 }
 
 TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
+    system("mkdir -p /etc/rrd");
+
+    FILE *fp = fopen("/etc/rrd/remote_debugger.json", "w");
+    ASSERT_NE(fp, nullptr);
+
+    fprintf(fp,
+        "{"
+        "\"Sanity\":{"
+            "\"Check\":{"
+                "\"Commands\":[\"kill\"]"
+            "}"
+        "}"
+        "}");
+
+    fclose(fp);
     const char* jsonstr = R"({
         "categoryB": {
             "typeX": [ "echo only" ]
@@ -4388,6 +4403,7 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
 
     FreeIssueData(result);
     cJSON_Delete(root);
+    remove("/etc/rrd/remote_debugger.json");
 }
 
 
