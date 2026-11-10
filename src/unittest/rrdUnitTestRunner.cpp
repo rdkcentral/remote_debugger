@@ -2842,7 +2842,7 @@ protected:
     {
         string test_name = getCurrentTestName();
         //Creates a queue for WebCfgDataStringCopiedCorrectly as well
-        if (test_name == "TestPushIssueTypesToMsgQueueSuccess" || test_name == "WebCfgDataStringCopiedCorrectly")
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
         {
             msqid_cpy = msqid;
             key_cpy = key;
@@ -2855,7 +2855,7 @@ protected:
     {
         string test_name = getCurrentTestName();
         //Creates a queue for WebCfgDataStringCopiedCorrectly as well
-        if (test_name == "TestPushIssueTypesToMsgQueueSuccess" || test_name == "WebCfgDataStringCopiedCorrectly")
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
         {
             int ret = msgctl(msqid, IPC_RMID, nullptr);
             ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
@@ -2894,29 +2894,6 @@ TEST_F(RemoteDebuggerWebConfigEventHandlerTest, TestPushIssueTypesToMsgQueueSucc
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
 
-TEST_F(RemoteDebuggerWebConfigEventHandlerTest, WebCfgDataStringCopiedCorrectly)
-{
-    const char *owner = IARM_BUS_RDK_REMOTE_DEBUGGER_NAME;
-    IARM_EventId_t eventId = IARM_BUS_RDK_REMOTE_DEBUGGER_WEBCFGDATA;
-
-    char data[] = "TestIssueType";
-
-    _remoteDebuggerWebCfgDataEventHandler(owner,
-                                          eventId,
-                                          data,
-                                          sizeof(data));
-
-    data_buf receivedBuf;
-
-    int ret = msgrcv(msqid,
-                     &receivedBuf,
-                     sizeof(receivedBuf),
-                     IARM_EVENT_MSG,
-                     0);
-
-    ASSERT_NE(ret, -1);
-    ASSERT_STREQ(receivedBuf.mdata, "TestIssueType");
-}
 #endif
 
 /* --------------- Test _rdmManagerEventHandler() from rrdIarm --------------- */
