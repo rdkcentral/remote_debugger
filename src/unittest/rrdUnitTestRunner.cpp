@@ -635,6 +635,15 @@ TEST_F(IsCommandsValidTest, ReturnsZeroForBackgroundCommand)
     ASSERT_STREQ(command, "ls -lh & ");
 }
 
+TEST_F(IsCommandsValidTest, RejectsKillCommand)
+{
+    char command[] = "kill 1234";
+
+    int result = isCommandsValid(command);
+
+    ASSERT_EQ(result, 1);
+}
+
 /* --------------- Test replaceRRDLocation() from rrdCommandSanity --------------- */
 
 TEST(ReplaceRRDLocationTest, TestReplaceRRDLocation_SubstringExists)
