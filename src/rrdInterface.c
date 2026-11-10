@@ -464,6 +464,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
         free(dataMsg);
+		dataMsg = NULL;
     }
     else
     {
@@ -491,6 +492,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         else
         {
             free(dataMsg);
+			dataMsg = NULL;
         }
     #else
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
