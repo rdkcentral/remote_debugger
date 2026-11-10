@@ -2891,6 +2891,7 @@ TEST_F(RemoteDebuggerWebConfigEventHandlerTest, TestPushIssueTypesToMsgQueueSucc
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
+
 #endif
 
 /* --------------- Test _rdmManagerEventHandler() from rrdIarm --------------- */

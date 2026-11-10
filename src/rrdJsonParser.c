@@ -629,11 +629,22 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     // Creating Directory for MainNode under /tmp/rrd Folder
     ctime = time (NULL);
     ltime = localtime (&ctime);
-    dlen=snprintf(outdir,BUF_LEN_256,"%s%s-DebugReport-",RRD_OUTPUT_DIR,issuestructNode->Node);
+    dlen=snprintf(outdir,sizeof(outdir),"%s%s-DebugReport-",RRD_OUTPUT_DIR,issuestructNode->Node);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: debug print issuestructNode->Node: %s !!! \n",__FUNCTION__,__LINE__, issuestructNode->Node);
     if ((strcmp(issuestructNode->Node, DEEP_SLEEP_STR) == 0)|| (strcmp(issuestructNode->Node, "deepsleep")== 0))
     {
         isDeepSleepAwakeEventValid = true;    
+    }
+	if (dlen < 0 || dlen >= (int)sizeof(outdir))
+    {
+        RDK_LOG(RDK_LOG_ERROR,
+             LOG_REMDEBUG,
+            "[%s:%d]: Output path truncated\n",
+            __FUNCTION__,
+            __LINE__);
+		free(rfcbuf);
+        rfcbuf = NULL;
+        return;
     }
     strftime (outdir + dlen, sizeof(outdir) - dlen, "%Y-%m-%d-%H-%M-%S", ltime);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Creating Directory %s for Issue Category to store Output data...\n",__FUNCTION__,__LINE__,outdir);
