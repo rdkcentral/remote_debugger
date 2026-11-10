@@ -444,15 +444,53 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         free(issuestdata);
         issuestdata = NULL;
     }
+	 else
+    {
+        cJSON *trustedJson = readAndParseJSON(RRD_JSON_FILE);
+
+        if(trustedJson == NULL)
+        {
+            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,
+                    "[%s:%d]: Failed to load trusted JSON %s\n",
+                    __FUNCTION__,__LINE__,RRD_JSON_FILE);
+
+            free(issuestdata->command);
+            free(issuestdata);
+            issuestdata = NULL;
+        }
     else
     {
-        sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
-        check = cJSON_GetObjectItem(sanity, "Check");
-        checkval = cJSON_Print(check);  // Print list of sanity commands received
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
-        cmdlist = cJSON_GetObjectItem(check, "Commands");
-        cJSON_free(checkval); // free sanity command list
-        ret = isCommandsValid(issuestdata->command, cmdlist);
+        sanity = cJSON_GetObjectItem(trustedJson, "Sanity");
+        check = sanity ? cJSON_GetObjectItem(sanity, "Check") : NULL;
+        cmdlist = check ? cJSON_GetObjectItem(check, "Commands") : NULL;
+        if (cmdlist == NULL)
+            {
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,
+                        "[%s:%d]: Trusted sanity command list missing\n",
+                        __FUNCTION__,__LINE__);
+
+                cJSON_Delete(trustedJson);
+
+                free(issuestdata->command);
+                free(issuestdata);
+                issuestdata = NULL;
+            }
+            else
+            {
+                checkval = cJSON_Print(check);
+
+                if(checkval)
+                {
+                    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,
+                            "[%s:%d]: Reading Trusted Sanity Check Commands List: \n%s\n",
+                            __FUNCTION__,__LINE__,checkval);
+                    cJSON_free(checkval);
+                }
+
+                ret = isCommandsValid(issuestdata->command, cmdlist);
+
+                cJSON_Delete(trustedJson);
+                trustedJson = NULL;
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
@@ -469,9 +507,10 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Using default timeout of %d seconds\n",__FUNCTION__,__LINE__,issuestdata->timeout);
             }
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Value of rfcvalue: %s command: %s time: %d\n",__FUNCTION__,__LINE__, issuestdata->rfcvalue,issuestdata->command,issuestdata->timeout);
-        }
-    }
-
+		}
+	        }
+      }
+	  }
     return issuestdata;
 }
 
@@ -553,30 +592,62 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Commands found, exiting.. \n",__FUNCTION__,__LINE__);
         free(issuestdata);
+		issuestdata = NULL;
     }
     else
     {
-        sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
-        check = cJSON_GetObjectItem(sanity, "Check");
-        checkval = cJSON_Print(check);  // Print list of sanity commands received
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
-	if(checkval ==NULL)
-	{
-	    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Entering checkval null case : \n",__FUNCTION__,__LINE__);
-            jsoncfg = readAndParseJSON(RRD_JSON_FILE);
-	    sanity = cJSON_GetObjectItem(jsoncfg, "Sanity");
-	    check = cJSON_GetObjectItem(sanity, "Check");
-            checkval = cJSON_Print(check);  // Print list of sanity commands received
-            RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Check Commands List: \n%s\n",__FUNCTION__,__LINE__,checkval);
+        cJSON *trustedJson = readAndParseJSON(RRD_JSON_FILE);
+
+        if (trustedJson == NULL)
+        {
+            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,
+                    "[%s:%d]: Failed to load trusted JSON %s\n",
+                    __FUNCTION__,__LINE__,RRD_JSON_FILE);
+
+            free(issuestdata->command);
+            free(issuestdata);
+            issuestdata = NULL;
         }
-        cmdlist = cJSON_GetObjectItem(check, "Commands");
-        cJSON_free(checkval); // free sanity command list
-        ret = isCommandsValid(issuestdata->command, cmdlist);
+        else
+        {
+            sanity = cJSON_GetObjectItem(trustedJson, "Sanity");
+            check = sanity ? cJSON_GetObjectItem(sanity, "Check") : NULL;
+            cmdlist = check ? cJSON_GetObjectItem(check, "Commands") : NULL;
+
+            if (cmdlist == NULL)
+            {
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,
+                        "[%s:%d]: Trusted sanity command list missing\n",
+                        __FUNCTION__,__LINE__);
+
+                cJSON_Delete(trustedJson);
+
+                free(issuestdata->command);
+                free(issuestdata);
+                issuestdata = NULL;
+            }
+            else
+            {
+                checkval = cJSON_Print(check);
+
+                if(checkval)
+                {
+                    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,
+                            "[%s:%d]: Reading Trusted Sanity Check Commands List: \n%s\n",
+                            __FUNCTION__,__LINE__,checkval);
+                    cJSON_free(checkval);
+                }
+
+                ret = isCommandsValid(issuestdata->command, cmdlist);
+
+                cJSON_Delete(trustedJson);
+                trustedJson = NULL;
         if(ret != 0)
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
             free(issuestdata->command);
             free(issuestdata);
+			issuestdata = NULL;
         }
         else
         { 
@@ -589,9 +660,10 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Value of rfcvalue: %s command: %s time: %d\n",__FUNCTION__,__LINE__, issuestdata->rfcvalue,issuestdata->command,issuestdata->timeout);
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
             exresult = executeCommands(issuestdata);
-        }
-    }
-
+            }
+              }
+	      }		
+	     }
     return exresult;
 }
 

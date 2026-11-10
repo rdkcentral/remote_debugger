@@ -315,12 +315,31 @@ int rrd_archive_create(const char *source_dir, const char *working_dir, const ch
         snprintf(outpath, sizeof(outpath), "%s", archive_filename);
     }
 
-    gzFile out = gzopen(outpath, "wb");
-    if (!out) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to create archive file: %s (error: %s)\n",
-                __FUNCTION__, outpath, strerror(errno));
-        return -2;
-    }
+   /* Securely create archive without following symlinks */
+    int fd = open(outpath,
+                   O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW,
+                    0600);
+    if (fd < 0) {
+        RDK_LOG(RDK_LOG_ERROR,
+                LOG_REMDEBUG,
+                "[%s] Failed to create archive file: %s (error: %s)\n",
+                __FUNCTION__,
+                outpath,
+                strerror(errno));
+         return -2;
+     }
+
+    gzFile out = gzdopen(fd, "wb");
+    if (!out)
+    {
+         RDK_LOG(RDK_LOG_ERROR,
+                 LOG_REMDEBUG,
+                 "[%s] Failed to create gzip stream for %s\n",
+                 __FUNCTION__,
+                 outpath);
+         close(fd);
+         return -2;
+     }
 
     /* If source_dir itself is a file, archive that single file preserving its name as '.' replacement */
     struct stat stroot;

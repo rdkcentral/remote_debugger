@@ -4359,6 +4359,21 @@ TEST_F(GetIssueCommandInfoTest, ReturnsValidStruct) {
 }
 
 TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
+    system("mkdir -p /etc/rrd");
+
+    FILE *fp = fopen("/etc/rrd/remote_debugger.json", "w");
+    ASSERT_NE(fp, nullptr);
+
+    fprintf(fp,
+        "{"
+        "\"Sanity\":{"
+            "\"Check\":{"
+                "\"Commands\":[\"kill\"]"
+            "}"
+        "}"
+        "}");
+
+    fclose(fp);
     const char* jsonstr = R"({
         "categoryB": {
             "typeX": [ "echo only" ]
@@ -4388,6 +4403,7 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
 
     FreeIssueData(result);
     cJSON_Delete(root);
+    remove("/etc/rrd/remote_debugger.json");
 }
 
 
@@ -4612,7 +4628,36 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
     remove(full_path);
 }
 
+TEST_F(RRDUploadOrchestrationTest, ArchiveCreationRejectsSymlink)
+{
+    char target_file[256];
+    snprintf(target_file, sizeof(target_file),
+             "%sreal_file.txt", rrd_log_dir);
 
+    FILE *fp = fopen(target_file, "w");
+    ASSERT_NE(fp, nullptr);
+    fclose(fp);
+
+    const char *archive_filename = "symlink_archive.tgz";
+
+    char symlink_path[256];
+    snprintf(symlink_path,
+             sizeof(symlink_path),
+             "%s%s",
+             rrd_log_dir,
+             archive_filename);
+
+    ASSERT_EQ(symlink(target_file, symlink_path), 0);
+
+    int result = rrd_archive_create(test_dir,
+                                    rrd_log_dir,
+                                    archive_filename);
+
+    EXPECT_NE(result, 0);
+
+    unlink(symlink_path);
+    unlink(target_file);
+}
 
 // Test: File operations
 TEST_F(RRDUploadOrchestrationTest, FileOperations) {
