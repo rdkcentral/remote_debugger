@@ -317,7 +317,7 @@ int rrd_archive_create(const char *source_dir, const char *working_dir, const ch
 
    /* Securely create archive without following symlinks */
     int fd = open(outpath,
-                   O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW,
+                   O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW,
                     0600);
     if (fd < 0) {
         RDK_LOG(RDK_LOG_ERROR,
