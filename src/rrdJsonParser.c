@@ -209,6 +209,7 @@ char * readJsonFile(char *jsonfile)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Failed to read json file %s. Expected %d bytes, read %zu bytes \n",__FUNCTION__,__LINE__,jsonfile,ch_count,bytes_read);
         free(jsonfile_content);
+		jsonfile_content = NULL;
         fclose(fp);
         return NULL;
     }
@@ -245,12 +246,14 @@ cJSON *readAndParseJSON(char *jsonFile)
         // Parse Failure
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s Parse Failed...!!\n",__FUNCTION__,__LINE__,jsonFile);
         free(file_content);     // free file content received from readJsonFile
+		file_content = NULL;
         return NULL;
     }
     else
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Json File parse Success... %s\n",__FUNCTION__,__LINE__,jsonFile);
         free(file_content);
+		file_content = NULL;
         return jsoncfg;
     }
 }
@@ -431,6 +434,7 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
                 if(issuestdata->command != NULL)
                 {
                     free(issuestdata->command); // Free previous command before overwriting
+					issuestdata->command = NULL;
                 }
                 issuestdata->command = strdup(tmpCommand);   // print command info from json file
                 cJSON_free(tmpCommand);
@@ -553,6 +557,7 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: No Commands found, exiting.. \n",__FUNCTION__,__LINE__);
         free(issuestdata);
+		issuestdata = NULL;
     }
     else
     {
@@ -576,7 +581,9 @@ bool invokeSanityandCommandExec(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         {
             RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Aborting Command execution due to Harmful commands!!!\n",__FUNCTION__,__LINE__);
             free(issuestdata->command);
+			issuestdata->command = NULL;
             free(issuestdata);
+			issuestdata = NULL;
         }
         else
         { 
@@ -1026,6 +1033,7 @@ bool lookupRrdProfileList(const char *profile)
         token = strtok(NULL, ",");
     }
     free(profiles);
+	profiles = NULL;
     return false;
 }
 

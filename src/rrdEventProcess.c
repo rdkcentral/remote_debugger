@@ -227,12 +227,15 @@ static void processIssueType(data_buf *rbuf)
                             if (dynamicprofiledata->rfcvalue != NULL)
                             {
                                 free(dynamicprofiledata->rfcvalue);
+								dynamicprofiledata->rfcvalue = NULL;
                             }
                             if (dynamicprofiledata->command != NULL)
                             {
                                 free(dynamicprofiledata->command);
+								dynamicprofiledata->command = NULL;
                             }
                             free(dynamicprofiledata);
+							dynamicprofiledata = NULL;
                         }
                     }
                     else
@@ -249,12 +252,15 @@ static void processIssueType(data_buf *rbuf)
                                 if (dynamicprofiledata->rfcvalue != NULL)
                                 {
                                     free(dynamicprofiledata->rfcvalue);
+									dynamicprofiledata->rfcvalue = NULL;
                                 }
                                 if (dynamicprofiledata->command != NULL)
                                 {
                                     free(dynamicprofiledata->command);
+									dynamicprofiledata->command = NULL;
                                 }
                                 free(dynamicprofiledata);
+								dynamicprofiledata = NULL;
                             }
                             // Free staticprofiledata
                             if (staticprofiledata != NULL)
@@ -262,12 +268,15 @@ static void processIssueType(data_buf *rbuf)
                                 if (staticprofiledata->rfcvalue != NULL)
                                 {
                                     free(staticprofiledata->rfcvalue);
+									staticprofiledata->rfcvalue = NULL;
                                 }
                                 if (staticprofiledata->command != NULL)
                                 {
                                     free(staticprofiledata->command);
+									staticprofiledata->command = NULL;
                                 }
                                 free(staticprofiledata);
+								staticprofiledata = NULL;
                             }
                         }
                         else
@@ -294,10 +303,12 @@ static void processIssueType(data_buf *rbuf)
                                     if (staticprofiledata->rfcvalue != NULL)
                                     {
                                         free(staticprofiledata->rfcvalue);
+										staticprofiledata->rfcvalue = NULL;
                                     }
                                     if (staticprofiledata->command != NULL)
                                     {
                                         free(staticprofiledata->command);
+										staticprofiledata->command = NULL;
                                     }
                                     free(staticprofiledata);
                                     staticprofiledata = NULL; // Set to NULL to prevent double-free
@@ -308,10 +319,12 @@ static void processIssueType(data_buf *rbuf)
                                     if (dynamicprofiledata->rfcvalue != NULL)
                                     {
                                         free(dynamicprofiledata->rfcvalue);
+										dynamicprofiledata->rfcvalue = NULL;
                                     }
                                     if (dynamicprofiledata->command != NULL)
                                     {
                                         free(dynamicprofiledata->command);
+										dynamicprofiledata->command = NULL;
                                     }
                                     free(dynamicprofiledata);
                                     dynamicprofiledata = NULL; // Set to NULL to prevent double-free
@@ -333,12 +346,15 @@ static void processIssueType(data_buf *rbuf)
                                 if (dynamicprofiledata->rfcvalue != NULL)
                                 {
                                     free(dynamicprofiledata->rfcvalue);
+									dynamicprofiledata->rfcvalue = NULL;
                                 }
                                 if (dynamicprofiledata->command != NULL)
                                 {
                                     free(dynamicprofiledata->command);
+									dynamicprofiledata->command = NULL;
                                 }
                                 free(dynamicprofiledata);
+								dynamicprofiledata = NULL;
                             }
                         }
                     }
@@ -522,6 +538,7 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     }
 
     freeParsedJson(jsonParsed);
+	jsonParsed = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
@@ -586,6 +603,7 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
         }
     }
     freeParsedJson(jsonParsed);
+	jsonParsed = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return dynamicdata;
@@ -623,6 +641,7 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
     }
 
     freeParsedJson(jsonParsed);
+	jsonParsed = NULL;
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return staticdata;
@@ -728,7 +747,8 @@ static void processIssueTypeInInstalledPackage(data_buf *rbuf, issueNodeData *pI
         }
     }
     freeParsedJson(jsonParsed);
-
+    jsonParsed = NULL;
+	
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
 }

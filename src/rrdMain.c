@@ -82,6 +82,7 @@ void *RRDEventThreadFunc(void *arg)
         default:
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid Message Type %d!!!\n", __FUNCTION__, __LINE__, rbuf->mtype);
             free(rbuf->mdata);
+			rbuf->mdata = NULL;
             free(rbuf);
             break;
         }

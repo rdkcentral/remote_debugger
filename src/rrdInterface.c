@@ -304,17 +304,21 @@ void RRD_data_buff_deAlloc(data_buf *sbuf)
         if (sbuf->mdata)
         {
             free(sbuf->mdata);
+			sbuf->mdata = NULL;
         }
 
         if (sbuf->jsonPath)
         {
             free(sbuf->jsonPath);
+			sbuf->jsonPath = NULL;
         }
         if (sbuf->suffix)
         {
             free(sbuf->suffix);
+			sbuf->suffix = NULL;
         }
         free(sbuf);
+		sbuf = NULL;
     }
 }
 
@@ -422,7 +426,9 @@ void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbu
     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Package not requested... %s \n", __FUNCTION__, __LINE__, pkg_name);
     }
     free(pkg_name);
+	pkg_name = NULL;
     free(pkg_inst_path);
+	pkg_inst_path = NULL;
 }
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription)
 {
@@ -458,6 +464,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
     {
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Message Received is empty, Exit Processing!!! \n", __FUNCTION__, __LINE__);
         free(dataMsg);
+		dataMsg = NULL;
     }
     else
     {
@@ -485,6 +492,7 @@ void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, 
         else
         {
             free(dataMsg);
+			dataMsg = NULL;
         }
     #else
         pushIssueTypesToMsgQueue(dataMsg, EVENT_MSG);
@@ -870,6 +878,7 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
     if (!json) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to parse JSON from %s\n", __FUNCTION__, __LINE__, filename);
         free(jsonBuffer);
+		jsonBuffer = NULL;
         return RBUS_ERROR_BUS_ERROR;
     }
     
@@ -895,6 +904,7 @@ rbusError_t rrd_GetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHand
     // Cleanup
     cJSON_Delete(json);
     free(jsonBuffer);
+	jsonBuffer = NULL;
     cJSON_free(result_str);
     
     return error;
