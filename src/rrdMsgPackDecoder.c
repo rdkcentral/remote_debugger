@@ -253,9 +253,11 @@ void remotedebuggerdoc_destroy(remotedebuggerdoc_t *ld)
         {
 	    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Free subdoc name. \n", __FUNCTION__, __LINE__);
             free(ld->subdoc_name);
+			ld->subdoc_name = NULL;
         }
 	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Free structure pointer %p. \n", __FUNCTION__, __LINE__,(void *)ld);
         free(ld);
+		ld = NULL;
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Remote Debugger SubDoc Destroyed. \n", __FUNCTION__, __LINE__);
     }
 }
