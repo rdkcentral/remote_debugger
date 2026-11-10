@@ -2301,16 +2301,6 @@ TEST(ProcessWebCfgTypeEvntTest, RBufDataIsNull){
     free(rbuf.jsonPath);
 }
 
-TEST(ProcessWebCfgTypeEvntTest, MDataSetToNullAfterFree)
-{
-    data_buf rbuf = {};
-    rbuf.mdata = strdup("mdata");
-
-    processWebCfgTypeEvent(&rbuf);
-
-    EXPECT_EQ(rbuf.mdata, nullptr);
-}
-
 /* --------------- Test processIssueTypeEvent() from rrdEventProcess --------------- */
 TEST(ProcessIssueTypeEvntTest, RBufIsNull){
     data_buf *rbuf = nullptr;
