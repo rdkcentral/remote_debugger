@@ -84,7 +84,6 @@ void *RRDEventThreadFunc(void *arg)
             free(rbuf->mdata);
 			rbuf->mdata = NULL;
             free(rbuf);
-			rbuf = NULL;
             break;
         }
 #if GTEST_ENABLE
