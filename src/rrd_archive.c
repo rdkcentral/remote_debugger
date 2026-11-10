@@ -171,12 +171,14 @@ static int write_file_contents(gzFile out, const char *path, const struct stat *
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to write file data: %s\n",
                     __FUNCTION__, path);
             free(buf);
+            buf = NULL;
             close(fd);
             return -1;
         }
         remaining -= (unsigned long long)r;
     }
     free(buf);
+    buf = NULL;
     close(fd);
     if (r < 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to read file: %s (error: %s)\n",
@@ -236,7 +238,9 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
         if (!relname || !childpath) {
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to allocate memory\n", __FUNCTION__);
             free(relname);
+            relname = NULL;
             free(childpath);
+            childpath = NULL;
             closedir(d);
             return -1;
         }
@@ -250,7 +254,9 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s] Failed to stat child: %s (error: %s)\n",
                     __FUNCTION__, childpath, strerror(errno));
             free(relname);
+            relname = NULL;
             free(childpath);
+            childpath = NULL;
             closedir(d);
             return -1;
         }
@@ -261,39 +267,51 @@ static int archive_path_recursive(gzFile out, const char *source_root, const cha
             snprintf(dirtarname, sizeof(dirtarname), "%s/", relname);
             if (write_tar_header(out, dirtarname, &st, '5') != 0) { 
                 free(relname);
+                relname = NULL;
                 free(childpath);
+                childpath = NULL;
                 closedir(d); 
                 return -1; 
             }
             /* recurse into directory */
             if (archive_path_recursive(out, source_root, relname) != 0) { 
                 free(relname);
+                relname = NULL;
                 free(childpath);
+                childpath = NULL;
                 closedir(d); 
                 return -1; 
             }
         } else if (S_ISREG(st.st_mode)) {
             if (write_tar_header(out, relname, &st, '0') != 0) { 
                 free(relname);
+                relname = NULL;
                 free(childpath);
+                childpath = NULL;
                 closedir(d); 
                 return -1; 
             }
             if (write_file_contents(out, childpath, &st) != 0) { 
                 free(relname);
+                relname = NULL;
                 free(childpath);
+                childpath = NULL;
                 closedir(d); 
                 return -1; 
             }
         } else {
             /* ignore symlinks and special files for this minimal impl */
             free(relname);
+            relname = NULL;
             free(childpath);
+            childpath = NULL;
             continue;
         }
         
         free(relname);
+        relname = NULL;
         free(childpath);
+        childpath = NULL;
     }
     closedir(d);
     return 0;
