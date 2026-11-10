@@ -309,9 +309,12 @@ bool executeCommands(issueData *cmdinfo)
         {
            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,dirname);
            free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
-           free(cmdData->command); // free command received from RRDEventThreadFunc
-           free(cmdData); // free structure with command and time information
-           return false;
+           cmdData->rfcvalue = NULL;
+		   free(cmdData->command); // free command received from RRDEventThreadFunc
+           cmdData->command = NULL;
+		   free(cmdData); // free structure with command and time information
+           cmdData = NULL;
+		   return false;
         }
         else
         {
@@ -339,8 +342,10 @@ bool executeCommands(issueData *cmdinfo)
                     /* Fix for warning Wformat-overflow : directive argument is null */
                     RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Invalid Location found for command:\n",__FUNCTION__,__LINE__);
                     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
-                    free(cmdData); // free structure with command and time information
-                    return false;
+                    cmdData->rfcvalue = NULL;
+					free(cmdData); // free structure with command and time information
+                    cmdData = NULL;
+					return false;
                 }
                 else
                 {
@@ -362,9 +367,12 @@ bool executeCommands(issueData *cmdinfo)
             {
                 RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Unable to Open File:%s\n",__FUNCTION__,__LINE__,finalOutFile);
                 free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
-                free(cmdData->command); // free command received from RRDEventThreadFunc
-                free(cmdData); // free structure with command and time information
-                return false;
+                cmdData->rfcvalue = NULL;
+				free(cmdData->command); // free command received from RRDEventThreadFunc
+                cmdData->command = NULL;
+				free(cmdData); // free structure with command and time information
+                cmdData = NULL;
+				return false;
             }
 
             /*Printing Command Details into Output file*/
@@ -373,7 +381,8 @@ bool executeCommands(issueData *cmdinfo)
             fprintf(filePointer, "%s\n", printbuffer);
             RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: PrintBuffer: %s\n",__FUNCTION__,__LINE__,printbuffer);
             free(printbuffer); // free echo message memory
-
+            printbuffer = NULL;
+			
             /*Executing Commands using systemd-run*/
             RDK_LOG(RDK_LOG_INFO,LOG_REMDEBUG,"[%s:%d]: Executing following commands using systemd-run:\n \"%s\"\n",__FUNCTION__,__LINE__,cmdData->command);
             time_t epochTime = time(NULL);
@@ -418,14 +427,19 @@ bool executeCommands(issueData *cmdinfo)
 #if !defined(GTEST_ENABLE)
 	    v_secure_system("systemctl stop %s", remoteDebuggerServiceStr);
             free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
-            free(cmdData->command); // free updated command info received from RRDEventThreadFunc
-            free(cmdData);
+            cmdData->rfcvalue = NULL;
+			free(cmdData->command); // free updated command info received from RRDEventThreadFunc
+            cmdData->command = NULL;
+			free(cmdData);
+			cmdData = NULL;
 #endif
             return true;
         }
     }
     free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
-    free(cmdData);
+    cmdData->rfcvalue = NULL;
+	free(cmdData);
+	cmdData = NULL;
     return false;
 }
 
