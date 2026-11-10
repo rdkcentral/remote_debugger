@@ -527,6 +527,8 @@ static void processIssueTypeInStaticProfile(data_buf *rbuf, issueNodeData *pIssu
     return;
 }
 
+
+
 issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode)
 {
     issueData *dynamicdata = NULL;
@@ -575,10 +577,21 @@ issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData 
             // Issue Data in Dynamic Profile JSON
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Issue Data Node:%s and Sub-Node:%s found in Dynamic JSON File %s...\n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, dynJSONPath);
             free(dynJSONPath);
+			dynJSONPath = NULL;
             // Get the command for received Issue Type of the Issue Category
             dynamicdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-            RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
-        }
+			/* Guard getIssueCommandInfo() return value before dereferencing.
+             * Prevents NULL pointer crashes when command extraction fails.
+             */
+            if (dynamicdata == NULL)
+            {
+               RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to get issue command info from Dynamic JSON\n", __FUNCTION__, __LINE__);
+             }
+             else
+             {
+                RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, dynamicdata->rfcvalue, dynamicdata->command, dynamicdata->timeout);
+              }
+		}
         else
         {
             // Issue Data not in Dynamic Profile JSON
@@ -615,8 +628,15 @@ issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Issue Data Node: %s and Sub-Node: %s found in Static JSON File %s... \n", __FUNCTION__, __LINE__, pIssueNode->Node, pIssueNode->subNode, RRD_JSON_FILE);
         // Get the command for received Issue Type of the Issue Category
         staticdata = getIssueCommandInfo(pIssueNode, jsonParsed, rbuf->mdata);
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n", __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
-    }
+        if (staticdata == NULL)
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Failed to get issue command info from Static JSON\n", __FUNCTION__, __LINE__);
+         }
+        else
+        {
+             RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Static Profile Data: RFCValue: %s, Command: %s, Timeout: %d... \n",  __FUNCTION__, __LINE__, staticdata->rfcvalue, staticdata->command, staticdata->timeout);
+         }
+	}
     else
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d] Issue Data Not found in Static JSON File... \n", __FUNCTION__, __LINE__);
