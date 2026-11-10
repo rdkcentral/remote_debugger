@@ -102,6 +102,7 @@ char *replaceRRDLocation(char* commandStr, char* dirLocation)
     }
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Command to be executed: %s \n",__FUNCTION__,__LINE__,data);
     free(commandStr); // free old command received with MACRO
+    commandStr = NULL;
     commandStr = (char *) data; // Update new command to the argument
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Copying updated command to argument: %s \n",__FUNCTION__,__LINE__,commandStr);
 
