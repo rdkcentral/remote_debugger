@@ -2841,7 +2841,6 @@ protected:
     void SetUp() override
     {
         string test_name = getCurrentTestName();
-        //Creates a queue for WebCfgDataStringCopiedCorrectly as well
         if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
         {
             msqid_cpy = msqid;
@@ -2854,7 +2853,6 @@ protected:
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        //Creates a queue for WebCfgDataStringCopiedCorrectly as well
         if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
         {
             int ret = msgctl(msqid, IPC_RMID, nullptr);
