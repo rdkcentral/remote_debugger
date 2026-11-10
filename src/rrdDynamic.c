@@ -273,13 +273,16 @@ void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSON
                         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Setting Parameters failed...\n", __FUNCTION__, __LINE__);
                     }
                     free(msgDataString);
+					msgDataString = NULL;
 		    free(appendData);
+			appendData = NULL;
                 }
                 else
                 {
                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed for Request RDM Manager Download.\n", __FUNCTION__, __LINE__);
                 }
                 free(paramString);
+				paramString = NULL;
             }
             else
             {
@@ -328,6 +331,7 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
             RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic Profile JSON Not Found... \n", __FUNCTION__, __LINE__);
 #if !defined(GTEST_ENABLE)
             free(rbuf->mdata);
+			rbuf->mdata = NULL;
 #else
             if (rbuf->mdata) {
                 free(rbuf->mdata);
@@ -346,7 +350,9 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Dynamic JSON Parse/Read failed... %s\n", __FUNCTION__, __LINE__, rbuf->jsonPath);
 #if !defined(GTEST_ENABLE)
                 free(rbuf->mdata);
+				rbuf->mdata = NULL;
                 free(rbuf->jsonPath);
+			    rbuf->jsonPath = NULL;
 #else
                 if (rbuf->mdata) {
                     free(rbuf->mdata);
@@ -368,7 +374,9 @@ char *RRDCheckIssueInDynamicProfile(data_buf *rbuf, issueNodeData *issueStructNo
                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Issue Data not found in Dynamic JSON %s... \n", __FUNCTION__, __LINE__, rbuf->jsonPath);
 #if !defined(GTEST_ENABLE)
                     free(rbuf->mdata);
+					rbuf->mdata = NULL;
                     free(rbuf->jsonPath);
+					rbuf->jsonPath = NULL;
                     free(jsonParsed);
                     jsonParsed = NULL;
 #else
