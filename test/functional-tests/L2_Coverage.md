@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.3% (1536 of 3118 lines) |
+| Line coverage (lcov) | 49.3% (1536 of 3117 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -112,7 +112,7 @@
 
 | Module | Lines | Functions | Coverage Bar |
 |---|:---:|:---:|---|
-| `rrdMain.c` | 58.5% (38/65) | 75.0% (3/4) | `████████████░░░░░░░░` |
+| `rrdMain.c` | 59.4% (38/64) | 75.0% (3/4) | `████████████░░░░░░░░` |
 | `rrdInterface.c` | 44.0% (193/439) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
 | `rrdEventProcess.c` | 67.8% (250/369) | 81.8% (9/11) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 81.3% (409/503) | 86.7% (13/15) | `████████████████░░░░` |
