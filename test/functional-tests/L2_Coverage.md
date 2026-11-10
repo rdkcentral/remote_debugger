@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.4% (1515 of 3064 lines) |
+| Line coverage (lcov) | 49.5% (1518 of 3069 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -114,7 +114,7 @@
 |---|:---:|:---:|---|
 | `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
 | `rrdInterface.c` | 44.0% (189/430) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
-| `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | `██████████████░░░░░░` |
+| `rrdEventProcess.c` | 68.6% (243/354) | 81.8% (9/11) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 79.0% (411/520) | 86.7% (13/15) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
 | `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
