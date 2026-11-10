@@ -32,7 +32,7 @@ extern "C"
 
 int updateBackgroundCmd(char * str);
 char *replaceRRDLocation(char* commandStr, char* dirLocation);
-int isCommandsValid(char *issuecmd,cJSON *sanitylist);
+int isCommandsValid(char *issuecmd);
 
 #ifdef __cplusplus
 }
