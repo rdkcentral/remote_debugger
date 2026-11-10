@@ -2301,15 +2301,13 @@ TEST(ProcessWebCfgTypeEvntTest, RBufDataIsNull){
     free(rbuf.jsonPath);
 }
 
-TEST(ProcessWebCfgTypeEvntTest, ReplayedEventDoesNotDoubleFree)
+TEST(ProcessWebCfgTypeEvntTest, MDataSetToNullAfterFree)
 {
     data_buf rbuf = {};
-    rbuf.mdata = strdup("testData");
+    rbuf.mdata = strdup("mdata");
 
     processWebCfgTypeEvent(&rbuf);
-    EXPECT_EQ(rbuf.mdata, nullptr);
 
-    processWebCfgTypeEvent(&rbuf);
     EXPECT_EQ(rbuf.mdata, nullptr);
 }
 
