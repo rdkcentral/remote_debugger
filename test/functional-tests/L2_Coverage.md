@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-11-09  
+**Generated:** 2026-11-10  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.0% (1464 of 2989 lines) |
+| Line coverage (lcov) | 49.0% (1466 of 2994 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -124,7 +124,7 @@
 | `rrd_config.c` | 42.8% (95/222) | 66.7% (6/9) | `█████████░░░░░░░░░░░` |
 | `rrd_sysinfo.c` | 31.2% (35/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
-| `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
+| `rrd_archive.c` | 47.1% (128/272) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
 | `rrd_upload.c` | 40.7% (37/91) | 60.0% (3/5) | `████████░░░░░░░░░░░░` |
 | `rrdIarmEvents.c` | 8.6% (12/140) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
 | `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
