@@ -2841,7 +2841,8 @@ protected:
     void SetUp() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        //Creates a queue for WebCfgDataStringCopiedCorrectly as well
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess" || test_name == "WebCfgDataStringCopiedCorrectly")
         {
             msqid_cpy = msqid;
             key_cpy = key;
@@ -2853,7 +2854,8 @@ protected:
     void TearDown() override
     {
         string test_name = getCurrentTestName();
-        if (test_name == "TestPushIssueTypesToMsgQueueSuccess")
+        //Creates a queue for WebCfgDataStringCopiedCorrectly as well
+        if (test_name == "TestPushIssueTypesToMsgQueueSuccess" || test_name == "WebCfgDataStringCopiedCorrectly")
         {
             int ret = msgctl(msqid, IPC_RMID, nullptr);
             ASSERT_NE(ret, -1) << "Error removing message queue used for testing";
