@@ -142,4 +142,3 @@
     "- **Coverage run:** `kill_rrd()` sends `SIGTERM` when `RRD_COVERAGE_MODE` is set so gcov flushes"
   ]
 }
-~
