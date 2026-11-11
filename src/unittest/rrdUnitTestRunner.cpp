@@ -3263,25 +3263,6 @@ TEST(FinderTest, KeyTypeStrExpectTypeMatch)
     EXPECT_STREQ(result->via.str.ptr, "value");
 }
 
-TEST(FinderTest, KeyTypeStrValTypeStrMatch)
-{
-    msgpack_object_map map;
-    msgpack_object_kv kv;
-    kv.key.type = MSGPACK_OBJECT_STR;
-    kv.key.via.str.ptr = "name";
-    kv.key.via.str.size = strlen("name");
-    kv.val.type = MSGPACK_OBJECT_STR;
-    kv.val.via.str.ptr = "value";
-    kv.val.via.str.size = strlen("value");
-    map.size = 1;
-    map.ptr = &kv;
-    msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
-
-    ASSERT_NE(result, nullptr);
-    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
-    EXPECT_STREQ(result->via.str.ptr, "value");
-}
-
 TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 {
     msgpack_object_map map;
@@ -3298,6 +3279,30 @@ TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
     EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
 }
 
+TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "version";
+    kv.key.via.str.size = strlen("version");
+
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.str.ptr = "abc";
+    kv.val.via.str.size = strlen("abc");
+
+    map.size = 1;
+    map.ptr = &kv;
+
+    msgpack_object *result =
+        __finder("version",
+                 MSGPACK_OBJECT_POSITIVE_INTEGER,
+                 &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
 TEST(GetMsgpackUnpackStatusTest, DecodedbufIsNullAndSizeIsZero)
 {
