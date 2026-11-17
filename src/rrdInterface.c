@@ -21,6 +21,7 @@
 #include "rrdInterface.h"
 #include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
+#include "rrdJsonParser.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -510,12 +511,22 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
 			                        rbusValue_ToString(value, NULL, 0));
-        int len = strlen(rbusValue_GetString(value, NULL));
-        inString = (char *)calloc(1, len);
+        const char *webcfgData = rbusValue_GetString(value, NULL);
+        if (webcfgData == NULL)
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: WebConfig value is not a string\n", __FUNCTION__, __LINE__);
+            return;
+        }
+        size_t len = strlen(webcfgData);
+        inString = (char *)calloc(len + 1, sizeof(char));
         if(inString)
         {
-            strncpy(inString, rbusValue_GetString(value, NULL), len);
+            memcpy(inString, webcfgData, len);
             pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory allocation failed for WebConfig value\n", __FUNCTION__, __LINE__);
         }
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
@@ -686,13 +697,13 @@ bool has_direct_commands(cJSON *category)
  */
 char* read_profile_json_file(const char* filename, long* file_size)
 {
-    if (file_size == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: file_size is NULL\n", __FUNCTION__, __LINE__);
+    if (filename == NULL || file_size == NULL) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: filename or file_size is NULL\n", __FUNCTION__, __LINE__);
         return NULL;
     }
 
     *file_size = 0;
-    FILE *fp = fopen(filename, "rb");
+    FILE *fp = rrd_open_profile_file(filename);
     if (!fp) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
         return NULL;

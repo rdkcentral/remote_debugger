@@ -37,7 +37,10 @@ typedef enum {
 } rrd_nodes_t;
 
 int getParamcount(char *str);
-char* readJsonFile(char *jsonfile);
+/* Requires root/euid ownership and no group/other writes (sticky directories excepted).
+ * Rejects symlinks in every component; caller owns the stream and must fclose(). */
+FILE *rrd_open_profile_file(const char *path);
+char* readJsonFile(const char *jsonfile);
 cJSON* readAndParseJSON(char *jsonFile);
 void getIssueInfo(char *issuestr, issueNodeData *issue);
 bool findIssueInParsedJSON(issueNodeData *issuestructNode, cJSON *jsoncfg);

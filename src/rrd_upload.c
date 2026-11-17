@@ -18,6 +18,10 @@
  * limitations under the License.
  */
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
+
 #include "rrd_upload.h"
 #include "rrdCommon.h"
 
@@ -26,6 +30,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ftw.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <fcntl.h>
@@ -164,6 +169,7 @@ int rrd_upload_wait_for_lock(int max_attempts, int wait_seconds) {
 // Cleanup files after upload (matching shell script line 139 and 143)
 int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir) {
     int ret = 0;
+    int source_ret = 0;
     
     // Remove archive file
     if (archive_path) {
@@ -176,31 +182,84 @@ int rrd_upload_cleanup_files(const char *archive_path, const char *source_dir) {
         }
     }
     
-    // Remove source directory (matching shell script rm -rf $RRD_LOG_PATH)
+    // Remove source directory with the filesystem cleanup routine.
     if (source_dir) {
-        rrd_upload_cleanup_source_dir(source_dir);
+        source_ret = rrd_upload_cleanup_source_dir(source_dir);
     }
     
-    return (ret == 0 || !archive_path) ? 0 : -1;
+    return (ret == 0 || !archive_path) && source_ret == 0 ? 0 : -1;
 }
 
-// Recursively remove source directory
-int rrd_upload_cleanup_source_dir(const char *dir_path) {
-    if (!dir_path) return -1;
-    
-    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Removing source directory: %s\n", __FUNCTION__, dir_path);
-    
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "rm -rf %s", dir_path);
-    
-    int ret = system(cmd);
-    if (ret == 0) {
-        RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Successfully removed source directory: %s\n", 
-                __FUNCTION__, dir_path);
-        return 0;
-    } else {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to remove source directory: %s (ret: %d)\n", 
-                __FUNCTION__, dir_path, ret);
+static int rrd_upload_remove_entry(const char *path, const struct stat *st,
+                                   int type, struct FTW *info)
+{
+    (void)st;
+    (void)info;
+    if (type == FTW_NS || type == FTW_DNR) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot traverse %s (errno: %d)\n",
+                __FUNCTION__, path, errno);
         return -1;
     }
+    if (remove(path) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to remove %s (errno: %d)\n",
+                __FUNCTION__, path, errno);
+        return -1;
+    }
+    return 0;
+}
+
+static bool rrd_upload_is_report_source_dir(const char *dir_path)
+{
+    static const char report_root[] = "/tmp/rrd/";
+    const size_t report_root_len = sizeof(report_root) - 1;
+
+    if (strncmp(dir_path, report_root, report_root_len) != 0) {
+        return false;
+    }
+
+    const char *name = dir_path + report_root_len;
+    return name[0] != '\0' && strchr(name, '/') == NULL &&
+           strcmp(name, ".") != 0 && strcmp(name, "..") != 0;
+}
+
+int rrd_upload_cleanup_source_dir(const char *dir_path)
+{
+    if (!dir_path || dir_path[0] == '\0') {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Invalid source directory path\n", __FUNCTION__);
+        return -1;
+    }
+
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Removing source directory: %s\n", __FUNCTION__, dir_path);
+
+    if (!rrd_upload_is_report_source_dir(dir_path)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Refusing to remove path outside report directory: %s\n",
+                __FUNCTION__, dir_path);
+        return -1;
+    }
+
+    struct stat st;
+    if (lstat(dir_path, &st) != 0) {
+        if (errno == ENOENT) {
+            return 0;
+        }
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to inspect source directory %s (errno: %d)\n",
+                __FUNCTION__, dir_path, errno);
+        return -1;
+    }
+
+    if (!S_ISDIR(st.st_mode)) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Source path is not a directory: %s\n",
+                __FUNCTION__, dir_path);
+        return -1;
+    }
+
+    if (nftw(dir_path, rrd_upload_remove_entry, 8, FTW_DEPTH | FTW_PHYS) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to remove source directory %s (errno: %d)\n",
+                __FUNCTION__, dir_path, errno);
+        return -1;
+    }
+
+    RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "%s: Successfully removed source directory: %s\n",
+            __FUNCTION__, dir_path);
+    return 0;
 }
