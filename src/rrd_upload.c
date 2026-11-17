@@ -237,21 +237,30 @@ int rrd_upload_cleanup_source_dir(const char *dir_path)
         return -1;
     }
 
+    int fd = open(dir_path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+    if (fd < 0) {
+       if (errno == ENOENT) {
+           return 0;
+       }
+       return -1;
+     }
+
     struct stat st;
-    if (lstat(dir_path, &st) != 0) {
-        if (errno == ENOENT) {
-            return 0;
-        }
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to inspect source directory %s (errno: %d)\n",
+    if (fstat(fd, &st) != 0) {
+            close(fd);
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to inspect source directory %s (errno: %d)\n",
                 __FUNCTION__, dir_path, errno);
-        return -1;
-    }
+            return -1;
+        }
 
     if (!S_ISDIR(st.st_mode)) {
+        close(fd);
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Source path is not a directory: %s\n",
                 __FUNCTION__, dir_path);
         return -1;
     }
+
+    close(fd);
 
     if (nftw(dir_path, rrd_upload_remove_entry, 8, FTW_DEPTH | FTW_PHYS) != 0) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Failed to remove source directory %s (errno: %d)\n",
