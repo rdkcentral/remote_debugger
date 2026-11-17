@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-30  
+**Generated:** 2026-11-17  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -8,18 +8,6 @@
 ---
 
 ## 1. Executive Summary
-
-**L2 Test Summary**
-
-| Metric | Value |
-|---|:---:|
-| Feature files | 22 |
-| Feature scenarios | 103 |
-| Pytest files | 23 |
-| Test functions (`test_*`) | 118 |
-| Mapped feature/test pairs | 19 / 22 |
-| Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1507 of 3034 lines) |
 
 **L2 Test Coverage**
 
@@ -44,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1508 of 3034 lines) |
+| Line coverage (lcov) | 49.7% (1507 of 3034 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
