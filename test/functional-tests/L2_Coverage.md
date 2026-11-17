@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.5% (1572 of 3175 lines) |
+| Line coverage (lcov) | 49.5% (1575 of 3182 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -125,7 +125,7 @@
 | `rrd_sysinfo.c` | 31.2% (35/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
 | `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
-| `rrd_upload.c` | 41.3% (50/121) | 71.4% (5/7) | `████████░░░░░░░░░░░░` |
+| `rrd_upload.c` | 41.4% (53/128) | 71.4% (5/7) | `████████░░░░░░░░░░░░` |
 | `rrdIarmEvents.c` | 8.0% (12/150) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
 | `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
 
