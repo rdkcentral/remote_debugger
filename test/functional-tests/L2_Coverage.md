@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |---|:---:|
-| Source functions found | 132 |
-| Functions hit | 80 |
+| Source functions found | 133 |
+| Functions hit | 81 |
 | Functions not hit | 52 |
-| Current functional coverage | 60.6% |
+| Current functional coverage | 60.9% |
 | Target L2 functional coverage | ~100% |
 
 > Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.5% (1575 of 3182 lines) |
+| Line coverage (lcov) | 49.5% (1574 of 3178 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -117,12 +117,12 @@
 | `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 81.7% (447/547) | 87.5% (14/16) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
-| `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
+| `rrdCommandSanity.c` | 95.6% (65/68) | 100.0% (4/4) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
 | `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
 | `rrdMsgPackDecoder.c` | 0.0% (0/309) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
 | `rrd_config.c` | 44.1% (105/238) | 70.0% (7/10) | `█████████░░░░░░░░░░░` |
-| `rrd_sysinfo.c` | 31.2% (35/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
+| `rrd_sysinfo.c` | 32.1% (36/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
 | `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
 | `rrd_upload.c` | 41.4% (53/128) | 71.4% (5/7) | `████████░░░░░░░░░░░░` |
