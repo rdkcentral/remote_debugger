@@ -152,8 +152,6 @@ static bool isBlockedCommand(const char *cmd)
 
     while (token)
     {
-        for (i = 0; g_blockedCommands[i] != NULL; i++)
-        {
             const char *compareToken = token;
             const char *base = strrchr(token, '/');
 
@@ -161,9 +159,11 @@ static bool isBlockedCommand(const char *cmd)
             {
                 compareToken = base + 1;
             }
-
+    for (i = 0; g_blockedCommands[i] != NULL; i++)
+        {
             if (strcmp(compareToken, g_blockedCommands[i]) == 0)
             {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d] blocked command detected: %s\n", __FUNCTION__, __LINE__, compareToken);
                 return true;
             }
         }
@@ -187,31 +187,18 @@ int isCommandsValid(char *issuecmd, cJSON *sanitylist)
 
     if (isBlockedCommand(issuecmd))
     {
-        RDK_LOG(RDK_LOG_ERROR,
-                LOG_REMDEBUG,
-                "[%s:%d]: Blocked command detected\n",
-                __FUNCTION__,
-                __LINE__);
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Blocked command detected\n", __FUNCTION__, __LINE__);
         return 1;
     }
 
     if (strchr(issuecmd, '&'))
     {
-        RDK_LOG(RDK_LOG_DEBUG,
-                LOG_REMDEBUG,
-                "[%s:%d]: Received Commands to execute in background...\n",
-                __FUNCTION__,
-                __LINE__);
-
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received Commands to execute in background...\n", __FUNCTION__, __LINE__);
         result = updateBackgroundCmd(issuecmd);
 
         if (result != 0)
         {
-            RDK_LOG(RDK_LOG_ERROR,
-                    LOG_REMDEBUG,
-                    "[%s:%d]: Removing special character failed!!!\n",
-                    __FUNCTION__,
-                    __LINE__);
+            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Removing special character failed!!!\n", __FUNCTION__, __LINE__);
             return 1;
         }
     }
