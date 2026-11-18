@@ -507,15 +507,14 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
         }
         else if(elem && elem->type == cJSON_String)
         {
-            tmpCommand = cJSON_Print(elem);
-            if(tmpCommand)
+            if (elem && cJSON_IsString(elem) && elem->valuestring)
             {
-                if(issuestdata->command != NULL)
+               if (issuestdata->command != NULL)
                 {
-                    free(issuestdata->command); // Free previous command before overwriting
+                   free(issuestdata->command);
                 }
-                issuestdata->command = strdup(tmpCommand);   // print command info from json file
-                cJSON_free(tmpCommand);
+
+                issuestdata->command = strdup(elem->valuestring);
             }
         }
     }
