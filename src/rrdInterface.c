@@ -508,27 +508,29 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_WEBCFG_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_WEBCFG_ISSUE_EVENT);
     if (value)
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
-			                        rbusValue_ToString(value, NULL, 0));
-        const char *webcfgData = rbusValue_GetString(value, NULL);
-        if (webcfgData == NULL)
+	{
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+            "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n",
+            __FUNCTION__, __LINE__,
+            rbusValue_ToString(value, NULL, 0));
+
+      const char *str = rbusValue_GetString(value, NULL);
+
+        if (str)
         {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: WebConfig value is not a string\n", __FUNCTION__, __LINE__);
-            return;
-        }
-        size_t len = strlen(webcfgData);
-        inString = (char *)calloc(len + 1, sizeof(char));
-        if(inString)
-        {
-            memcpy(inString, webcfgData, len);
-            pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
-        }
-        else
-        {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory allocation failed for WebConfig value\n", __FUNCTION__, __LINE__);
-        }
-    }
+            size_t len = strlen(str) + 1;
+
+             inString = (char *)calloc(1, len);
+
+            if (inString)
+            {
+                strncpy(inString, str, len - 1);
+                inString[len - 1] = '\0';
+
+                pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
+            }
+         }
+      }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
 }
 #endif
