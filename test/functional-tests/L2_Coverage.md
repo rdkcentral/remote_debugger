@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-11-10  
+**Generated:** 2026-11-18  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.6% (1510 of 3043 lines) |
+| Line coverage (lcov) | 48.7% (1545 of 3171 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -114,17 +114,17 @@
 |---|:---:|:---:|---|
 | `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
 | `rrdInterface.c` | 43.6% (189/433) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
-| `rrdEventProcess.c` | 68.6% (240/350) | 81.8% (9/11) | `██████████████░░░░░░` |
-| `rrdJsonParser.c` | 81.2% (406/500) | 86.7% (13/15) | `████████████████░░░░` |
+| `rrdEventProcess.c` | 67.7% (237/350) | 81.8% (9/11) | `██████████████░░░░░░` |
+| `rrdJsonParser.c` | 80.1% (419/523) | 87.5% (14/16) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
-| `rrdCommandSanity.c` | 95.6% (65/68) | 100.0% (4/4) | `███████████████████░` |
+| `rrdCommandSanity.c` | 95.7% (66/69) | 100.0% (4/4) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
 | `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
-| `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
-| `rrd_config.c` | 42.8% (95/222) | 66.7% (6/9) | `█████████░░░░░░░░░░░` |
-| `rrd_sysinfo.c` | 33.0% (37/112) | 33.3% (2/6) | `███████░░░░░░░░░░░░░` |
+| `rrdMsgPackDecoder.c` | 0.0% (0/320) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
+| `rrd_config.c` | 44.1% (105/238) | 70.0% (7/10) | `█████████░░░░░░░░░░░` |
+| `rrd_sysinfo.c` | 31.2% (35/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
-| `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
+| `rrd_archive.c` | 47.1% (128/272) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
 | `rrd_upload.c` | 41.4% (53/128) | 71.4% (5/7) | `████████░░░░░░░░░░░░` |
 | `rrdIarmEvents.c` | 8.0% (12/150) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
 | `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
