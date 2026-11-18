@@ -3448,9 +3448,6 @@ TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
     EXPECT_EQ(errno, MISSING_ENTRY);
 }
 
-    EXPECT_EQ(result, nullptr);
-    EXPECT_EQ(errno, MISSING_ENTRY);
-}
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
 TEST(GetMsgpackUnpackStatusTest, DecodedbufIsNullAndSizeIsZero)
 {
