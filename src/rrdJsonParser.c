@@ -27,6 +27,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 /* Maximum suffix length, including the leading '_' character. */
 #define RRD_MAX_SUFFIX_LEN  9
 
@@ -167,20 +170,103 @@ int getParamcount(char *str)
     return total_node;
 }
 
+FILE *rrd_open_profile_file(const char *path)
+{
+    char *path_copy = NULL;
+    char *saveptr = NULL;
+    int fd = -1;
+    int saved_errno;
+    FILE *fp = NULL;
+    bool directory = true;
+
+    if (!path || path[0] == '\0')
+    {
+        errno = EINVAL;
+        goto fail;
+    }
+    path_copy = strdup(path);
+    if (!path_copy)
+    {
+        goto fail;
+    }
+    fd = open(path[0] == '/' ? "/" : ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    for (char *component = strtok_r(path_copy, "/", &saveptr); ;)
+    {
+        struct stat st;
+        if (fd < 0 || fstat(fd, &st) != 0)
+        {
+            goto fail;
+        }
+        /* Sticky shared directories such as /tmp are allowed, but not untrusted descendants. */
+        if ((st.st_uid != 0 && st.st_uid != geteuid()) ||
+            (directory ? !S_ISDIR(st.st_mode) : !S_ISREG(st.st_mode)) ||
+            ((st.st_mode & (S_IWGRP | S_IWOTH)) && !(directory && (st.st_mode & S_ISVTX))))
+        {
+            errno = EPERM;
+            goto fail;
+        }
+        if (!directory)
+        {
+            break;
+        }
+        if (!component || strcmp(component, "..") == 0)
+        {
+            errno = EINVAL;
+            goto fail;
+        }
+        char *next = strtok_r(NULL, "/", &saveptr);
+        int child_fd = openat(fd, component, O_RDONLY | O_NOFOLLOW | O_CLOEXEC |
+                              (next ? O_DIRECTORY : O_NONBLOCK));
+        if (child_fd < 0)
+        {
+            goto fail;
+        }
+        close(fd);
+        fd = child_fd;
+        directory = next != NULL;
+        component = next;
+    }
+    fp = fdopen(fd, "r");
+    if (!fp)
+    {
+        goto fail;
+    }
+    free(path_copy);
+    return fp;
+
+fail:
+    saved_errno = errno;
+    if (fd >= 0)
+    {
+        close(fd);
+    }
+    free(path_copy);
+    RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Cannot securely open profile %s (errno: %d)\n",
+            __FUNCTION__, __LINE__, path ? path : "(null)", saved_errno);
+    errno = saved_errno;
+    return NULL;
+}
+
 /*
  * @function readJsonFile
  * @brief Reads the JSON file and stores the content in a character array.
- * @param char *jsonfile - The name of the JSON file whose content is to be read.
+ * @param const char *jsonfile - The name of the JSON file whose content is to be read.
  * @return char* - A string containing the JSON content, or NULL on failure.
  */
-char * readJsonFile(char *jsonfile)
+char * readJsonFile(const char *jsonfile)
 {
     FILE *fp = NULL;
     int ch_count = 0;
     char *jsonfile_content = NULL;
 
+    if (jsonfile == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Missing JSON profile path\n", __FUNCTION__, __LINE__);
+        return NULL;
+    }
+
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading json config file %s \n",__FUNCTION__,__LINE__,jsonfile);
-    fp = fopen(jsonfile, "r");
+    fp = rrd_open_profile_file(jsonfile);
     if (fp == NULL)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Json File %s Read Failed!!! \n",__FUNCTION__,__LINE__,jsonfile);
@@ -600,15 +686,26 @@ void checkIssueNodeInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, data_buf
     // Creating Directory for MainNode under /tmp/rrd Folder
     ctime = time (NULL);
     ltime = localtime (&ctime);
-    dlen=snprintf(outdir,BUF_LEN_256,"%s%s-DebugReport-",RRD_OUTPUT_DIR,issuestructNode->Node);
+    dlen=snprintf(outdir,sizeof(outdir),"%s%s-DebugReport-",RRD_OUTPUT_DIR,issuestructNode->Node);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: debug print issuestructNode->Node: %s !!! \n",__FUNCTION__,__LINE__, issuestructNode->Node);
     if ((strcmp(issuestructNode->Node, DEEP_SLEEP_STR) == 0)|| (strcmp(issuestructNode->Node, "deepsleep")== 0))
     {
         isDeepSleepAwakeEventValid = true;    
     }
+	if (dlen < 0 || dlen >= (int)sizeof(outdir))
+    {
+        RDK_LOG(RDK_LOG_ERROR,
+             LOG_REMDEBUG,
+            "[%s:%d]: Output path truncated\n",
+            __FUNCTION__,
+            __LINE__);
+		free(rfcbuf);
+        rfcbuf = NULL;
+        return;
+    }
     strftime (outdir + dlen, sizeof(outdir) - dlen, "%Y-%m-%d-%H-%M-%S", ltime);
     RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Creating Directory %s for Issue Category to store Output data...\n",__FUNCTION__,__LINE__,outdir);
-    if (mkdir(outdir,0777) != 0)
+    if (mkdir(outdir,0700) != 0)
     {
         RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,outdir);
         free(rfcbuf); // free duplicated rfc data

@@ -115,10 +115,12 @@ char *replaceRRDLocation(char* commandStr, char* dirLocation)
  * @param char *issuecmd - The command string to be validated.
  * @param cJSON *sanitylist - JSON object containing the list of sanctioned commands.
  * @return int - Returns 0 if the command is valid, or 1 if the command is harmful or invalid.
-*/
+ */
+
+
 static const char *g_blockedCommands[] =
 {
-    "rm -rf",
+    "rm",
     "kill",
     "pkill",
     "iptables",
@@ -126,42 +128,90 @@ static const char *g_blockedCommands[] =
     NULL
 };
 
-int isCommandsValid(char *issuecmd)
+static bool isBlockedCommand(const char *cmd)
 {
-  int i = 0, result = 0;
-  char *sanitystr = NULL;
+    char buf[512];
+    char *token;
+    int i;
 
-if(issuecmd == NULL)
+    if (!cmd)
     {
-        return 1;
-    }
-    
-for (i = 0; g_blockedCommands[i] != NULL; i++)
-{
-    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,
-            "[%s:%d]: Checking for \"%s\" string in Issue commands...\n",
-            __FUNCTION__,__LINE__,
-            g_blockedCommands[i]);
-
-    sanitystr = strstr(issuecmd, g_blockedCommands[i]);
-
-    if (sanitystr)
-    {
-        RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,
-                "[%s:%d]: Found harmful commands: %s, Exiting!!!\n",
-                __FUNCTION__,__LINE__,
-                sanitystr);
-        return 1;
+        return true;
     }
 }
 
-    if(strstr(issuecmd,"&"))
+    if (strlen(cmd) >= sizeof(buf))
     {
-        RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Received Commands to execute in background... \n",__FUNCTION__,__LINE__);
+       return true;
+    }
+
+    strncpy(buf, cmd, sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
+
+    token = strtok(buf, " \t;&|");
+
+    while (token)
+    {
+        for (i = 0; g_blockedCommands[i] != NULL; i++)
+        {
+            const char *compareToken = token;
+            const char *base = strrchr(token, '/');
+
+            if (base)
+            {
+                compareToken = base + 1;
+            }
+
+            if (strcmp(compareToken, g_blockedCommands[i]) == 0)
+            {
+                return true;
+            }
+        }
+
+        token = strtok(NULL, " \t;&|");
+    }
+
+    return false;
+}
+
+int isCommandsValid(char *issuecmd, cJSON *sanitylist)
+{
+    int result = 0;
+
+    (void)sanitylist;
+
+    if (issuecmd == NULL)
+    {
+       return 1;
+    }
+
+    if (isBlockedCommand(issuecmd))
+    {
+        RDK_LOG(RDK_LOG_ERROR,
+                LOG_REMDEBUG,
+                "[%s:%d]: Blocked command detected\n",
+                __FUNCTION__,
+                __LINE__);
+        return 1;
+    }
+
+    if (strchr(issuecmd, '&'))
+    {
+        RDK_LOG(RDK_LOG_DEBUG,
+                LOG_REMDEBUG,
+                "[%s:%d]: Received Commands to execute in background...\n",
+                __FUNCTION__,
+                __LINE__);
+
         result = updateBackgroundCmd(issuecmd);
+
         if (result != 0)
         {
-            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Removing special charater failed!!! \n",__FUNCTION__,__LINE__);
+            RDK_LOG(RDK_LOG_ERROR,
+                    LOG_REMDEBUG,
+                    "[%s:%d]: Removing special character failed!!!\n",
+                    __FUNCTION__,
+                    __LINE__);
             return 1;
         }
     }
