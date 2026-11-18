@@ -264,8 +264,9 @@ const char *remotedebuggerdoc_strerror(int errnum)
         {.v = OK, .txt = "No errors."},
         {.v = OUT_OF_MEMORY, .txt = "Out of memory."},
         {.v = INVALID_FIRST_ELEMENT, .txt = "Invalid first element."},
+        {.v = MISSING_ENTRY, .txt = "Missing required field."},
         {.v = INVALID_VERSION, .txt = "Invalid 'version' value."},
-        {.v = INVALID_OBJECT, .txt = "Invalid 'value' array."},
+        {.v = INVALID_OBJECT, .txt = "Invalid object."},
         {.v = 0, .txt = NULL}};
     int i = 0;
     while ((map[i].v != errnum) && (NULL != map[i].txt))
@@ -394,23 +395,64 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
  */
 int process_remotedebuggerdoc(remotedebuggerdoc_t *ld, int num, ...)
 {
-    // To access the variable arguments use va_list
+    msgpack_object *obj;
+    msgpack_object *obj1;
+    msgpack_object *obj2;
+    msgpack_object *obj3;
+    msgpack_object_map *mapobj;
     va_list valist;
-    va_start(valist, num); // start of variable argument loop
+
+    if (NULL == ld || 4 != num)
+    {
+        errno = INVALID_OBJECT;
+        return -1;
+    }
+
+    va_start(valist, num);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
-    msgpack_object *obj = va_arg(valist, msgpack_object *); // each usage of va_arg fn argument iterates by one time
-    msgpack_object_map *mapobj = &obj->via.map;
+    obj = va_arg(valist, msgpack_object *);
+    obj1 = va_arg(valist, msgpack_object *);
+    obj2 = va_arg(valist, msgpack_object *);
+    obj3 = va_arg(valist, msgpack_object *);
+    va_end(valist);
 
-    msgpack_object *obj1 = va_arg(valist, msgpack_object *);
+    if (NULL == obj || NULL == obj1 || NULL == obj2 || NULL == obj3)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Missing required document field\n", __FUNCTION__, __LINE__);
+        errno = MISSING_ENTRY;
+        return -1;
+    }
+    if (MSGPACK_OBJECT_MAP != obj->type ||
+        (0 < obj->via.map.size && NULL == obj->via.map.ptr) ||
+        MSGPACK_OBJECT_STR != obj1->type ||
+        NULL == obj1->via.str.ptr)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid document field type\n", __FUNCTION__, __LINE__);
+        errno = INVALID_OBJECT;
+        return -1;
+    }
+    if (MSGPACK_OBJECT_POSITIVE_INTEGER != obj2->type ||
+        MSGPACK_OBJECT_POSITIVE_INTEGER != obj3->type ||
+        UINT32_MAX < obj2->via.u64 || UINT16_MAX < obj3->via.u64)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid version or transaction_id\n", __FUNCTION__, __LINE__);
+        errno = INVALID_VERSION;
+        return -1;
+    }
+
+    mapobj = &obj->via.map;
     ld->subdoc_name = strndup(obj1->via.str.ptr, obj1->via.str.size);
+    if (NULL == ld->subdoc_name)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed\n", __FUNCTION__, __LINE__);
+        errno = OUT_OF_MEMORY;
+        return -1;
+    }
 
-    msgpack_object *obj2 = va_arg(valist, msgpack_object *);
     ld->version = (uint32_t)obj2->via.u64;
 
-    msgpack_object *obj3 = va_arg(valist, msgpack_object *);
     ld->transaction_id = (uint16_t)obj3->via.u64;
-    va_end(valist); // End of variable argument loop
 
     ld->entries_count = 1;
     ld->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));

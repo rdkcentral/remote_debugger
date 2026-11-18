@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-10-28  
+**Generated:** 2026-11-17  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -8,6 +8,19 @@
 ---
 
 ## 1. Executive Summary
+
+**L2 Test Coverage**
+
+| Metric | Value |
+|---|:---:|
+| Source functions found | 133 |
+| Functions hit | 81 |
+| Functions not hit | 52 |
+| Current functional coverage | 60.9% |
+| Target L2 functional coverage | ~100% |
+
+> Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
+> divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
 
 **L2 Test Summary**
 
@@ -19,20 +32,13 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1508 of 3034 lines) |
+| Line coverage (lcov) | 49.5% (1574 of 3178 lines) |
 
-**L2 Test Coverage**
-
-| Metric | Value |
-|---|:---:|
-| Source functions found | 128 |
-| Functions hit | 76 |
-| Functions not hit | 52 |
-| Current functional coverage | 59.4% |
-| Target L2 functional coverage | ~100% |
-
-> Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
-> divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
+> Function definitions are discovered with a heuristic C source scan.
+> Disabled test functions (skip markers or commented definitions): 0;
+> files with no enabled test functions: 0.
+> Test counts include skipped definitions and are not pass/fail results. Skip counts are
+> estimates; conditional, class-level and module-level skips are not evaluated.
 
 ---
 
@@ -63,9 +69,13 @@
 | 19 | `test_rrd_static_profile_report_with_suffix_negative_case.feature` | 4 | `test_rrd_static_profile_report_with_suffix_negative_case.py` | 5 | PASS |
 | | **Totals** | **90** | | **95** | |
 
+> PASS means the test-definition count meets the scenario count, not that tests passed.
+> Matching uses the same relative directory and feature stem, with an optional
+> test_ prefix. Scenario Outline rows and parametrized cases are not expanded.
+
 ### 2.2 Tests Exceeding Scenario Count
 
-> Extra functions handle setup/teardown split more granularly than feature scenarios.
+> Extra functions can include setup/teardown split more granularly than feature scenarios.
 
 | Feature File | Scenarios | Test File | Tests | Extra |
 |---|:---:|---|:---:|:---:|
@@ -103,25 +113,30 @@
 | Module | Lines | Functions | Coverage Bar |
 |---|:---:|:---:|---|
 | `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
-| `rrdInterface.c` | 44.0% (189/430) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
+| `rrdInterface.c` | 43.5% (189/434) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
 | `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | `██████████████░░░░░░` |
-| `rrdJsonParser.c` | 81.8% (405/495) | 86.7% (13/15) | `████████████████░░░░` |
+| `rrdJsonParser.c` | 81.7% (447/547) | 87.5% (14/16) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
-| `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
+| `rrdCommandSanity.c` | 95.6% (65/68) | 100.0% (4/4) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
 | `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
-| `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
-| `rrd_config.c` | 42.8% (95/222) | 66.7% (6/9) | `█████████░░░░░░░░░░░` |
+| `rrdMsgPackDecoder.c` | 0.0% (0/309) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
+| `rrd_config.c` | 44.1% (105/238) | 70.0% (7/10) | `█████████░░░░░░░░░░░` |
 | `rrd_sysinfo.c` | 32.1% (36/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
 | `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
-| `rrd_upload.c` | 40.7% (37/91) | 60.0% (3/5) | `████████░░░░░░░░░░░░` |
-| `rrdIarmEvents.c` | 8.6% (12/140) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
+| `rrd_upload.c` | 41.4% (53/128) | 71.4% (5/7) | `████████░░░░░░░░░░░░` |
+| `rrdIarmEvents.c` | 8.0% (12/150) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
 | `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
+
+> Only trace records matched to source files in this module contribute to line coverage.
+> Ambiguous source paths are excluded; keep source-relative paths in the tracefile.
 
 ---
 
 ## 4. Per-Behavior Coverage Detail
+
+> Module-supplied assessment; not inferred from lcov or test counts.
 
 > Legend — **YES**: tested by an L2 scenario | **NO**: no test exists | **PARTIAL**: subset covered
 
@@ -208,7 +223,6 @@
 | Profile category load error | NO |
 | Profile file write error | NO |
 
-
 ---
 
 ## 5. Scenario-to-Test Gap Analysis
@@ -218,16 +232,20 @@
 | `rrd_c_api_upload.feature` | 21 | 5 | **16** |
 | `rrd_start_control.feature` | 2 | 1 | **1** |
 
-**Orphan tests** (no feature file — behavior is tested but not documented):
+**Orphan tests** (no feature file):
 
 - `test_rrd_append_dynamic_profile_static_notfound.py`
 - `test_rrd_dynamic_profile_rdm_node_length_exceeded.py`
 - `test_rrd_dynamic_subcategory_report.py`
 - `test_rrd_profile_data.py`
 
+> Unmatched features are listed in section 2.4; counts alone do not prove behavior coverage.
+
 ---
 
 ## 6. Gap Recommendations
+
+> Module-supplied recommendations; review when the implementation or tests change.
 
 ### Priority 1 — Must Fix
 
@@ -258,7 +276,6 @@
 | 13 | `systemd-run` / `journalctl` execution failures | `rrdRunCmdThread.c` |
 | 14 | Output file write errors | `rrdRunCmdThread.c` |
 | 15 | Invalid deep sleep event type | `rrdDynamic.c` |
-
 
 ---
 
