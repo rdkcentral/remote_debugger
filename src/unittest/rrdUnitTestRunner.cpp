@@ -186,6 +186,97 @@ TEST(ReadJsonFileTest, HandleFileReadError)
     ASSERT_EQ(jsonfile_content, nullptr);
 }
 
+/* --------------- Secure profile file opening --------------- */
+class SecureProfileOpenTest : public ::testing::Test
+{
+protected:
+    std::string directory;
+    std::string profile;
+    std::string link;
+
+    void SetUp() override
+    {
+        char path[] = "/tmp/rrd-profile-XXXXXX";
+        ASSERT_NE(mkdtemp(path), nullptr);
+        directory = path;
+        profile = directory + "/profile.json";
+        link = directory + "/link";
+        int fd = open(profile.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+        ASSERT_GE(fd, 0);
+        const char json[] = "{\"key\":\"value\"}";
+        const ssize_t written = write(fd, json, sizeof(json) - 1);
+        EXPECT_EQ(close(fd), 0);
+        ASSERT_EQ(written, static_cast<ssize_t>(sizeof(json) - 1));
+    }
+
+    void TearDown() override
+    {
+        if (!directory.empty())
+        {
+            unlink(link.c_str());
+            unlink(profile.c_str());
+            rmdir(directory.c_str());
+        }
+    }
+
+    void expectRejected(const std::string &path)
+    {
+        char *content = readJsonFile(path.c_str());
+        EXPECT_EQ(content, nullptr);
+        free(content);
+        long size = 0;
+        content = read_profile_json_file(path.c_str(), &size);
+        EXPECT_EQ(content, nullptr);
+        EXPECT_EQ(size, 0);
+        free(content);
+    }
+};
+
+TEST_F(SecureProfileOpenTest, ReadsTrustedRegularProfile)
+{
+    char *content = readJsonFile(profile.c_str());
+    ASSERT_NE(content, nullptr);
+    EXPECT_STREQ(content, "{\"key\":\"value\"}");
+    free(content);
+    long size = 0;
+    content = read_profile_json_file(profile.c_str(), &size);
+    ASSERT_NE(content, nullptr);
+    EXPECT_STREQ(content, "{\"key\":\"value\"}");
+    EXPECT_EQ(size, 15);
+    free(content);
+}
+
+TEST_F(SecureProfileOpenTest, RejectsFileSymlink)
+{
+    ASSERT_EQ(symlink(profile.c_str(), link.c_str()), 0);
+    expectRejected(link);
+}
+
+TEST_F(SecureProfileOpenTest, RejectsParentDirectorySymlink)
+{
+    ASSERT_EQ(symlink(directory.c_str(), link.c_str()), 0);
+    expectRejected(link + "/profile.json");
+}
+
+TEST_F(SecureProfileOpenTest, RejectsWritableProfile)
+{
+    ASSERT_EQ(chmod(profile.c_str(), 0666), 0);
+    expectRejected(profile);
+}
+
+TEST_F(SecureProfileOpenTest, RejectsUntrustedWritableDirectory)
+{
+    ASSERT_EQ(chmod(directory.c_str(), 0777), 0);
+    expectRejected(profile);
+}
+
+TEST_F(SecureProfileOpenTest, RejectsFifoWithoutBlocking)
+{
+    ASSERT_EQ(unlink(profile.c_str()), 0);
+    ASSERT_EQ(mkfifo(profile.c_str(), 0600), 0);
+    expectRejected(profile);
+}
+
 /* --------------- Test readAndParseJSON() from rrdJsonParser --------------- */
 TEST(ReadAndParseJSONTest, ParsesJsonFileCorrectly)
 {
@@ -622,17 +713,26 @@ protected:
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForValidCommand)
 {
-    int result = isCommandsValid("ls -l", sanitylist);
+    int result = isCommandsValid("ls -l");
     ASSERT_EQ(result, 0);
 }
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForBackgroundCommand)
 {
     char command[] = "ls -lh &;";
-    int result = isCommandsValid(command, sanitylist);
+    int result = isCommandsValid(command);
 
     ASSERT_EQ(result, 0);
     ASSERT_STREQ(command, "ls -lh & ");
+}
+
+TEST_F(IsCommandsValidTest, RejectsKillCommand)
+{
+    char command[] = "kill 1234";
+
+    int result = isCommandsValid(command);
+
+    ASSERT_EQ(result, 1);
 }
 
 /* --------------- Test replaceRRDLocation() from rrdCommandSanity --------------- */
@@ -2958,6 +3058,55 @@ TEST_F(RDMMgrEventHandlerTest, TestNotFoundInCache)
     _rdmManagerEventHandler(owner, eventId, &eventData, sizeof(eventData));
 }
 
+TEST_F(RDMMgrEventHandlerTest, TestRejectsNullOwnerAndPayload)
+{
+    const IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    IARM_Bus_RDMMgr_EventData_t eventData = {};
+    testing::internal::CaptureStdout();
+    _rdmManagerEventHandler(nullptr, eventId, &eventData, sizeof(eventData));
+    _rdmManagerEventHandler(IARM_BUS_RDMMGR_NAME, eventId, nullptr, sizeof(eventData));
+    const std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_NE(output.find("Missing RDM event owner"), std::string::npos);
+    EXPECT_NE(output.find("Invalid RDM event payload"), std::string::npos);
+    EXPECT_EQ(output.find("finding "), std::string::npos);
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestRejectsTruncatedPayload)
+{
+    const IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    IARM_Bus_RDMMgr_EventData_t eventData = {};
+    for (size_t len : {size_t(0), sizeof(eventData) - 1})
+    {
+        testing::internal::CaptureStdout();
+        _rdmManagerEventHandler(IARM_BUS_RDMMGR_NAME, eventId, &eventData, len);
+        const std::string output = testing::internal::GetCapturedStdout();
+        EXPECT_NE(output.find("Invalid RDM event payload"), std::string::npos);
+        EXPECT_EQ(output.find("finding "), std::string::npos);
+    }
+}
+
+TEST_F(RDMMgrEventHandlerTest, TestRejectsUnterminatedPackageFields)
+{
+    const IARM_EventId_t eventId = IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS;
+    for (bool invalidName : {true, false})
+    {
+        IARM_Bus_RDMMgr_EventData_t eventData = {};
+        if (invalidName)
+        {
+            memset(eventData.rdm_pkg_info.pkg_name, 'A', sizeof(eventData.rdm_pkg_info.pkg_name));
+        }
+        else
+        {
+            memset(eventData.rdm_pkg_info.pkg_inst_path, 'A', sizeof(eventData.rdm_pkg_info.pkg_inst_path));
+        }
+        testing::internal::CaptureStdout();
+        _rdmManagerEventHandler(IARM_BUS_RDMMGR_NAME, eventId, &eventData, sizeof(eventData));
+        const std::string output = testing::internal::GetCapturedStdout();
+        EXPECT_NE(output.find("Unterminated RDM event string field"), std::string::npos);
+        EXPECT_EQ(output.find("finding "), std::string::npos);
+    }
+}
+
 TEST_F(RDMMgrEventHandlerTest, TestFoundInCacheDownloadNotComplete)
 {
     const char *owner = IARM_BUS_RDMMGR_NAME;
@@ -3264,25 +3413,6 @@ TEST(FinderTest, KeyTypeStrExpectTypeMatch)
     EXPECT_STREQ(result->via.str.ptr, "value");
 }
 
-TEST(FinderTest, KeyTypeStrValTypeStrMatch)
-{
-    msgpack_object_map map;
-    msgpack_object_kv kv;
-    kv.key.type = MSGPACK_OBJECT_STR;
-    kv.key.via.str.ptr = "name";
-    kv.key.via.str.size = strlen("name");
-    kv.val.type = MSGPACK_OBJECT_STR;
-    kv.val.via.str.ptr = "value";
-    kv.val.via.str.size = strlen("value");
-    map.size = 1;
-    map.ptr = &kv;
-    msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
-
-    ASSERT_NE(result, nullptr);
-    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
-    EXPECT_STREQ(result->via.str.ptr, "value");
-}
-
 TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 {
     msgpack_object_map map;
@@ -3299,6 +3429,28 @@ TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
     EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
 }
 
+TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "version";
+    kv.key.via.str.size = strlen("version");
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "abc";
+    kv.key.via.str.size = strlen("abc");
+    map.size = 1;
+    map.ptr = &kv;
+    msgpack_object *result = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &map);
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
+
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
 TEST(GetMsgpackUnpackStatusTest, DecodedbufIsNullAndSizeIsZero)
 {
@@ -3353,13 +3505,13 @@ TEST(RemoteDebuggerDocStrErrorTest, KnownError)
     EXPECT_STREQ(remotedebuggerdoc_strerror(OK), "No errors.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(OUT_OF_MEMORY), "Out of memory.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_FIRST_ELEMENT), "Invalid first element.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(MISSING_ENTRY), "Missing required field.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_VERSION), "Invalid 'version' value.");
-    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid 'value' array.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid object.");
 }
 
 TEST(RemoteDebuggerDocStrErrorTest, UnknownError)
 {
-    EXPECT_STREQ(remotedebuggerdoc_strerror(MISSING_ENTRY), "Unknown error.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(999), "Unknown error."); // Test with an arbitrary number not in the map
 }
 
@@ -3985,8 +4137,8 @@ TEST_F(RemoteDebuggerDocTest, ProcessRemoteDebuggerDocFailure)
     int result = process_remotedebuggerdoc(&ld, 4, &obj, &obj1, &obj2, &obj3);
 
     EXPECT_EQ(result, -1);
-    EXPECT_NE(ld.subdoc_name, nullptr);
-    EXPECT_NE(ld.param, nullptr);
+    EXPECT_EQ(ld.subdoc_name, nullptr);
+    EXPECT_EQ(ld.param, nullptr);
 
     msgpack_sbuffer_destroy(&sbuf);
 }
@@ -4028,6 +4180,66 @@ TEST(RemoteDebuggerDocConvertTest, ConvertSuccess)
 
     remotedebuggerdoc_destroy(result);
     msgpack_sbuffer_destroy(&sbuf);
+}
+
+TEST(RemoteDebuggerDocConvertTest, RejectsMissingRequiredMetadata)
+{
+    const char *metadata_fields[] = {"subdoc_name", "version", "transaction_id"};
+
+    for (size_t missing_index = 0;
+         missing_index < sizeof(metadata_fields) / sizeof(metadata_fields[0]);
+         ++missing_index)
+    {
+        msgpack_sbuffer sbuf;
+        msgpack_packer pk;
+        msgpack_sbuffer_init(&sbuf);
+        msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+        msgpack_pack_map(&pk, 3);
+        msgpack_pack_str(&pk, strlen("remotedebugger"));
+        msgpack_pack_str_body(&pk, "remotedebugger", strlen("remotedebugger"));
+        msgpack_pack_map(&pk, 1);
+        msgpack_pack_str(&pk, strlen("IssueType"));
+        msgpack_pack_str_body(&pk, "IssueType", strlen("IssueType"));
+        msgpack_pack_array(&pk, 1);
+        msgpack_pack_str(&pk, strlen("value"));
+        msgpack_pack_str_body(&pk, "value", strlen("value"));
+
+        for (size_t field_index = 0;
+             field_index < sizeof(metadata_fields) / sizeof(metadata_fields[0]);
+             ++field_index)
+        {
+            const char *field = metadata_fields[field_index];
+            if (field_index == missing_index)
+            {
+                continue;
+            }
+
+            msgpack_pack_str(&pk, strlen(field));
+            msgpack_pack_str_body(&pk, field, strlen(field));
+            if (0 == strcmp(field, "subdoc_name"))
+            {
+                msgpack_pack_str(&pk, strlen("test_name"));
+                msgpack_pack_str_body(&pk, "test_name", strlen("test_name"));
+            }
+            else if (0 == strcmp(field, "version"))
+            {
+                msgpack_pack_uint32(&pk, 1);
+            }
+            else
+            {
+                msgpack_pack_uint16(&pk, 123);
+            }
+        }
+
+        remotedebuggerdoc_t *result = remotedebuggerdoc_convert(sbuf.data, sbuf.size);
+        EXPECT_EQ(result, nullptr) << "Accepted document missing " << metadata_fields[missing_index];
+        if (nullptr != result)
+        {
+            remotedebuggerdoc_destroy(result);
+        }
+        msgpack_sbuffer_destroy(&sbuf);
+    }
 }
 
 /* --------------- Test decodeWebCfgData() from rrdMsgPackDecoder --------------- */
@@ -4206,8 +4418,9 @@ TEST(RemoteDebuggerDocStrErrorTest, KnownErrorCodes) {
     EXPECT_STREQ(remotedebuggerdoc_strerror(OK), "No errors.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(OUT_OF_MEMORY), "Out of memory.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_FIRST_ELEMENT), "Invalid first element.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(MISSING_ENTRY), "Missing required field.");
     EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_VERSION), "Invalid 'version' value.");
-    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid 'value' array.");
+    EXPECT_STREQ(remotedebuggerdoc_strerror(INVALID_OBJECT), "Invalid object.");
 }
 
 TEST(RemoteDebuggerDocStrErrorTest, UnknownErrorCode) {
@@ -4395,6 +4608,71 @@ TEST_F(GetIssueCommandInfoTest, UsesDefaultTimeoutIfNotSet) {
 
 
 
+
+class TrustedDcmConfigTest : public ::testing::Test {
+protected:
+    std::string directory;
+    std::string configPath;
+    std::string linkPath;
+
+    void SetUp() override {
+        char path[] = "/tmp/rrd-dcm-XXXXXX";
+        ASSERT_NE(mkdtemp(path), nullptr);
+        directory = path;
+        configPath = directory + "/settings.conf";
+        linkPath = directory + "/link";
+        int fd = open(configPath.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+        ASSERT_GE(fd, 0);
+        const char settings[] = "HTTP_UPLOAD_LINK=https://logs.example.com\n";
+        ssize_t written = write(fd, settings, sizeof(settings) - 1);
+        EXPECT_EQ(close(fd), 0);
+        ASSERT_EQ(written, static_cast<ssize_t>(sizeof(settings) - 1));
+    }
+
+    void TearDown() override {
+        if (!directory.empty()) {
+            unlink(linkPath.c_str());
+            unlink(configPath.c_str());
+            rmdir(directory.c_str());
+        }
+    }
+
+    void expectRejected(const char *path) {
+        rrd_config_t config = {};
+        EXPECT_NE(rrd_config_parse_dcm_settings(path, &config), 0);
+        EXPECT_STREQ(config.http_upload_link, "");
+        EXPECT_NE(rrd_config_parse_properties(path, &config), 0);
+        EXPECT_STREQ(config.http_upload_link, "");
+    }
+};
+
+TEST_F(TrustedDcmConfigTest, LoadsRootOwnedPrivateConfig) {
+    if (geteuid() != 0) {
+        GTEST_SKIP() << "Trusted configuration must be created by root";
+    }
+    rrd_config_t config = {};
+    ASSERT_EQ(rrd_config_parse_dcm_settings(configPath.c_str(), &config), 0);
+    EXPECT_STREQ(config.http_upload_link, "https://logs.example.com");
+    ASSERT_EQ(rrd_config_parse_properties(configPath.c_str(), &config), 0);
+    EXPECT_STREQ(config.http_upload_link, "https://logs.example.com");
+}
+
+TEST_F(TrustedDcmConfigTest, RejectsWritableConfigsAndSymlinks) {
+    for (mode_t mode : {mode_t(0620), mode_t(0602)}) {
+        ASSERT_EQ(chmod(configPath.c_str(), mode), 0);
+        expectRejected(configPath.c_str());
+    }
+    ASSERT_EQ(chmod(configPath.c_str(), 0600), 0);
+    ASSERT_EQ(symlink(configPath.c_str(), linkPath.c_str()), 0);
+    expectRejected(linkPath.c_str());
+}
+
+TEST_F(TrustedDcmConfigTest, RejectsNonRootOwner) {
+    if (geteuid() == 0) {
+        ASSERT_EQ(chown(configPath.c_str(), 65534, 65534), 0);
+    }
+    expectRejected(configPath.c_str());
+}
 
 class RRDUploadOrchestrationTest : public ::testing::Test {
 protected:
@@ -4680,26 +4958,44 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCleanup) {
 }
 
 // Test: Source directory cleanup
-TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanup) {
-    const char *temp_source = "/tmp/rrd_test_source_cleanup";
-    mkdir(temp_source, 0755);
+TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanupHandlesShellSyntaxAndSymlinks) {
+    const char *temp_source = "/tmp/rrd/rrd_test_source_cleanup;true";
+    const char *nested_dir = "/tmp/rrd/rrd_test_source_cleanup;true/nested";
+    const char *external_file = "/tmp/rrd/rrd_test_source_cleanup_external";
+    const char *external_link = "/tmp/rrd/rrd_test_source_cleanup;true/nested/external_link";
+    mkdir("/tmp/rrd", 0755);
+    rrd_upload_cleanup_source_dir(temp_source);
+    unlink(external_file);
+    ASSERT_EQ(mkdir(temp_source, 0700), 0);
+    ASSERT_EQ(mkdir(nested_dir, 0700), 0);
     
-    // Create some files in it
-    std::string file1 = std::string(temp_source) + "/file1.txt";
+    std::string file1 = std::string(nested_dir) + "/file1.txt";
     std::ofstream f1(file1);
     f1 << "content\n";
     f1.close();
+    std::ofstream external(external_file);
+    external << "outside report directory\n";
+    external.close();
+    ASSERT_EQ(symlink(external_file, external_link), 0);
     
-    // Verify directory exists
     struct stat st;
     EXPECT_EQ(stat(temp_source, &st), 0);
     
-    // Cleanup
     int result = rrd_upload_cleanup_source_dir(temp_source);
     EXPECT_EQ(result, 0);
-    
-    // Verify directory is gone
     EXPECT_NE(stat(temp_source, &st), 0);
+    EXPECT_EQ(stat(external_file, &st), 0);
+    unlink(external_file);
+}
+
+TEST_F(RRDUploadOrchestrationTest, SourceDirectoryCleanupRejectsPathsOutsideReportRoot) {
+    const char *outside_dir = "/tmp/rrd_cleanup_outside";
+    rmdir(outside_dir);
+    ASSERT_EQ(mkdir(outside_dir, 0700), 0);
+    struct stat st;
+    EXPECT_NE(rrd_upload_cleanup_source_dir(outside_dir), 0);
+    EXPECT_EQ(stat(outside_dir, &st), 0);
+    EXPECT_EQ(rmdir(outside_dir), 0);
 }
 
 // Test: Configuration cleanup

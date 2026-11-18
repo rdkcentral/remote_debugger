@@ -21,6 +21,7 @@
 #include "rrdInterface.h"
 #include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
+#include "rrdJsonParser.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -698,13 +699,13 @@ bool has_direct_commands(cJSON *category)
  */
 char* read_profile_json_file(const char* filename, long* file_size)
 {
-    if (file_size == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: file_size is NULL\n", __FUNCTION__, __LINE__);
+    if (filename == NULL || file_size == NULL) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: filename or file_size is NULL\n", __FUNCTION__, __LINE__);
         return NULL;
     }
 
     *file_size = 0;
-    FILE *fp = fopen(filename, "rb");
+    FILE *fp = rrd_open_profile_file(filename);
     if (!fp) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
         return NULL;

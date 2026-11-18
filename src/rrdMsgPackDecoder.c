@@ -23,6 +23,8 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <time.h>
+#include <limits.h>
+#include <stdint.h>
 #include "rrdMsgPackDecoder.h"
 #include "rrdCommon.h"
 
@@ -44,29 +46,15 @@ msgpack_object *__finder(const char *name,
     {
         if (MSGPACK_OBJECT_STR == map->ptr[i].key.type)
         {
-            if (expect_type == map->ptr[i].val.type)
+            if ((expect_type == map->ptr[i].val.type) &&
+               (0 == match(&(map->ptr[i]), name)))
             {
-                if (0 == match(&(map->ptr[i]), name))
-                {
                     return &map->ptr[i].val;
-                }
             }
-            else if (MSGPACK_OBJECT_STR == map->ptr[i].val.type)
-            {
-                if (0 == strncmp(map->ptr[i].key.via.str.ptr, name, strlen(name)))
-                {
-                    return &map->ptr[i].val;
-                }
-            }
-            else
-            {
-                if (0 == strncmp(map->ptr[i].key.via.str.ptr, name, strlen(name)))
-                {
-                    return &map->ptr[i].val;
-                }
-            }
-        }
+            
+         }
     }
+    
     errno = MISSING_ENTRY;
     return NULL;
 }
@@ -136,9 +124,9 @@ void *helper_convert(const void *buf, size_t len,
                 else if (NULL != wrapper && 0 != strcmp(wrapper, "parameters"))
                 {
                     inner = __finder(wrapper, expect_type, &msg.data.via.map);
-                    subdoc_name = __finder("subdoc_name", expect_type, &msg.data.via.map);
-                    version = __finder("version", expect_type, &msg.data.via.map);
-                    transaction_id = __finder("transaction_id", expect_type, &msg.data.via.map);
+                    subdoc_name = __finder("subdoc_name", MSGPACK_OBJECT_STR, &msg.data.via.map);
+                    version = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
+                    transaction_id = __finder("transaction_id", MSGPACK_OBJECT_POSITIVE_INTEGER, &msg.data.via.map);
                     if (((NULL != inner) && (0 == (process)(p, 4, inner, subdoc_name, version, transaction_id))) ||
                         ((true == optional) && (NULL == inner)))
                     {
@@ -276,8 +264,9 @@ const char *remotedebuggerdoc_strerror(int errnum)
         {.v = OK, .txt = "No errors."},
         {.v = OUT_OF_MEMORY, .txt = "Out of memory."},
         {.v = INVALID_FIRST_ELEMENT, .txt = "Invalid first element."},
+        {.v = MISSING_ENTRY, .txt = "Missing required field."},
         {.v = INVALID_VERSION, .txt = "Invalid 'version' value."},
-        {.v = INVALID_OBJECT, .txt = "Invalid 'value' array."},
+        {.v = INVALID_OBJECT, .txt = "Invalid object."},
         {.v = 0, .txt = NULL}};
     int i = 0;
     while ((map[i].v != errnum) && (NULL != map[i].txt))
@@ -298,16 +287,38 @@ const char *remotedebuggerdoc_strerror(int errnum)
  * @param msgpack_object_array *arr - The msgpack array containing the issue types.
  * @return int - The required size of the issue type string.
  */
-int getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
+size_t getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
 {
-    int index = 0, size = 0;
+    size_t index = 0;
+	size_t size = 0;
     for(index = 0; index < arr->size; index++)
     {
         if(arr->ptr[index].type == MSGPACK_OBJECT_STR)
-        {
+        { 
+			printf("index=%zu size=%zu curr=%zu\n",
+                   index,
+                   size,
+                   (size_t)arr->ptr[index].via.str.size);
+			
+			if (SIZE_MAX - size < arr->ptr[index].via.str.size) 
+			{
+				printf("OVERFLOW CHECK HIT\n");
+                return 0;
+			}
             size += arr->ptr[index].via.str.size;
+			printf("after add size=%zu\n", size);
         }
     }
+	printf("before final check size=%zu arrsize=%zu\n",
+           size,
+           (size_t)arr->size);
+	 if (SIZE_MAX - size < arr->size + 1)
+	 {
+		printf("FINAL OVERFLOW CHECK HIT\n"); 
+        return 0;
+	 }
+    printf("returning=%zu\n", (size + arr->size + 1));
+
     return (size + arr->size + 1); /* Need to add Number of Required "," between each string*/
 }
 
@@ -322,7 +333,8 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
 {
     int left = map->size;
     uint8_t objects_left = 1;
-    int index = 0, resultLen = 0;
+    int index = 0;
+	size_t resultLen = 0;
     msgpack_object_kv *p = NULL;
     msgpack_object_array *arr = NULL;
     p = map->ptr;
@@ -336,7 +348,11 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
             {
                 arr = &p->val.via.array;
                 resultLen = getReqTotalSizeOfIssueTypesStr(arr);
-                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%d \n", __FUNCTION__, __LINE__,resultLen);
+				if (resultLen == 0) {
+                     RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid IssueType size\n", __FUNCTION__, __LINE__);
+                     return -1;
+                }
+                RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Size:%zu \n", __FUNCTION__, __LINE__,resultLen);
                 rrdParam->length = resultLen;
 		rrdParam->commandList = (char *)calloc(resultLen + 1, sizeof(char));
                 if(rrdParam->commandList != NULL)
@@ -379,23 +395,64 @@ int process_remotedebuggerparams(remotedebuggerparam_t *rrdParam, msgpack_object
  */
 int process_remotedebuggerdoc(remotedebuggerdoc_t *ld, int num, ...)
 {
-    // To access the variable arguments use va_list
+    msgpack_object *obj;
+    msgpack_object *obj1;
+    msgpack_object *obj2;
+    msgpack_object *obj3;
+    msgpack_object_map *mapobj;
     va_list valist;
-    va_start(valist, num); // start of variable argument loop
+
+    if (NULL == ld || 4 != num)
+    {
+        errno = INVALID_OBJECT;
+        return -1;
+    }
+
+    va_start(valist, num);
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
-    msgpack_object *obj = va_arg(valist, msgpack_object *); // each usage of va_arg fn argument iterates by one time
-    msgpack_object_map *mapobj = &obj->via.map;
+    obj = va_arg(valist, msgpack_object *);
+    obj1 = va_arg(valist, msgpack_object *);
+    obj2 = va_arg(valist, msgpack_object *);
+    obj3 = va_arg(valist, msgpack_object *);
+    va_end(valist);
 
-    msgpack_object *obj1 = va_arg(valist, msgpack_object *);
+    if (NULL == obj || NULL == obj1 || NULL == obj2 || NULL == obj3)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Missing required document field\n", __FUNCTION__, __LINE__);
+        errno = MISSING_ENTRY;
+        return -1;
+    }
+    if (MSGPACK_OBJECT_MAP != obj->type ||
+        (0 < obj->via.map.size && NULL == obj->via.map.ptr) ||
+        MSGPACK_OBJECT_STR != obj1->type ||
+        NULL == obj1->via.str.ptr)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid document field type\n", __FUNCTION__, __LINE__);
+        errno = INVALID_OBJECT;
+        return -1;
+    }
+    if (MSGPACK_OBJECT_POSITIVE_INTEGER != obj2->type ||
+        MSGPACK_OBJECT_POSITIVE_INTEGER != obj3->type ||
+        UINT32_MAX < obj2->via.u64 || UINT16_MAX < obj3->via.u64)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid version or transaction_id\n", __FUNCTION__, __LINE__);
+        errno = INVALID_VERSION;
+        return -1;
+    }
+
+    mapobj = &obj->via.map;
     ld->subdoc_name = strndup(obj1->via.str.ptr, obj1->via.str.size);
+    if (NULL == ld->subdoc_name)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed\n", __FUNCTION__, __LINE__);
+        errno = OUT_OF_MEMORY;
+        return -1;
+    }
 
-    msgpack_object *obj2 = va_arg(valist, msgpack_object *);
     ld->version = (uint32_t)obj2->via.u64;
 
-    msgpack_object *obj3 = va_arg(valist, msgpack_object *);
     ld->transaction_id = (uint16_t)obj3->via.u64;
-    va_end(valist); // End of variable argument loop
 
     ld->entries_count = 1;
     ld->param = (remotedebuggerparam_t *)malloc(sizeof(remotedebuggerparam_t));

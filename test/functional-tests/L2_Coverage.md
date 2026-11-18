@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |---|:---:|
-| Source functions found | 128 |
-| Functions hit | 76 |
+| Source functions found | 133 |
+| Functions hit | 81 |
 | Functions not hit | 52 |
-| Current functional coverage | 59.4% |
+| Current functional coverage | 60.9% |
 | Target L2 functional coverage | ~100% |
 
 > Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
@@ -117,7 +117,7 @@
 | `rrdEventProcess.c` | 68.6% (240/350) | 81.8% (9/11) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 81.2% (406/500) | 86.7% (13/15) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
-| `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
+| `rrdCommandSanity.c` | 95.6% (65/68) | 100.0% (4/4) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
 | `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
 | `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
@@ -125,8 +125,8 @@
 | `rrd_sysinfo.c` | 33.0% (37/112) | 33.3% (2/6) | `███████░░░░░░░░░░░░░` |
 | `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
 | `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
-| `rrd_upload.c` | 40.7% (37/91) | 60.0% (3/5) | `████████░░░░░░░░░░░░` |
-| `rrdIarmEvents.c` | 8.6% (12/140) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
+| `rrd_upload.c` | 41.4% (53/128) | 71.4% (5/7) | `████████░░░░░░░░░░░░` |
+| `rrdIarmEvents.c` | 8.0% (12/150) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
 | `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
 
 > Only trace records matched to source files in this module contribute to line coverage.
