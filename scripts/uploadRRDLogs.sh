@@ -34,7 +34,7 @@ OUTFILE='/tmp/DCMSettings.conf'
 MAC=`getMacAddressOnly`
 TIMESTAMP=`date "+%Y-%m-%d-%H-%M-%S%p"`
 RRD_LOG_FILE="$LOG_PATH/remote-debugger.log"
-ISSUETYPE=`echo $2 | tr '[a-z]' '[A-Z]'`
+ISSUETYPE=$(printf '%s' "$2" | tr '[:lower:]' '[:upper:]' | tr -cd 'A-Z0-9_-')
 RRD_LOG_PATH="$1"
 RRD_REPORT_NAME=${RRD_LOG_PATH#/tmp/rrd/}
 case "$RRD_LOG_PATH" in
