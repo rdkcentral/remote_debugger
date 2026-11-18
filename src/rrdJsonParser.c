@@ -1,4 +1,4 @@
-/*
+no/*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
@@ -480,7 +480,6 @@ issueData * getIssueCommandInfo(issueNodeData *issuestructNode, cJSON *jsoncfg, 
     cJSON *category = NULL;
     cJSON *type = NULL;
     cJSON *elem = NULL;
-    char *tmpCommand = NULL;
 
     category = cJSON_GetObjectItem(jsoncfg, issuestructNode->Node);
     type = cJSON_GetObjectItem(category, issuestructNode->subNode);
