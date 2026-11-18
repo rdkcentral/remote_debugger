@@ -138,6 +138,7 @@ static bool isBlockedCommand(const char *cmd)
     {
         return true;
     }
+}
 
     if (strlen(cmd) >= sizeof(buf))
     {
