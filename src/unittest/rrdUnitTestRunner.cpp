@@ -3432,6 +3432,7 @@ TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
 {
     msgpack_object_map map;
     msgpack_object_kv kv;
+
     kv.key.type = MSGPACK_OBJECT_STR;
     kv.key.via.str.ptr = "version";
     kv.key.via.str.size = strlen("version");
@@ -3446,6 +3447,9 @@ TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
     EXPECT_EQ(errno, MISSING_ENTRY);
 }
 
+    EXPECT_EQ(result, nullptr);
+    EXPECT_EQ(errno, MISSING_ENTRY);
+}
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
 TEST(GetMsgpackUnpackStatusTest, DecodedbufIsNullAndSizeIsZero)
 {
