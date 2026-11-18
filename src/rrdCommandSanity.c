@@ -174,11 +174,9 @@ static bool isBlockedCommand(const char *cmd)
     return false;
 }
 
-int isCommandsValid(char *issuecmd, cJSON *sanitylist)
+int isCommandsValid(char *issuecmd)
 {
     int result = 0;
-
-    (void)sanitylist;
 
     if (issuecmd == NULL)
     {
