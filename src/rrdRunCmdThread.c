@@ -305,7 +305,7 @@ bool executeCommands(issueData *cmdinfo)
         len=snprintf(dirname,BUF_LEN_256,"%s_%lu_",cmdData->rfcvalue,RRDCmdThreadID);
         strftime (dirname + len, sizeof(dirname) - len, "%Y-%m-%d-%H-%M-%S", loc_time);
         RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Creating Directory %s for Storing Output data...\n",__FUNCTION__,__LINE__,dirname);
-        if (mkdir(dirname,0777) != 0)
+        if (mkdir(dirname,0700) != 0)
         {
            RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: %s Directory creation failed!!!\n",__FUNCTION__,__LINE__,dirname);
            free(cmdData->rfcvalue); // free rfcvalue received from RRDEventThreadFunc
