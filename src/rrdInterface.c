@@ -21,6 +21,7 @@
 #include "rrdInterface.h"
 #include "rrdRbus.h"
 #include "rrdRunCmdThread.h"
+#include "rrdJsonParser.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -507,17 +508,29 @@ void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t cons
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering... \n", __FUNCTION__, __LINE__);
     RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for RRD_WEBCFG_ISSUE_EVENT %s \n", __FUNCTION__, __LINE__, RRD_WEBCFG_ISSUE_EVENT);
     if (value)
-    {
-        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n", __FUNCTION__, __LINE__, 
-			                        rbusValue_ToString(value, NULL, 0));
-        int len = strlen(rbusValue_GetString(value, NULL));
-        inString = (char *)calloc(1, len);
-        if(inString)
+	{
+        RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+            "[%s:%d]: Data from TR69 Parameter for REMOTE_DEBUGGER_WEBCFGDATA %s \n",
+            __FUNCTION__, __LINE__,
+            rbusValue_ToString(value, NULL, 0));
+
+      const char *str = rbusValue_GetString(value, NULL);
+
+        if (str)
         {
-            strncpy(inString, rbusValue_GetString(value, NULL), len);
-            pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
-        }
-    }
+            size_t len = strlen(str) + 1;
+
+             inString = (char *)calloc(1, len);
+
+            if (inString)
+            {
+                strncpy(inString, str, len - 1);
+                inString[len - 1] = '\0';
+
+                pushIssueTypesToMsgQueue(inString, EVENT_WEBCFG_MSG);
+            }
+         }
+      }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exit... \n", __FUNCTION__, __LINE__);
 }
 #endif
@@ -686,13 +699,13 @@ bool has_direct_commands(cJSON *category)
  */
 char* read_profile_json_file(const char* filename, long* file_size)
 {
-    if (file_size == NULL) {
-        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: file_size is NULL\n", __FUNCTION__, __LINE__);
+    if (filename == NULL || file_size == NULL) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: filename or file_size is NULL\n", __FUNCTION__, __LINE__);
         return NULL;
     }
 
     *file_size = 0;
-    FILE *fp = fopen(filename, "rb");
+    FILE *fp = rrd_open_profile_file(filename);
     if (!fp) {
         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unable to read profile file from %s\n", __FUNCTION__, __LINE__, filename);
         return NULL;
