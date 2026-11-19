@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-11-18  
+**Generated:** 2026-11-19  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 48.7% (1545 of 3171 lines) |
+| Line coverage (lcov) | 48.7% (1544 of 3170 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -115,7 +115,7 @@
 | `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
 | `rrdInterface.c` | 43.6% (189/433) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
 | `rrdEventProcess.c` | 67.7% (237/350) | 81.8% (9/11) | `██████████████░░░░░░` |
-| `rrdJsonParser.c` | 80.1% (419/523) | 87.5% (14/16) | `████████████████░░░░` |
+| `rrdJsonParser.c` | 80.1% (418/522) | 87.5% (14/16) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
 | `rrdCommandSanity.c` | 95.7% (66/69) | 100.0% (4/4) | `███████████████████░` |
 | `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
