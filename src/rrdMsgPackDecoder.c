@@ -295,29 +295,37 @@ size_t getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
     {
         if(arr->ptr[index].type == MSGPACK_OBJECT_STR)
         { 
-			printf("index=%zu size=%zu curr=%zu\n",
-                   index,
-                   size,
-                   (size_t)arr->ptr[index].via.str.size);
+			RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "index=%zu size=%zu curr=%zu\n",
+                index,
+                size,
+                (size_t)arr->ptr[index].via.str.size);
 			
 			if (SIZE_MAX - size < arr->ptr[index].via.str.size) 
 			{
-				printf("OVERFLOW CHECK HIT\n");
+				RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+                    "OVERFLOW CHECK HIT\n");
                 return 0;
 			}
             size += arr->ptr[index].via.str.size;
-			printf("after add size=%zu\n", size);
+			RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+                "after add size=%zu\n",
+                size);
         }
     }
-	printf("before final check size=%zu arrsize=%zu\n",
-           size,
-           (size_t)arr->size);
+	RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+        "before final check size=%zu arrsize=%zu\n",
+        size,
+        (size_t)arr->size);
 	 if (SIZE_MAX - size < arr->size + 1)
 	 {
-		printf("FINAL OVERFLOW CHECK HIT\n"); 
+		RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
+            "FINAL OVERFLOW CHECK HIT\n");
         return 0;
 	 }
-    printf("returning=%zu\n", (size + arr->size + 1));
+    RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
+        "returning=%zu\n",
+        (size + arr->size + 1));
 
     return (size + arr->size + 1); /* Need to add Number of Required "," between each string*/
 }
