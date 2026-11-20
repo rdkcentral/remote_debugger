@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-08-14  
+**Generated:** 2026-11-17  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -9,16 +9,36 @@
 
 ## 1. Executive Summary
 
+**L2 Test Coverage**
+
+| Metric | Value |
+|---|:---:|
+| Source functions found | 128 |
+| Functions hit | 76 |
+| Functions not hit | 52 |
+| Current functional coverage | 59.4% |
+| Target L2 functional coverage | ~100% |
+
+> Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
+> divided by all function definitions in `src/*.c`, including those compiled out by `#if`.
+
+**L2 Test Summary**
+
 | Metric | Value |
 |---|:---:|
 | Feature files | 22 |
 | Feature scenarios | 103 |
-| Test files (pytest) | 23 |
+| Pytest files | 23 |
 | Test functions (`test_*`) | 118 |
-| Feature → Test mapped pairs | 19 / 22 (+4 orphan tests) |
-| **Line coverage (lcov)** | **49.4%** (1487 of 3012 lines) |
-| **Branch coverage (lcov)** | **36.8%** (503 of 1365 branches) |
-| **Function coverage (lcov)** | **60.3%** (76 of 126 functions) |
+| Mapped feature/test pairs | 19 / 22 |
+| Unmatched test files | 4 |
+| Line coverage (lcov) | 49.7% (1507 of 3034 lines) |
+
+> Function definitions are discovered with a heuristic C source scan.
+> Disabled test functions (skip markers or commented definitions): 0;
+> files with no enabled test functions: 0.
+> Test counts include skipped definitions and are not pass/fail results. Skip counts are
+> estimates; conditional, class-level and module-level skips are not evaluated.
 
 ---
 
@@ -26,30 +46,50 @@
 
 ### 2.1 Mapped Pairs
 
-| # | Feature File | Scenarios | Test File | Tests | Gap |
+| # | Feature File | Scenarios | Test File | Tests | Status |
 |:---:|---|:---:|---|:---:|:---:|
-| 1 | `rrd_append_report.feature` | 4 | `test_rrd_append_report.py` | 7 | — |
-| 2 | `rrd_background_cmd_static_profile_report.feature` | 5 | `test_rrd_background_cmd_static_profile_report.py` | 5 | — |
-| 3 | `rrd_c_api_upload.feature` | 21 | `test_rrd_c_api_upload.py` | 5 | **16 missing** |
-| 4 | `rrd_corrupted_static_profile_report.feature` | 4 | `test_rrd_corrupted_static_profile_report.py` | 4 | — |
-| 5 | `rrd_debug_report_upload.feature` | 6 | `test_rrd_debug_report_upload.py` | 6 | — |
-| 6 | `rrd_deepsleep_static_report.feature` | 2 | `test_rrd_deepsleep_static_report.py` | 5 | — |
-| 7 | `rrd_dynamic_profile_missing_report.feature` | 4 | `test_rrd_dynamic_profile_missing_report.py` | 7 | — |
-| 8 | `rrd_dynamic_profile_report.feature` | 5 | `test_rrd_dynamic_profile_report.py` | 9 | — |
-| 9 | `rrd_empty_issuetype_event.feature` | 2 | `test_rrd_empty_issuetype_event.py` | 2 | — |
-| 10 | `rrd_harmful_command_static_report.feature` | 5 | `test_rrd_harmful_command_static_report.py` | 5 | — |
-| 11 | `rrd_single_instance.feature` | 1 | `test_rrd_single_instance.py` | 3 | — |
-| 12 | `rrd_start_control.feature` | 2 | `test_rrd_start_control.py` | 1 | **1 missing** |
-| 13 | `rrd_start_subscribe_and_wait.feature` | 1 | `test_rrd_start_subscribe_and_wait.py` | 4 | — |
-| 14 | `rrd_static_profile_category_report.feature` | 5 | `test_rrd_static_profile_category_report.py` | 5 | — |
-| 15 | `rrd_static_profile_missing_command_report.feature` | 5 | `test_rrd_static_profile_missing_command_report.py` | 5 | — |
-| 16 | `rrd_static_profile_report.feature` | 5 | `test_rrd_static_profile_report.py` | 5 | — |
-| 17 | `test_rrd_dynamic_profile_harmful_report.feature` | 5 | `test_rrd_dynamic_profile_harmful_report.py` | 7 | — |
-| 18 | `test_rrd_static_profile_report_with_suffix.feature` | 4 | `test_rrd_static_profile_report_with_suffix.py` | 5 | — |
-| 19 | `test_rrd_static_profile_report_with_suffix_negative_case.feature` | 4 | `test_rrd_static_profile_report_with_suffix_negative_case.py` | 5 | — |
+| 1 | `rrd_append_report.feature` | 4 | `test_rrd_append_report.py` | 7 | PASS |
+| 2 | `rrd_background_cmd_static_profile_report.feature` | 5 | `test_rrd_background_cmd_static_profile_report.py` | 5 | PASS |
+| 3 | `rrd_c_api_upload.feature` | 21 | `test_rrd_c_api_upload.py` | 5 | **GAP** (16 missing) |
+| 4 | `rrd_corrupted_static_profile_report.feature` | 4 | `test_rrd_corrupted_static_profile_report.py` | 4 | PASS |
+| 5 | `rrd_debug_report_upload.feature` | 6 | `test_rrd_debug_report_upload.py` | 6 | PASS |
+| 6 | `rrd_deepsleep_static_report.feature` | 2 | `test_rrd_deepsleep_static_report.py` | 5 | PASS |
+| 7 | `rrd_dynamic_profile_missing_report.feature` | 4 | `test_rrd_dynamic_profile_missing_report.py` | 7 | PASS |
+| 8 | `rrd_dynamic_profile_report.feature` | 5 | `test_rrd_dynamic_profile_report.py` | 9 | PASS |
+| 9 | `rrd_empty_issuetype_event.feature` | 2 | `test_rrd_empty_issuetype_event.py` | 2 | PASS |
+| 10 | `rrd_harmful_command_static_report.feature` | 5 | `test_rrd_harmful_command_static_report.py` | 5 | PASS |
+| 11 | `rrd_single_instance.feature` | 1 | `test_rrd_single_instance.py` | 3 | PASS |
+| 12 | `rrd_start_control.feature` | 2 | `test_rrd_start_control.py` | 1 | **GAP** (1 missing) |
+| 13 | `rrd_start_subscribe_and_wait.feature` | 1 | `test_rrd_start_subscribe_and_wait.py` | 4 | PASS |
+| 14 | `rrd_static_profile_category_report.feature` | 5 | `test_rrd_static_profile_category_report.py` | 5 | PASS |
+| 15 | `rrd_static_profile_missing_command_report.feature` | 5 | `test_rrd_static_profile_missing_command_report.py` | 5 | PASS |
+| 16 | `rrd_static_profile_report.feature` | 5 | `test_rrd_static_profile_report.py` | 5 | PASS |
+| 17 | `test_rrd_dynamic_profile_harmful_report.feature` | 5 | `test_rrd_dynamic_profile_harmful_report.py` | 7 | PASS |
+| 18 | `test_rrd_static_profile_report_with_suffix.feature` | 4 | `test_rrd_static_profile_report_with_suffix.py` | 5 | PASS |
+| 19 | `test_rrd_static_profile_report_with_suffix_negative_case.feature` | 4 | `test_rrd_static_profile_report_with_suffix_negative_case.py` | 5 | PASS |
 | | **Totals** | **90** | | **95** | |
 
-### 2.2 Orphan Tests (test exists, no feature file)
+> PASS means the test-definition count meets the scenario count, not that tests passed.
+> Matching uses the same relative directory and feature stem, with an optional
+> test_ prefix. Scenario Outline rows and parametrized cases are not expanded.
+
+### 2.2 Tests Exceeding Scenario Count
+
+> Extra functions can include setup/teardown split more granularly than feature scenarios.
+
+| Feature File | Scenarios | Test File | Tests | Extra |
+|---|:---:|---|:---:|:---:|
+| `rrd_append_report.feature` | 4 | `test_rrd_append_report.py` | 7 | +3 |
+| `rrd_deepsleep_static_report.feature` | 2 | `test_rrd_deepsleep_static_report.py` | 5 | +3 |
+| `rrd_dynamic_profile_missing_report.feature` | 4 | `test_rrd_dynamic_profile_missing_report.py` | 7 | +3 |
+| `rrd_dynamic_profile_report.feature` | 5 | `test_rrd_dynamic_profile_report.py` | 9 | +4 |
+| `rrd_single_instance.feature` | 1 | `test_rrd_single_instance.py` | 3 | +2 |
+| `rrd_start_subscribe_and_wait.feature` | 1 | `test_rrd_start_subscribe_and_wait.py` | 4 | +3 |
+| `test_rrd_dynamic_profile_harmful_report.feature` | 5 | `test_rrd_dynamic_profile_harmful_report.py` | 7 | +2 |
+| `test_rrd_static_profile_report_with_suffix.feature` | 4 | `test_rrd_static_profile_report_with_suffix.py` | 5 | +1 |
+| `test_rrd_static_profile_report_with_suffix_negative_case.feature` | 4 | `test_rrd_static_profile_report_with_suffix_negative_case.py` | 5 | +1 |
+
+### 2.3 Orphan Tests (test exists, no feature file)
 
 | Test File | Tests | Note |
 |---|:---:|---|
@@ -58,7 +98,7 @@
 | `test_rrd_dynamic_subcategory_report.py` | 7 | **Missing `.feature` file** |
 | `test_rrd_profile_data.py` | 3 | **Missing `.feature` file** |
 
-### 2.3 Orphan Features (feature exists, no test file)
+### 2.4 Orphan Features (feature exists, no test file)
 
 | Feature File | Scenarios | Note |
 |---|:---:|---|
@@ -70,28 +110,33 @@
 
 ## 3. Source Module Coverage (lcov)
 
-| Module | Lines | Functions | Branches | Coverage Bar |
-|---|:---:|:---:|:---:|---|
-| `rrdMain.c` | 60.3% (38/63) | 100.0% (4/4) | 42.9% (6/14) | `████████████░░░░░░░░` |
-| `rrdInterface.c` | 42.4% (181/427) | 59.1% (13/22) | 33.3% (56/168) | `████████░░░░░░░░░░░░` |
-| `rrdEventProcess.c` | 69.3% (232/335) | 81.8% (9/11) | 48.6% (68/140) | `██████████████░░░░░░` |
-| `rrdJsonParser.c` | 81.6% (400/490) | 86.7% (13/15) | 66.0% (128/194) | `████████████████░░░░` |
-| `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | 34.5% (20/58) | `███████████░░░░░░░░░` |
-| `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | 71.9% (23/32) | `███████████████████░` |
-| `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | 24.6% (14/57) | `████████░░░░░░░░░░░░` |
-| `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | 75.0% (6/8) | `███████████████████░` |
-| `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | 0.0% (0/138) | `░░░░░░░░░░░░░░░░░░░░` |
-| `rrd_config.c` | 42.8% (95/222) | 66.7% (6/9) | 27.6% (53/192) | `█████████░░░░░░░░░░░` |
-| `rrd_sysinfo.c` | 32.1% (36/112) | 33.3% (2/6) | 19.6% (11/56) | `██████░░░░░░░░░░░░░░` |
-| `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | 47.9% (23/48) | `██████████░░░░░░░░░░` |
-| `rrd_archive.c` | 47.2% (126/267) | 80.0% (8/10) | 46.5% (66/142) | `█████████░░░░░░░░░░░` |
-| `rrd_upload.c` | 40.7% (37/91) | 60.0% (3/5) | 30.4% (14/46) | `████████░░░░░░░░░░░░` |
-| `rrdIarmEvents.c` | 8.6% (12/140) | 25.0% (1/4) | 8.3% (4/48) | `██░░░░░░░░░░░░░░░░░░` |
-| `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | 45.8% (11/24) | `███████████░░░░░░░░░` |
+| Module | Lines | Functions | Coverage Bar |
+|---|:---:|:---:|---|
+| `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
+| `rrdInterface.c` | 44.0% (189/430) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
+| `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | `██████████████░░░░░░` |
+| `rrdJsonParser.c` | 81.8% (405/495) | 86.7% (13/15) | `████████████████░░░░` |
+| `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
+| `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
+| `rrdDynamic.c` | 40.4% (59/146) | 40.0% (2/5) | `████████░░░░░░░░░░░░` |
+| `rrdExecuteScript.c` | 94.1% (16/17) | 100.0% (2/2) | `███████████████████░` |
+| `rrdMsgPackDecoder.c` | 0.0% (0/280) | 0.0% (0/15) | `░░░░░░░░░░░░░░░░░░░░` |
+| `rrd_config.c` | 42.8% (95/222) | 66.7% (6/9) | `█████████░░░░░░░░░░░` |
+| `rrd_sysinfo.c` | 31.2% (35/112) | 33.3% (2/6) | `██████░░░░░░░░░░░░░░` |
+| `rrd_logproc.c` | 48.6% (36/74) | 75.0% (3/4) | `██████████░░░░░░░░░░` |
+| `rrd_archive.c` | 47.2% (126/267) | 72.7% (8/11) | `█████████░░░░░░░░░░░` |
+| `rrd_upload.c` | 40.7% (37/91) | 60.0% (3/5) | `████████░░░░░░░░░░░░` |
+| `rrdIarmEvents.c` | 8.6% (12/140) | 20.0% (1/5) | `██░░░░░░░░░░░░░░░░░░` |
+| `uploadRRDLogs.c` | 54.7% (35/64) | 100.0% (1/1) | `███████████░░░░░░░░░` |
+
+> Only trace records matched to source files in this module contribute to line coverage.
+> Ambiguous source paths are excluded; keep source-relative paths in the tracefile.
 
 ---
 
 ## 4. Per-Behavior Coverage Detail
+
+> Module-supplied assessment; not inferred from lcov or test counts.
 
 > Legend — **YES**: tested by an L2 scenario | **NO**: no test exists | **PARTIAL**: subset covered
 
@@ -170,6 +215,13 @@
 | Concurrent upload lock | NO |
 | Archive CPU throttle | NO |
 
+### 4.7 Profile Data SET/GET (RBUS)
+
+| Behavior | Covered |
+|---|:---:|
+| `setProfileData` / `getProfileData` via RBUS | PARTIAL (no feature file) |
+| Profile category load error | NO |
+| Profile file write error | NO |
 
 ---
 
@@ -180,16 +232,20 @@
 | `rrd_c_api_upload.feature` | 21 | 5 | **16** |
 | `rrd_start_control.feature` | 2 | 1 | **1** |
 
-**Orphan tests** (no feature file — behavior is tested but not documented):
+**Orphan tests** (no feature file):
 
 - `test_rrd_append_dynamic_profile_static_notfound.py`
 - `test_rrd_dynamic_profile_rdm_node_length_exceeded.py`
 - `test_rrd_dynamic_subcategory_report.py`
 - `test_rrd_profile_data.py`
 
+> Unmatched features are listed in section 2.4; counts alone do not prove behavior coverage.
+
 ---
 
 ## 6. Gap Recommendations
+
+> Module-supplied recommendations; review when the implementation or tests change.
 
 ### Priority 1 — Must Fix
 
@@ -221,10 +277,26 @@
 | 14 | Output file write errors | `rrdRunCmdThread.c` |
 | 15 | Invalid deep sleep event type | `rrdDynamic.c` |
 
+---
+
+## 7. Test Infrastructure Notes
+
+| Interface | Tool | Used By |
+|---|---|---|
+| RBUS event trigger | `rbuscli set` | All event-based tests |
+| RBUS profile data | `rbuscli set/get` | `test_rrd_profile_data.py` |
+| Log scraping | `grep_rrdlogs()` in `helper_functions.py` | All tests |
+| Process control | `pidof`, `kill`, `nohup` | Setup / teardown |
+| Mock upload server | Mock xconf server | `test_rrd_debug_report_upload.py` |
+| Mock upload script | `uploadSTBLogs.sh` | Upload tests |
+
+- **Runner:** `pytest`, sequential per file
+- **Shared state:** tests within a file depend on prior test side effects
+- **Coverage run:** `kill_rrd()` sends `SIGTERM` when `RRD_COVERAGE_MODE` is set so gcov flushes
 
 ---
 
-## 7. Appendix: File Inventory
+## 8. Appendix: File Inventory
 
 ### Feature Files
 

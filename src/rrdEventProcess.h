@@ -29,7 +29,9 @@ extern "C"
 #include <ctype.h>
 
 void processIssueTypeEvent(data_buf *rbuf);
+#ifndef DISABLE_WEBCONFIG
 void processWebCfgTypeEvent(data_buf *rbuf);
+#endif
 issueData* processIssueTypeInStaticProfileappend(data_buf *rbuf, issueNodeData *pIssueNode);
 issueData* processIssueTypeInDynamicProfileappend(data_buf *rbuf, issueNodeData *pIssueNode);
 #ifdef __cplusplus
