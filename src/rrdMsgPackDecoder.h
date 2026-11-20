@@ -31,7 +31,9 @@ extern "C"
 
 #if !defined(GTEST_ENABLE)
 #include <base64.h>
+#ifndef DISABLE_WEBCONFIG
 #include "webconfig_framework.h"
+#endif
 #endif
 
 #define match(p, s) strncmp((p)->key.via.str.ptr, s, (p)->key.via.str.size)

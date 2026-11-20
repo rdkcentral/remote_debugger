@@ -139,7 +139,9 @@ typedef struct deviceProperties {
 	char *deviceType;
 }devicePropertiesData;
 
+#ifndef DISABLE_WEBCONFIG
 int decodeWebCfgData(char *pString);
+#endif
 void pushIssueTypesToMsgQueue(char *issueTypeList, message_type_et sndtype);
 void RRD_data_buff_init(data_buf *sbuf, message_type_et sndtype, deepsleep_event_et  deepSleepEvent);
 void RRDRdmManagerDownloadRequest(issueNodeData *pissueStructNode, char *dynJSONPath, data_buf *rbuf, bool isDeepSleepAwakeEvent);

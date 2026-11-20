@@ -152,6 +152,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
             newState != POWER_STATE_STANDBY_DEEP_SLEEP))
     {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Received state from Power Manager Current :[%d] New[%d] \n", __FUNCTION__, __LINE__, currentState, newState);
+#ifndef DISABLE_WEBCONFIG
         rbusError_t rc = RBUS_ERROR_BUS_ERROR;
         rbusValue_t value;
 	    rbusValue_Init(&value);
@@ -165,6 +166,7 @@ void _pwrManagerEventHandler(const PowerController_PowerState_t currentState,
         }
 #endif
 	RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Invoking WebCfg Force Sync: %s... \n", __FUNCTION__, __LINE__, RRD_WEBCFG_FORCE_SYNC);
+#endif		
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Copying Message Received to the queue.. \n", __FUNCTION__, __LINE__);
         sbuf = (data_buf *)malloc(sizeof(data_buf));
         if (!sbuf)
