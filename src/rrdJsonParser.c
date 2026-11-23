@@ -195,46 +195,11 @@ FILE *rrd_open_profile_file(const char *path)
         struct stat st;
         if (fd < 0 || fstat(fd, &st) != 0)
         {
-			RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-            "[%s:%d] fstat failed for %s errno=%d\n",
-            __FUNCTION__, __LINE__, path, errno);
             goto fail;
         }
-        /* Sticky shared directories such as /tmp are allowed, but not untrusted descendants. */
-       /*
-		if ((st.st_uid != 0 && st.st_uid != geteuid()) ||
-            (directory ? !S_ISDIR(st.st_mode) : !S_ISREG(st.st_mode)) ||
-            ((st.st_mode & (S_IWGRP | S_IWOTH)) && !(directory && (st.st_mode & S_ISVTX))))
+        if ((st.st_uid != 0 && st.st_uid != geteuid()) ||
+            (directory ? !S_ISDIR(st.st_mode) : !S_ISREG(st.st_mode)))
         {
-			
-            errno = EPERM;
-            goto fail;
-        }
-		*/
-		if (st.st_uid != 0 && st.st_uid != geteuid())
-        {
-         RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-            "Owner validation failed uid=%d euid=%d\n",
-            (int)st.st_uid, (int)geteuid());
-          errno = EPERM;
-          goto fail;
-         }
-
-        if (directory ? !S_ISDIR(st.st_mode) : !S_ISREG(st.st_mode))
-        {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-            "Type validation failed mode=%o directory=%d\n",
-            st.st_mode, directory);
-            errno = EPERM;
-            goto fail;
-         }
-
-         if ((st.st_mode & (S_IWGRP | S_IWOTH)) &&
-               !(directory && (st.st_mode & S_ISVTX)))
-         {
-            RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-            "Permission validation failed mode=%o\n",
-            st.st_mode);
             errno = EPERM;
             goto fail;
         }
@@ -252,9 +217,6 @@ FILE *rrd_open_profile_file(const char *path)
                               (next ? O_DIRECTORY : O_NONBLOCK));
         if (child_fd < 0)
         {
-			RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-            "openat failed component=%s errno=%d\n",
-            component, errno);
             goto fail;
         }
         close(fd);
@@ -282,7 +244,6 @@ fail:
     errno = saved_errno;
     return NULL;
 }
-
 /*
  * @function readJsonFile
  * @brief Reads the JSON file and stores the content in a character array.
