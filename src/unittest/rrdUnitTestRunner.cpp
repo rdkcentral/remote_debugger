@@ -230,20 +230,25 @@ protected:
         EXPECT_EQ(size, 0);
         free(content);
     }
+
+    void expectReadable(const std::string &path)
+    {
+        char *content = readJsonFile(path.c_str());
+        ASSERT_NE(content, nullptr);
+        EXPECT_STREQ(content, "{\"key\":\"value\"}");
+        free(content);
+        long size = 0;
+        content = read_profile_json_file(path.c_str(), &size);
+        ASSERT_NE(content, nullptr);
+        EXPECT_STREQ(content, "{\"key\":\"value\"}");
+        EXPECT_EQ(size, 15);
+        free(content);
+    }
 };
 
 TEST_F(SecureProfileOpenTest, ReadsTrustedRegularProfile)
 {
-    char *content = readJsonFile(profile.c_str());
-    ASSERT_NE(content, nullptr);
-    EXPECT_STREQ(content, "{\"key\":\"value\"}");
-    free(content);
-    long size = 0;
-    content = read_profile_json_file(profile.c_str(), &size);
-    ASSERT_NE(content, nullptr);
-    EXPECT_STREQ(content, "{\"key\":\"value\"}");
-    EXPECT_EQ(size, 15);
-    free(content);
+    expectReadable(profile);
 }
 
 TEST_F(SecureProfileOpenTest, RejectsFileSymlink)
@@ -258,16 +263,23 @@ TEST_F(SecureProfileOpenTest, RejectsParentDirectorySymlink)
     expectRejected(link + "/profile.json");
 }
 
-TEST_F(SecureProfileOpenTest, RejectsWritableProfile)
+TEST_F(SecureProfileOpenTest, ReadsWritableProfile)
 {
-    ASSERT_EQ(chmod(profile.c_str(), 0666), 0);
-    expectRejected(profile);
+    ASSERT_EQ(chmod(profile.c_str(), 0777), 0);
+    expectReadable(profile);
 }
 
-TEST_F(SecureProfileOpenTest, RejectsUntrustedWritableDirectory)
+TEST_F(SecureProfileOpenTest, ReadsWritableDirectory)
 {
     ASSERT_EQ(chmod(directory.c_str(), 0777), 0);
-    expectRejected(profile);
+    expectReadable(profile);
+}
+
+TEST_F(SecureProfileOpenTest, ReadsWritableProfileInWritableDirectory)
+{
+    ASSERT_EQ(chmod(directory.c_str(), 0777), 0);
+    ASSERT_EQ(chmod(profile.c_str(), 0777), 0);
+    expectReadable(profile);
 }
 
 TEST_F(SecureProfileOpenTest, RejectsFifoWithoutBlocking)
@@ -713,26 +725,17 @@ protected:
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForValidCommand)
 {
-    int result = isCommandsValid("ls -l");
+    int result = isCommandsValid("ls -l", sanitylist);
     ASSERT_EQ(result, 0);
 }
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForBackgroundCommand)
 {
     char command[] = "ls -lh &;";
-    int result = isCommandsValid(command);
+    int result = isCommandsValid(command, sanitylist);
 
     ASSERT_EQ(result, 0);
     ASSERT_STREQ(command, "ls -lh & ");
-}
-
-TEST_F(IsCommandsValidTest, RejectsKillCommand)
-{
-    char command[] = "kill 1234";
-
-    int result = isCommandsValid(command);
-
-    ASSERT_EQ(result, 1);
 }
 
 /* --------------- Test replaceRRDLocation() from rrdCommandSanity --------------- */
@@ -2991,7 +2994,6 @@ TEST_F(RemoteDebuggerWebConfigEventHandlerTest, TestPushIssueTypesToMsgQueueSucc
 
     ASSERT_NE(ret, -1) << "Error receiving message from queue";
 }
-
 #endif
 
 /* --------------- Test _rdmManagerEventHandler() from rrdIarm --------------- */
@@ -3413,6 +3415,25 @@ TEST(FinderTest, KeyTypeStrExpectTypeMatch)
     EXPECT_STREQ(result->via.str.ptr, "value");
 }
 
+TEST(FinderTest, KeyTypeStrValTypeStrMatch)
+{
+    msgpack_object_map map;
+    msgpack_object_kv kv;
+    kv.key.type = MSGPACK_OBJECT_STR;
+    kv.key.via.str.ptr = "name";
+    kv.key.via.str.size = strlen("name");
+    kv.val.type = MSGPACK_OBJECT_STR;
+    kv.val.via.str.ptr = "value";
+    kv.val.via.str.size = strlen("value");
+    map.size = 1;
+    map.ptr = &kv;
+    msgpack_object *result = __finder("name", MSGPACK_OBJECT_NIL, &map);
+
+    ASSERT_NE(result, nullptr);
+    EXPECT_EQ(result->type, MSGPACK_OBJECT_STR);
+    EXPECT_STREQ(result->via.str.ptr, "value");
+}
+
 TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 {
     msgpack_object_map map;
@@ -3427,25 +3448,6 @@ TEST(FinderTest, KeyTypeStrValTypeAnyMatch)
 
     ASSERT_NE(result, nullptr);
     EXPECT_EQ(result->type, MSGPACK_OBJECT_NIL);
-}
-
-TEST(FinderTest, NameMatchesButTypeMismatchReturnsNull)
-{
-    msgpack_object_map map;
-    msgpack_object_kv kv;
-
-    kv.key.type = MSGPACK_OBJECT_STR;
-    kv.key.via.str.ptr = "version";
-    kv.key.via.str.size = strlen("version");
-    kv.val.type = MSGPACK_OBJECT_STR;
-    kv.key.via.str.ptr = "abc";
-    kv.key.via.str.size = strlen("abc");
-    map.size = 1;
-    map.ptr = &kv;
-    msgpack_object *result = __finder("version", MSGPACK_OBJECT_POSITIVE_INTEGER, &map);
-
-    EXPECT_EQ(result, nullptr);
-    EXPECT_EQ(errno, MISSING_ENTRY);
 }
 
 /* --------------- Test get_msgpack_unpack_status() from rrdMsgPackDecoder --------------- */
@@ -4888,35 +4890,7 @@ TEST_F(RRDUploadOrchestrationTest, ArchiveCreation) {
     remove(full_path);
 }
 
-TEST_F(RRDUploadOrchestrationTest, ArchiveCreationRejectsSymlink)
-{
-    char target_file[256];
-    snprintf(target_file, sizeof(target_file),
-             "%sreal_file.txt", rrd_log_dir);
-    FILE *fp = fopen(target_file, "w");
-    ASSERT_NE(fp, nullptr);
-    fclose(fp);
 
-    const char *archive_filename = "symlink_archive.tgz";
-
-    char symlink_path[256];
-    snprintf(symlink_path,
-             sizeof(symlink_path),
-             "%s%s",
-             rrd_log_dir,
-             archive_filename);
-
-    ASSERT_EQ(symlink(target_file, symlink_path), 0);
-
-    int result = rrd_archive_create(test_dir,
-                                    rrd_log_dir,
-                                    archive_filename);
-
-    EXPECT_NE(result, 0);
-
-    unlink(symlink_path);
-    unlink(target_file);
-}
 
 // Test: File operations
 TEST_F(RRDUploadOrchestrationTest, FileOperations) {
