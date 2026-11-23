@@ -499,6 +499,7 @@ int rollback_Debugger()
  * @param void *arg - Pointer to the execData structure to free.
  * @return void
  */
+#ifndef DISABLE_WEBCONFIG
 void FreeResources_RemoteDebugger(void *arg)
 {
 
@@ -561,6 +562,7 @@ pErr Process_RemoteDebugger_WebConfigRequest(void *Data)
 
     return retStatus;
 }
+#endif
 
 /*
  * @function get_base64_decodedbuffer
@@ -630,6 +632,7 @@ void PrepareDataToPush(remotedebuggerparam_t *param)
  * @param char *pString - The base64 encoded WebConfig data string.
  * @return int - Returns 0 on success, or -1 on failure.
  */
+#ifndef DISABLE_WEBCONFIG
 int decodeWebCfgData(char *pString)
 {
     char *decodeMsg = NULL;
@@ -720,3 +723,4 @@ int decodeWebCfgData(char *pString)
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return 0;
 }
+#endif

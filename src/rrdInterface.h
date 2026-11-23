@@ -61,7 +61,9 @@ typedef enum _RemoteDebugger_EventId_t {
 /*Event Handler Function*/
 #if !defined(GTEST_ENABLE)
 void _remoteDebuggerEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
+#ifndef DISABLE_WEBCONFIG
 void _remoteDebuggerWebCfgDataEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
+#endif
 void _rdmDownloadEventHandler(rbusHandle_t handle, rbusEvent_t const* event, rbusEventSubscription_t* subscription);
 
 // Helper functions for profile data processing

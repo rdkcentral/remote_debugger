@@ -31,9 +31,11 @@ extern "C"
 rbusEventSubscription_t subscriptions[3];
 #endif
 
+#ifndef DISABLE_WEBCONFIG
 void webconfigFrameworkInit();
 uint32_t getBlobVersion(char* subdoc);
 int setBlobVersion(char* subdoc,uint32_t version);
+#endif
 
 #ifdef __cplusplus
 }
