@@ -304,7 +304,9 @@ size_t getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
 			if (SIZE_MAX - size < arr->ptr[index].via.str.size) 
 			{
 				RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-                    "OVERFLOW CHECK HIT\n");
+                    "OVERFLOW CHECK HIT size=%zu curr=%zu\n",
+                     size,
+                    (size_t)arr->ptr[index].via.str.size);
                 return 0;
 			}
             size += arr->ptr[index].via.str.size;
@@ -320,7 +322,9 @@ size_t getReqTotalSizeOfIssueTypesStr(msgpack_object_array *arr)
 	 if (SIZE_MAX - size < arr->size + 1)
 	 {
 		RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG,
-            "FINAL OVERFLOW CHECK HIT\n");
+        "FINAL OVERFLOW CHECK HIT size=%zu arrsize=%zu\n",
+        size,
+        (size_t)arr->size);
         return 0;
 	 }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG,
