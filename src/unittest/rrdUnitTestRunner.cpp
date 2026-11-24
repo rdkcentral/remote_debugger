@@ -513,6 +513,39 @@ TEST_F(InvokeSanityandCommandExecTest, DeepSleepAwkEvntTrue_TypeIsString_Command
     EXPECT_FALSE(invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true));
 }
 
+TEST_F(InvokeSanityandCommandExecTest, RejectsBlockedStaticCommandBeforeExecution)
+{
+    cJSON *category = cJSON_AddObjectToObject(jsoncfg, "testNode");
+    cJSON *type = cJSON_AddObjectToObject(category, "testSubNode");
+    cJSON_AddStringToObject(type, "Commands", "pkill --help");
+    cJSON_AddNumberToObject(type, "Timeout", 1);
+
+    testing::internal::CaptureStdout();
+    const bool result = invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, false);
+    const std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_FALSE(result);
+    EXPECT_NE(output.find("Aborting Command execution due to Harmful commands"), std::string::npos);
+    EXPECT_EQ(output.find("Executing Commands in Runtime Service"), std::string::npos);
+}
+
+TEST_F(InvokeSanityandCommandExecTest, RejectsBlockedDeepSleepCommandBeforeExecution)
+{
+    cJSON *root = cJSON_AddObjectToObject(jsoncfg, DEEP_SLEEP_STR);
+    cJSON *category = cJSON_AddObjectToObject(root, "testNode");
+    cJSON *type = cJSON_AddObjectToObject(category, "testSubNode");
+    cJSON_AddStringToObject(type, "Commands", "pkill --help");
+    cJSON_AddNumberToObject(type, "Timeout", 1);
+
+    testing::internal::CaptureStdout();
+    const bool result = invokeSanityandCommandExec(&issuestructNode, jsoncfg, buf, true);
+    const std::string output = testing::internal::GetCapturedStdout();
+
+    EXPECT_FALSE(result);
+    EXPECT_NE(output.find("Aborting Command execution due to Harmful commands"), std::string::npos);
+    EXPECT_EQ(output.find("Executing Commands in Runtime Service"), std::string::npos);
+}
+
 /* --------------- Test processAllDebugCommand() from rrdJsonParser --------------- */
 class ProcessAllDebugCommandTest : public ::testing::Test
 {
@@ -725,17 +758,24 @@ protected:
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForValidCommand)
 {
-    int result = isCommandsValid("ls -l", sanitylist);
+    char command[] = "ls -l";
+    int result = isCommandsValid(command);
     ASSERT_EQ(result, 0);
 }
 
 TEST_F(IsCommandsValidTest, ReturnsZeroForBackgroundCommand)
 {
     char command[] = "ls -lh &;";
-    int result = isCommandsValid(command, sanitylist);
+    int result = isCommandsValid(command);
 
     ASSERT_EQ(result, 0);
     ASSERT_STREQ(command, "ls -lh & ");
+}
+
+TEST_F(IsCommandsValidTest, RejectsPkillWithLogFileArgument)
+{
+    char command[] = "pkill /opt/logs/btmgrlog.txt";
+    EXPECT_EQ(isCommandsValid(command), 1);
 }
 
 /* --------------- Test replaceRRDLocation() from rrdCommandSanity --------------- */
