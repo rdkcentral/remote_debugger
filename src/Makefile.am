@@ -16,6 +16,11 @@ remotedebugger_SOURCES = rrdMain.c rrdEventProcess.c rrdJsonParser.c rrdRunCmdTh
 remotedebugger_CFLAGS = -I$(top_srcdir)/include/rrd -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/trower-base64/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rbus/  -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} $(CJSON_CFLAGS)
 AM_LDFLAGS="-lpthread -lrdkloggers -lmsgpackc -ltrower-base64 -lwebconfig_framework -lrbus -lsecure_wrapper "
 
+if RDK_OTLP_ENABLE
+remotedebugger_CFLAGS += $(RDK_OTLP_CFLAGS)
+AM_LDFLAGS += $(RDK_OTLP_LDFLAGS)
+endif
+
 if IARMBUS_ENABLE
 remotedebugger_SOURCES += rrdIarmEvents.c uploadRRDLogs.c rrd_config.c rrd_sysinfo.c rrd_logproc.c rrd_archive.c rrd_upload.c
 remotedebugger_CFLAGS += -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmbus/ -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs/rdmmgr -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/rdk/iarmmgrs-hal -DIARMBUS_SUPPORT
