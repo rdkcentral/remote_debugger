@@ -143,7 +143,8 @@ static bool isBlockedCommand(const char *cmd)
     {
        return true;
     }
-
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Reading Sanity Commands List: \n",__FUNCTION__,__LINE__);
+    
     strncpy(buf, cmd, sizeof(buf)-1);
     buf[sizeof(buf)-1] = '\0';
 
@@ -162,7 +163,7 @@ static bool isBlockedCommand(const char *cmd)
         {
             if (strcmp(compareToken, g_blockedCommands[i]) == 0)
             {
-                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d] blocked command detected: %s\n", __FUNCTION__, __LINE__, compareToken);
+                RDK_LOG(RDK_LOG_ERROR,LOG_REMDEBUG,"[%s:%d]: Found harmful commands: %s, Exiting!!! \n",__FUNCTION__,__LINE__,compareToken);
                 return true;
             }
         }
@@ -200,5 +201,6 @@ int isCommandsValid(char *issuecmd)
         }
     }
 
+    RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Found valid Commands, Execute... \n",__FUNCTION__,__LINE__);
     return 0;
 }
