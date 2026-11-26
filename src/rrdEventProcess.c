@@ -277,17 +277,18 @@ static void processIssueType(data_buf *rbuf)
                         {
                             //Remove the double quotes
                             size_t staticstrlen = strlen(staticprofiledata->command);
-                            size_t dynamicstrlen = strlen(dynamicprofiledata->command);
+                            const char *dynamiccmd = dynamicprofiledata->command;
                             if (staticstrlen > 0 && staticprofiledata->command[staticstrlen - 1] == '"') {
                                 staticprofiledata->command[staticstrlen - 1] = '\0';
                                 staticstrlen--; // Update length after removing trailing quote
                             }
-                            if (dynamicprofiledata->command[0] == '"') {
-                                dynamicprofiledata->command[0] = COMMAND_DELIM;
+                            if (dynamiccmd[0] == '"') {
+                                dynamiccmd++; // Skip leading quote
                             }
-                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamicprofiledata->command);
+                            RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamiccmd);
 
-                            size_t appendstrlen = (staticstrlen + dynamicstrlen + 1);
+                            // +2 for the ';' separator and the terminating NUL
+                            size_t appendstrlen = (staticstrlen + strlen(dynamiccmd) + 2);
                             char *appendcommandstr = (char *)realloc(staticprofiledata->command, appendstrlen);
                             if (appendcommandstr == NULL) {
                                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
@@ -322,7 +323,8 @@ static void processIssueType(data_buf *rbuf)
                             }
                             else
                             {
-                                strcat(appendcommandstr, dynamicprofiledata->command);
+                                appendcommandstr[staticstrlen] = COMMAND_DELIM;
+                                strcpy(appendcommandstr + staticstrlen + 1, dynamiccmd);
                                 staticprofiledata->command = appendcommandstr;
                                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Updated command after append from dynamic and static profile: %s \n", __FUNCTION__, __LINE__, staticprofiledata->command);
                                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
