@@ -270,7 +270,7 @@ void _pwrManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 /*
  * @function  _rdmManagerEventHandler
  * @brief Receives the RDM Manager event and sends the value as a message in the message-queue
- *              to the thread function.
+ *              to the thread function. Rejects truncated payloads and unterminated strings.
  * @param const char *owner - Owner name of the event.
  *        IARM_EventId_t eventId - Event ID.
  *        void *data - Event data.
@@ -286,13 +286,31 @@ void _rdmManagerEventHandler(const char *owner, IARM_EventId_t eventId, void *da
 
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Entering.. \n", __FUNCTION__, __LINE__);
 
+    if (owner == NULL)
+    {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Missing RDM event owner\n", __FUNCTION__, __LINE__);
+        return;
+    }
+
     if (strcmp(owner, IARM_BUS_RDMMGR_NAME) == 0)
     {
         RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Received event for IARM_BUS_RDMMGR_NAME %s \n", __FUNCTION__, __LINE__, owner);
         if (eventId == IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS)
         {
             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Event ID found for IARM_BUS_RDMMGR_EVENT_APP_INSTALLATION_STATUS %d \n", __FUNCTION__, __LINE__, eventId);
+            if (data == NULL || len < sizeof(*eventData))
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Invalid RDM event payload (length: %zu, required: %zu)\n",
+                        __FUNCTION__, __LINE__, len, sizeof(*eventData));
+                return;
+            }
             eventData = (IARM_Bus_RDMMgr_EventData_t *)data;
+            if (memchr(eventData->rdm_pkg_info.pkg_name, '\0', sizeof(eventData->rdm_pkg_info.pkg_name)) == NULL ||
+                memchr(eventData->rdm_pkg_info.pkg_inst_path, '\0', sizeof(eventData->rdm_pkg_info.pkg_inst_path)) == NULL)
+            {
+                RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Unterminated RDM event string field\n", __FUNCTION__, __LINE__);
+                return;
+            }
             cache = findPresentInCache(eventData->rdm_pkg_info.pkg_name);
             if (cache != NULL)
             {

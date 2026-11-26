@@ -23,7 +23,7 @@ STATIC_PROFILE_DIR="/etc/rrd"
 OUTPUT_DIR="/tmp/rrd"
 LIB_DIR="/lib/rdk"
 COV_DIR="/tmp/l2_coverage"
-
+echo "LOG.RDK.DEFAULT" >> /etc/debug.ini
 export RRD_COVERAGE_MODE=1
 
 mkdir -p "$RESULT_DIR"

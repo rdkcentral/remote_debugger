@@ -32,8 +32,28 @@ TIMESTAMP=`date "+%Y-%m-%d-%H-%M-%S%p"`
 RRD_LOG_FILE="$LOG_PATH/remote-debugger.log.0"
 ISSUETYPE=`echo $2 | tr '[a-z]' '[A-Z]'`
 RRD_LOG_PATH="$1"
+RRD_REPORT_NAME=${RRD_LOG_PATH#/tmp/rrd/}
+case "$RRD_LOG_PATH" in
+    /tmp/rrd/*) ;;
+    *)
+        echo "Refusing unexpected report path: $RRD_LOG_PATH" >&2
+        exit 1
+        ;;
+esac
+case "$RRD_REPORT_NAME" in
+    ""|.|..|*/*)
+        echo "Refusing unexpected report directory name: $RRD_REPORT_NAME" >&2
+        exit 1
+        ;;
+esac
 RRD_LOG_DIR="/tmp/rrd/"
 UPLOAD_DEBUG_FILE="${MAC}_${ISSUETYPE}_${TIMESTAMP}_RRD_DEBUG_LOGS.tgz"
+case "$UPLOAD_DEBUG_FILE" in
+    ""|.|..|*/*)
+        echo "Refusing unexpected archive filename: $UPLOAD_DEBUG_FILE" >&2
+        exit 1
+        ;;
+esac
 source $RDK_LOGGER_PATH/logUpload_default_params.sh
 # Logging Format
 uploadLog()
@@ -54,20 +74,20 @@ SERVER=`getTFTPServer $BUILD_TYPE`
 ###################################
 uploadLog "Executing uploadRRDLogs.sh script to upload Debug info of ISSUETYPE=$ISSUETYPE"
 uploadLog "Checking $RRD_LOG_PATH size and contents"
-if [ -d $RRD_LOG_PATH ] && [ "$(ls -A $RRD_LOG_PATH)" ]; then
-    cd $RRD_LOG_DIR
+if [ -d "$RRD_LOG_PATH" ] && [ -n "$(ls -A "$RRD_LOG_PATH")" ]; then
+    cd "$RRD_LOG_DIR" || exit 1
     uploadLog "Creating $UPLOAD_DEBUG_FILE tarfile from Debug Commands output"
-    tar -zcf $UPLOAD_DEBUG_FILE -C $RRD_LOG_PATH . >> $RRD_LOG_FILE 2>&1
+    tar -zcf "$UPLOAD_DEBUG_FILE" -C "$RRD_LOG_PATH" . >> "$RRD_LOG_FILE" 2>&1
     uploadLog "Invoking uploadRDKBLogs.sh script to upload $UPLOAD_DEBUG_FILE file"
     $RDK_LOGGER_PATH/uploadRDKBLogs.sh $SERVER "HTTP" $URL "false" "" $RRD_LOG_DIR "false"
     retval=$?
     if [ $retval -ne 200 ];then
         uploadLog "RRD $ISSUETYPE Debug Information Report upload Failed!!!"
-        rm -rf $UPLOAD_DEBUG_FILE $RRD_LOG_PATH
+        rm -rf -- "$UPLOAD_DEBUG_FILE" "$RRD_LOG_PATH"
     else
         uploadLog "RRD $ISSUETYPE Debug Information Report upload Success"
         uploadLog "Removing uploaded report $UPLOAD_DEBUG_FILE"
-        rm -rf $UPLOAD_DEBUG_FILE $RRD_LOG_PATH
+        rm -rf -- "$UPLOAD_DEBUG_FILE" "$RRD_LOG_PATH"
     fi
 else
     uploadLog "$RRD_LOG_PATH is Empty, Exiting!!!"
