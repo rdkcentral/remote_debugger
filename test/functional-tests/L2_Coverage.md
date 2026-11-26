@@ -1,6 +1,6 @@
 # Remote Debugger L2 Coverage Report
 
-**Generated:** 2026-11-17  
+**Generated:** 2026-11-26  
 **Component:** `remotedebugger` (`src/`)  
 **Test suite:** `test/functional-tests/`  
 **Coverage tool:** lcov (source-level instrumentation via `--coverage`)
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |---|:---:|
-| Source functions found | 128 |
-| Functions hit | 76 |
+| Source functions found | 129 |
+| Functions hit | 77 |
 | Functions not hit | 52 |
-| Current functional coverage | 59.4% |
+| Current functional coverage | 59.7% |
 | Target L2 functional coverage | ~100% |
 
 > Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),
@@ -32,7 +32,7 @@
 | Test functions (`test_*`) | 118 |
 | Mapped feature/test pairs | 19 / 22 |
 | Unmatched test files | 4 |
-| Line coverage (lcov) | 49.7% (1507 of 3034 lines) |
+| Line coverage (lcov) | 49.7% (1513 of 3042 lines) |
 
 > Function definitions are discovered with a heuristic C source scan.
 > Disabled test functions (skip markers or commented definitions): 0;
@@ -114,7 +114,7 @@
 |---|:---:|:---:|---|
 | `rrdMain.c` | 60.3% (38/63) | 75.0% (3/4) | `████████████░░░░░░░░` |
 | `rrdInterface.c` | 44.0% (189/430) | 63.6% (14/22) | `█████████░░░░░░░░░░░` |
-| `rrdEventProcess.c` | 68.8% (240/349) | 81.8% (9/11) | `██████████████░░░░░░` |
+| `rrdEventProcess.c` | 68.9% (246/357) | 83.3% (10/12) | `██████████████░░░░░░` |
 | `rrdJsonParser.c` | 81.8% (405/495) | 86.7% (13/15) | `████████████████░░░░` |
 | `rrdRunCmdThread.c` | 55.2% (117/212) | 60.0% (6/10) | `███████████░░░░░░░░░` |
 | `rrdCommandSanity.c` | 93.1% (67/72) | 100.0% (3/3) | `███████████████████░` |
