@@ -50,6 +50,7 @@ void processWebCfgTypeEvent(data_buf *rbuf)
     {
         decodeWebCfgData(rbuf->mdata);
         free(rbuf->mdata);
+		rbuf->mdata = NULL;
     }
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: ...Exiting...\n", __FUNCTION__, __LINE__);
     return;
@@ -185,6 +186,37 @@ void processIssueTypeEvent(data_buf *rbuf)
     return;
 }
 
+static char *appendProfileCommands(char *staticCommand, const char *dynamicCommand)
+{
+    size_t staticLength = strlen(staticCommand);
+    size_t dynamicLength = strlen(dynamicCommand);
+    size_t separatorLength = (staticLength > 0 && dynamicLength > 0) ? 1 : 0;
+    char separator = COMMAND_DELIM;
+    size_t end = staticLength;
+
+    while (end > 0 && (staticCommand[end - 1] == ' ' || staticCommand[end - 1] == '\t'))
+    {
+        end--;
+    }
+    if (end > 0 && (staticCommand[end - 1] == ';' ||
+                    staticCommand[end - 1] == '&' || staticCommand[end - 1] == '\n'))
+    {
+        /* A second semicolon, including after '&', is invalid shell syntax. */
+        separator = '\n';
+    }
+
+    char *combined = (char *)realloc(staticCommand, staticLength + dynamicLength + separatorLength + 1);
+    if (combined != NULL)
+    {
+        if (separatorLength > 0)
+        {
+            combined[staticLength] = separator;
+        }
+        memcpy(combined + staticLength + separatorLength, dynamicCommand, dynamicLength + 1);
+    }
+    return combined;
+}
+
 /*
  * @function processIssueType
  * @brief Processes the given issue type by extracting issue node data and determining
@@ -274,20 +306,9 @@ static void processIssueType(data_buf *rbuf)
                         }
                         else
                         {
-                            //Remove the double quotes
-                            size_t staticstrlen = strlen(staticprofiledata->command);
-                            size_t dynamicstrlen = strlen(dynamicprofiledata->command);
-                            if (staticstrlen > 0 && staticprofiledata->command[staticstrlen - 1] == '"') {
-                                staticprofiledata->command[staticstrlen - 1] = '\0';
-                                staticstrlen--; // Update length after removing trailing quote
-                            }
-                            if (dynamicprofiledata->command[0] == '"') {
-                                dynamicprofiledata->command[0] = COMMAND_DELIM;
-                            }
                             RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "[%s:%d]: Static Profile Commands: %s, Dynamic Profile Commands: %s\n", __FUNCTION__, __LINE__, staticprofiledata->command, dynamicprofiledata->command);
 
-                            size_t appendstrlen = (staticstrlen + dynamicstrlen + 1);
-                            char *appendcommandstr = (char *)realloc(staticprofiledata->command, appendstrlen);
+                            char *appendcommandstr = appendProfileCommands(staticprofiledata->command, dynamicprofiledata->command);
                             if (appendcommandstr == NULL) {
                                 RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "[%s:%d]: Memory Allocation Failed... \n", __FUNCTION__, __LINE__);
                                 // Free staticprofiledata on realloc failure
@@ -321,7 +342,6 @@ static void processIssueType(data_buf *rbuf)
                             }
                             else
                             {
-                                strcat(appendcommandstr, dynamicprofiledata->command);
                                 staticprofiledata->command = appendcommandstr;
                                 RDK_LOG(RDK_LOG_INFO, LOG_REMDEBUG, "[%s:%d]: Updated command after append from dynamic and static profile: %s \n", __FUNCTION__, __LINE__, staticprofiledata->command);
                                 RDK_LOG(RDK_LOG_DEBUG,LOG_REMDEBUG,"[%s:%d]: Executing Commands in Runtime Service... \n",__FUNCTION__,__LINE__);
