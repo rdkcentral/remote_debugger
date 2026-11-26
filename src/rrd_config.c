@@ -24,6 +24,36 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+
+/* Validate the opened inode, not a pathname that can be replaced before fopen(). */
+static FILE *rrd_config_open_trusted(const char *filepath)
+{
+    int fd = open(filepath, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot open config %s (errno: %d)\n",
+                __FUNCTION__, filepath, errno);
+        return NULL;
+    }
+
+    struct stat st;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != 0 ||
+        (st.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Rejecting config %s: must be a root-owned regular file without group/other writes\n",
+                __FUNCTION__, filepath);
+        close(fd);
+        return NULL;
+    }
+
+    FILE *stream = fdopen(fd, "r");
+    if (!stream) {
+        RDK_LOG(RDK_LOG_ERROR, LOG_REMDEBUG, "%s: Cannot read config %s (errno: %d)\n",
+                __FUNCTION__, filepath, errno);
+        close(fd);
+    }
+    return stream;
+}
 
 // Helper: trim whitespace
 static void trim(char *str) {
@@ -180,7 +210,7 @@ int rrd_config_parse_properties(const char *filepath, rrd_config_t *config) {
     
     RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Entry - parsing %s\n", __FUNCTION__, filepath);
     
-    FILE *f = fopen(filepath, "r");
+    FILE *f = rrd_config_open_trusted(filepath);
     if (!f) {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Cannot open file: %s\n", __FUNCTION__, filepath);
         return -2;
@@ -305,7 +335,7 @@ int rrd_config_query_rfc(rrd_config_t *config) {
 int rrd_config_parse_dcm_settings(const char *filepath, rrd_config_t *config) {
     if (!filepath || !config) return -1;
     
-    FILE *f = fopen(filepath, "r");
+    FILE *f = rrd_config_open_trusted(filepath);
     if (!f) {
         RDK_LOG(RDK_LOG_DEBUG, LOG_REMDEBUG, "%s: Cannot open %s\n", __FUNCTION__, filepath);
         return -2;
